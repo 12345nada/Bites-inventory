@@ -9,7 +9,7 @@ body,
   margin: 0;
 }
 body {
-  overflow: hidden;
+  overflow: auto;
 }
 
 .dashboard-page,
@@ -1299,5 +1299,70 @@ body {
   .table-card td {
     padding: 9px 6px;
     font-size: 7.5px;
+  }
+}
+
+
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: auto;
+  }
+
+  body {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-page {
+    width: 1440px;
+    min-width: 1440px;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .dashboard-sidebar {
+    width: 220px;
+    min-width: 220px;
+    height: 100vh;
+  }
+
+  .dashboard-main {
+    width: calc(1440px - 234px);
+    min-width: calc(1440px - 234px);
+    height: calc(100vh - 28px);
+    margin: 14px 14px 14px 0;
+    padding: 16px 28px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .dashboard-search {
+    width: 45%;
+    min-width: 380px;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .dashboard-charts {
+    grid-template-columns: 1fr 1fr 1.08fr;
+  }
+
+  .dashboard-table-wrapper {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .table-card table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
   }
 }
