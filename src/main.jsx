@@ -35,6 +35,10 @@ import {
   SettingsProvider,
 } from "./context/SettingsContext.jsx";
 
+import {
+  StaffProvider,
+} from "./context/StaffContext.jsx";
+
 createRoot(
   document.getElementById("root")
 ).render(
@@ -47,7 +51,9 @@ createRoot(
               <DispatchesProvider>
                 <ReturnsProvider>
                   <SettingsProvider>
-                    <App />
+                    <StaffProvider>
+                      <App />
+                    </StaffProvider>
                   </SettingsProvider>
                 </ReturnsProvider>
               </DispatchesProvider>

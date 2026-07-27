@@ -14,6 +14,7 @@ import Dispatch from "./pages/Dispatch";
 import Returns from "./pages/Returns";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Staff from "./pages/Staff";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           path="/"
           element={<Dashboard />}
         />
+
         <Route
           path="/events"
           element={<Events />}
@@ -62,6 +64,12 @@ function App() {
           path="/reports"
           element={<Reports />}
         />
+
+        <Route
+          path="/staff"
+          element={<Staff />}
+        />
+
         <Route
           path="/settings"
           element={<Settings />}
@@ -70,4 +78,5 @@ function App() {
     </BrowserRouter>
   );
 }
+
 export default App;

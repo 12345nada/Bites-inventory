@@ -15,20 +15,20 @@ import "../styles/Suppliers.css";
 
 import {
   FiUsers,
-  FiCalendar,
   FiPlus,
   FiSearch,
   FiEdit2,
   FiMoreVertical,
-  FiList,
+  FiTrash2,
   FiX,
+  FiUserCheck,
+  FiUserX,
 } from "react-icons/fi";
 
 const tabs = [
   "All Suppliers",
   "Active",
   "Inactive",
-  "Blacklisted",
 ];
 
 const emptyForm = {
@@ -37,7 +37,6 @@ const emptyForm = {
   phone: "",
   email: "",
   address: "",
-  branch: "Cairo",
   status: "Active",
 };
 
@@ -45,8 +44,9 @@ export default function Suppliers() {
   const {
     suppliers,
     addSupplier,
-    deleteSupplier,
     updateSupplier,
+    toggleSupplierStatus,
+    deleteSupplier,
   } = useSuppliers();
 
   const [searchValue, setSearchValue] =
@@ -54,11 +54,6 @@ export default function Suppliers() {
 
   const [activeTab, setActiveTab] =
     useState("All Suppliers");
-
-  const [
-    selectedBranch,
-    setSelectedBranch,
-  ] = useState("All Branches");
 
   const [
     showSupplierModal,
@@ -92,7 +87,6 @@ export default function Suppliers() {
           supplier.phone,
           supplier.email,
           supplier.address,
-          supplier.branch,
           supplier.status,
         ].some((value) =>
           String(value)
@@ -104,57 +98,13 @@ export default function Suppliers() {
         activeTab === "All Suppliers" ||
         supplier.status === activeTab;
 
-      const matchesBranch =
-        selectedBranch === "All Branches" ||
-        supplier.branch === selectedBranch;
-
-      return (
-        matchesSearch &&
-        matchesTab &&
-        matchesBranch
-      );
+      return matchesSearch && matchesTab;
     });
   }, [
     suppliers,
     searchValue,
     activeTab,
-    selectedBranch,
   ]);
-
-  const activeSuppliers =
-    suppliers.filter(
-      (supplier) =>
-        supplier.status === "Active"
-    ).length;
-
-  const inactiveSuppliers =
-    suppliers.filter(
-      (supplier) =>
-        supplier.status === "Inactive"
-    ).length;
-
-  const blacklistedSuppliers =
-    suppliers.filter(
-      (supplier) =>
-        supplier.status === "Blacklisted"
-    ).length;
-
-  const newSuppliers = Math.min(
-    suppliers.length,
-    12
-  );
-
-  const handleFormChange = (event) => {
-    const {
-      name,
-      value,
-    } = event.target;
-
-    setFormData((currentData) => ({
-      ...currentData,
-      [name]: value,
-    }));
-  };
 
   const openAddModal = () => {
     setEditingSupplierId(null);
@@ -172,7 +122,6 @@ export default function Suppliers() {
       phone: supplier.phone,
       email: supplier.email,
       address: supplier.address,
-      branch: supplier.branch,
       status: supplier.status,
     });
 
@@ -184,6 +133,18 @@ export default function Suppliers() {
     setShowSupplierModal(false);
     setEditingSupplierId(null);
     setFormData(emptyForm);
+  };
+
+  const handleFormChange = (event) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setFormData((currentData) => ({
+      ...currentData,
+      [name]: value,
+    }));
   };
 
   const handleSaveSupplier = (event) => {
@@ -209,17 +170,19 @@ export default function Suppliers() {
       alert(
         "Please complete all supplier fields."
       );
-
       return;
     }
 
-    if (editingSupplierId) {
-      updateSupplier(
-        editingSupplierId,
-        formData
-      );
-    } else {
-      addSupplier(formData);
+    const result = editingSupplierId
+      ? updateSupplier(
+          editingSupplierId,
+          formData
+        )
+      : addSupplier(formData);
+
+    if (!result.success) {
+      alert(result.message);
+      return;
     }
 
     closeModal();
@@ -240,12 +203,6 @@ export default function Suppliers() {
     setOpenActionId(null);
   };
 
-  const getStatusClass = (status) => {
-    return status
-      .toLowerCase()
-      .replace(/\s+/g, "-");
-  };
-
   return (
     <div className="dashboard-page">
       <Sidebar activePage="suppliers" />
@@ -261,7 +218,8 @@ export default function Suppliers() {
             <h1>Suppliers</h1>
 
             <p>
-              Manage all your suppliers
+              Manage supplier contact
+              information
             </p>
           </div>
 
@@ -271,46 +229,8 @@ export default function Suppliers() {
             onClick={openAddModal}
           >
             <FiPlus />
-
-            <span>Add New Supplier</span>
+            Add New Supplier
           </button>
-        </section>
-
-        <section className="suppliers-stats">
-          <SupplierStatCard
-            icon={<FiUsers />}
-            title="Total Suppliers"
-            value={suppliers.length}
-            subtitle="All suppliers"
-          />
-
-          <SupplierStatCard
-            icon={<FiUsers />}
-            title="Active Suppliers"
-            value={activeSuppliers}
-            subtitle="Active now"
-          />
-
-          <SupplierStatCard
-            icon={<FiUsers />}
-            title="Inactive Suppliers"
-            value={inactiveSuppliers}
-            subtitle="Inactive now"
-          />
-
-          <SupplierStatCard
-            icon={<FiUsers />}
-            title="New Suppliers"
-            value={newSuppliers}
-            subtitle="This month"
-          />
-
-          <SupplierStatCard
-            icon={<FiCalendar />}
-            title="Blacklisted Suppliers"
-            value={blacklistedSuppliers}
-            subtitle="Blacklisted"
-          />
         </section>
 
         <section className="suppliers-table-card">
@@ -334,49 +254,19 @@ export default function Suppliers() {
               ))}
             </div>
 
-            <div className="suppliers-filters">
-              <div className="suppliers-search-box">
-                <FiSearch />
+            <div className="suppliers-search-box">
+              <FiSearch />
 
-                <input
-                  type="text"
-                  placeholder="Search suppliers..."
-                  value={searchValue}
-                  onChange={(event) =>
-                    setSearchValue(
-                      event.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <select
-                value={selectedBranch}
+              <input
+                type="text"
+                placeholder="Search suppliers..."
+                value={searchValue}
                 onChange={(event) =>
-                  setSelectedBranch(
+                  setSearchValue(
                     event.target.value
                   )
                 }
-              >
-                <option>
-                  All Branches
-                </option>
-
-                <option value="Cairo">
-                  Cairo
-                </option>
-
-                <option value="Alex">
-                  Alex
-                </option>
-              </select>
-
-              <button
-                type="button"
-                className="suppliers-view-button"
-              >
-                <FiList />
-              </button>
+              />
             </div>
           </div>
 
@@ -384,14 +274,7 @@ export default function Suppliers() {
             <table>
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      aria-label="Select all suppliers"
-                    />
-                  </th>
-
-                  <th>Supplier Name</th>
+                  <th>Supplier</th>
                   <th>Contact Person</th>
                   <th>Phone</th>
                   <th>Email</th>
@@ -402,20 +285,10 @@ export default function Suppliers() {
               </thead>
 
               <tbody>
-                {filteredSuppliers.length >
-                0 ? (
+                {filteredSuppliers.length > 0 ? (
                   filteredSuppliers.map(
                     (supplier) => (
-                      <tr
-                        key={supplier.id}
-                      >
-                        <td>
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${supplier.name}`}
-                          />
-                        </td>
-
+                      <tr key={supplier.id}>
                         <td>
                           <div className="supplier-name-cell">
                             <div className="supplier-icon">
@@ -424,15 +297,11 @@ export default function Suppliers() {
 
                             <div>
                               <strong>
-                                {
-                                  supplier.name
-                                }
+                                {supplier.name}
                               </strong>
 
                               <span>
-                                {
-                                  supplier.id
-                                }
+                                {supplier.id}
                               </span>
                             </div>
                           </div>
@@ -458,13 +327,9 @@ export default function Suppliers() {
 
                         <td>
                           <span
-                            className={`supplier-status ${getStatusClass(
-                              supplier.status
-                            )}`}
+                            className={`supplier-status ${supplier.status.toLowerCase()}`}
                           >
-                            {
-                              supplier.status
-                            }
+                            {supplier.status}
                           </span>
                         </td>
 
@@ -472,12 +337,12 @@ export default function Suppliers() {
                           <div className="supplier-actions">
                             <button
                               type="button"
-                              className="supplier-edit-button"
                               onClick={() =>
                                 openEditModal(
                                   supplier
                                 )
                               }
+                              aria-label={`Edit ${supplier.name}`}
                             >
                               <FiEdit2 />
                             </button>
@@ -497,6 +362,7 @@ export default function Suppliers() {
                                         : supplier.id
                                   )
                                 }
+                                aria-label={`More actions for ${supplier.name}`}
                               >
                                 <FiMoreVertical />
                               </button>
@@ -506,13 +372,26 @@ export default function Suppliers() {
                                 <div className="supplier-action-menu">
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      openEditModal(
-                                        supplier
-                                      )
-                                    }
+                                    onClick={() => {
+                                      toggleSupplierStatus(
+                                        supplier.id
+                                      );
+                                      setOpenActionId(
+                                        null
+                                      );
+                                    }}
                                   >
-                                    Edit
+                                    {supplier.status ===
+                                    "Active" ? (
+                                      <FiUserX />
+                                    ) : (
+                                      <FiUserCheck />
+                                    )}
+
+                                    {supplier.status ===
+                                    "Active"
+                                      ? "Deactivate"
+                                      : "Activate"}
                                   </button>
 
                                   <button
@@ -524,6 +403,7 @@ export default function Suppliers() {
                                       )
                                     }
                                   >
+                                    <FiTrash2 />
                                     Delete
                                   </button>
                                 </div>
@@ -537,7 +417,7 @@ export default function Suppliers() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="7"
                       className="suppliers-empty-state"
                     >
                       No suppliers match your
@@ -549,45 +429,10 @@ export default function Suppliers() {
             </table>
           </div>
 
-          <div className="suppliers-pagination">
-            <p>
-              Showing{" "}
-              {filteredSuppliers.length} of{" "}
-              {suppliers.length} suppliers
-            </p>
-
-            <div>
-              <button type="button">
-                ‹
-              </button>
-
-              <button
-                type="button"
-                className="active"
-              >
-                1
-              </button>
-
-              <button type="button">
-                2
-              </button>
-
-              <button type="button">
-                3
-              </button>
-
-              <button type="button">
-                ...
-              </button>
-
-              <button type="button">
-                22
-              </button>
-
-              <button type="button">
-                ›
-              </button>
-            </div>
+          <div className="suppliers-footer">
+            Showing{" "}
+            {filteredSuppliers.length} of{" "}
+            {suppliers.length} suppliers
           </div>
         </section>
       </main>
@@ -613,7 +458,7 @@ export default function Suppliers() {
                 </h2>
 
                 <p>
-                  Enter the supplier
+                  Enter supplier contact
                   information.
                 </p>
               </div>
@@ -629,10 +474,10 @@ export default function Suppliers() {
             <div className="supplier-modal-grid">
               <label>
                 Supplier Name
-
                 <input
                   type="text"
                   name="name"
+                  placeholder="Royal Glass"
                   value={formData.name}
                   onChange={handleFormChange}
                 />
@@ -640,10 +485,10 @@ export default function Suppliers() {
 
               <label>
                 Contact Person
-
                 <input
                   type="text"
                   name="contactPerson"
+                  placeholder="Ahmed Hassan"
                   value={
                     formData.contactPerson
                   }
@@ -652,11 +497,11 @@ export default function Suppliers() {
               </label>
 
               <label>
-                Phone
-
+                Phone Number
                 <input
                   type="text"
                   name="phone"
+                  placeholder="01012345678"
                   value={formData.phone}
                   onChange={handleFormChange}
                 />
@@ -664,10 +509,10 @@ export default function Suppliers() {
 
               <label>
                 Email
-
                 <input
                   type="email"
                   name="email"
+                  placeholder="info@supplier.com"
                   value={formData.email}
                   onChange={handleFormChange}
                 />
@@ -675,36 +520,17 @@ export default function Suppliers() {
 
               <label className="supplier-full-field">
                 Address
-
                 <input
                   type="text"
                   name="address"
+                  placeholder="Supplier address"
                   value={formData.address}
                   onChange={handleFormChange}
                 />
               </label>
 
-              <label>
-                Branch
-
-                <select
-                  name="branch"
-                  value={formData.branch}
-                  onChange={handleFormChange}
-                >
-                  <option value="Cairo">
-                    Cairo
-                  </option>
-
-                  <option value="Alex">
-                    Alex
-                  </option>
-                </select>
-              </label>
-
-              <label>
+              <label className="supplier-full-field">
                 Status
-
                 <select
                   name="status"
                   value={formData.status}
@@ -716,10 +542,6 @@ export default function Suppliers() {
 
                   <option value="Inactive">
                     Inactive
-                  </option>
-
-                  <option value="Blacklisted">
-                    Blacklisted
                   </option>
                 </select>
               </label>
@@ -747,28 +569,5 @@ export default function Suppliers() {
         </div>
       )}
     </div>
-  );
-}
-
-function SupplierStatCard({
-  icon,
-  title,
-  value,
-  subtitle,
-}) {
-  return (
-    <article className="supplier-stat-card">
-      <div className="supplier-stat-content">
-        <div className="supplier-stat-icon">
-          {icon}
-        </div>
-
-        <div>
-          <h4>{title}</h4>
-          <h2>{value}</h2>
-          <p>{subtitle}</p>
-        </div>
-      </div>
-    </article>
   );
 }

@@ -50,6 +50,13 @@ const menuItems = [
     path: "/warehouse",
     pageName: "warehouse",
   },
+
+  {
+  title: "Staff",
+  icon: <FiUsers />,
+  path: "/staff",
+  pageName: "staff",
+},
   {
     title: "Dispatch",
     icon: <FiTruck />,
