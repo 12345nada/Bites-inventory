@@ -138,7 +138,6 @@ body {
   border-radius: 26px 0 0 26px;
   font-weight: 600;
 
-  /* يمنع قص الـ curve عند اتصال الـ active بالـ main */
   overflow: visible;
 }
 
