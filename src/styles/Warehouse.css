@@ -2,19 +2,16 @@
   flex: 1;
   min-width: 0;
   height: calc(100vh - 28px);
-
   margin: 14px 14px 14px 0;
   padding: 16px 28px;
-
   overflow-y: auto;
   overflow-x: hidden;
-
   background: #ffffff;
   border-radius: 28px;
 }
+
 .warehouse-title-section {
   margin: 10px 0 18px;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -22,16 +19,13 @@
 
 .warehouse-title-section h1 {
   margin: 0;
-
   color: #17130f;
-
   font-size: 24px;
   font-weight: 700;
 }
 
 .warehouse-title-section p {
   margin: 3px 0 0;
-
   color: #302a26;
   font-size: 12px;
 }
@@ -39,22 +33,17 @@
 .add-warehouse-button {
   height: 40px;
   padding: 0 18px;
-
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 9px;
-
   border: none;
   border-radius: 9px;
-
   background: #713006;
   color: #ffffff;
-
   font-size: 11px;
   font-weight: 600;
-
   cursor: pointer;
-
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -63,51 +52,38 @@
 
 .add-warehouse-button:hover {
   transform: translateY(-2px);
-
   background: #6b2608;
-
-  box-shadow:
-    0 7px 18px
-    rgba(91, 30, 5, 0.22);
+  box-shadow: 0 7px 18px rgba(91, 30, 5, 0.22);
 }
+
 .warehouse-table-card {
   width: 100%;
-
   overflow: visible;
-
   background: #ffffff;
-
   border: 1px solid #f0ddcf;
   border-radius: 14px;
 }
 
 .warehouse-table-toolbar {
   min-height: 68px;
-
   padding: 12px 14px;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-
   border-bottom: 1px solid #f0ddcf;
 }
 
 .warehouse-table-toolbar h3 {
   margin: 0;
-
   color: #211b17;
-
   font-size: 13px;
   font-weight: 700;
 }
 
 .warehouse-table-toolbar p {
   margin: 3px 0 0;
-
   color: #81766e;
-
   font-size: 9px;
 }
 
@@ -120,54 +96,37 @@
 .warehouse-search-box {
   width: 250px;
   height: 38px;
-
   padding: 0 13px;
-
   display: flex;
   align-items: center;
   gap: 10px;
-
-  background: linear-gradient(
-    90deg,
-    #fff9f3,
-    #fbe5d2
-  );
-
+  background: linear-gradient(90deg, #fff9f3, #fbe5d2);
   border-radius: 9px;
 }
 
 .warehouse-search-box input {
   width: 100%;
-
   border: none;
   outline: none;
-
   background: transparent;
-
   font-size: 11px;
 }
 
 .warehouse-filters select {
   min-width: 145px;
   height: 38px;
-
   padding: 0 12px;
-
   border: 1px solid #eadbd0;
   border-radius: 9px;
   outline: none;
-
   background: #ffffff;
-
   color: #302a26;
-
   font-size: 10px;
-
   cursor: pointer;
 }
+
 .warehouse-table-wrapper {
   width: 100%;
-
   overflow-x: auto;
   overflow-y: visible;
 }
@@ -175,7 +134,6 @@
 .warehouse-table-wrapper table {
   width: 100%;
   min-width: 940px;
-
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -183,13 +141,9 @@
 .warehouse-table-wrapper th,
 .warehouse-table-wrapper td {
   padding: 13px 10px;
-
   text-align: left;
-
   border-top: 1px solid #f0e8e2;
-
   color: #332e2a;
-
   font-size: 9px;
 }
 
@@ -199,59 +153,30 @@
 }
 
 .warehouse-table-wrapper thead {
-  background: linear-gradient(
-    90deg,
-    #fffaf6,
-    #fceddf
-  );
+  background: linear-gradient(90deg, #fffaf6, #fceddf);
 }
 
-.warehouse-table-wrapper
-th:first-child,
-.warehouse-table-wrapper
-td:first-child {
+.warehouse-table-wrapper th:first-child,
+.warehouse-table-wrapper td:first-child {
   width: 42px;
-
   text-align: center;
 }
 
-.warehouse-table-wrapper
-th:nth-child(2) {
-  width: 17%;
-}
+.warehouse-table-wrapper th:nth-child(2) { width: 17%; }
+.warehouse-table-wrapper th:nth-child(3) { width: 9%; }
+.warehouse-table-wrapper th:nth-child(4) { width: 17%; }
 
-.warehouse-table-wrapper
-th:nth-child(3) {
-  width: 9%;
-}
-
-.warehouse-table-wrapper
-th:nth-child(4) {
-  width: 17%;
-}
-
-.warehouse-table-wrapper
-th:nth-child(5),
-.warehouse-table-wrapper
-th:nth-child(6) {
+.warehouse-table-wrapper th:nth-child(5),
+.warehouse-table-wrapper th:nth-child(6) {
   width: 13%;
 }
 
-.warehouse-table-wrapper
-th:nth-child(7) {
-  width: 17%;
-}
+.warehouse-table-wrapper th:nth-child(7) { width: 17%; }
+.warehouse-table-wrapper th:nth-child(8) { width: 10%; }
 
-.warehouse-table-wrapper
-th:nth-child(8) {
-  width: 10%;
-}
-
-.warehouse-table-wrapper
-input[type="checkbox"] {
+.warehouse-table-wrapper input[type="checkbox"] {
   width: 14px;
   height: 14px;
-
   accent-color: #7a2706;
 }
 
@@ -265,16 +190,12 @@ input[type="checkbox"] {
   width: 34px;
   height: 34px;
   min-width: 34px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   background: #fce9da;
   color: #8b330a;
-
   border-radius: 8px;
-
   font-size: 16px;
 }
 
@@ -289,7 +210,6 @@ input[type="checkbox"] {
 
 .warehouse-name-cell span {
   margin-top: 2px;
-
   color: #766d66;
   font-size: 8px;
 }
@@ -298,8 +218,6 @@ input[type="checkbox"] {
   color: #1f6c2c !important;
   font-weight: 700;
 }
-
-/* Capacity */
 
 .warehouse-capacity-cell {
   display: flex;
@@ -311,32 +229,25 @@ input[type="checkbox"] {
   width: 100%;
   max-width: 160px;
   height: 6px;
-
   overflow: hidden;
-
   background: #eadbce;
-
   border-radius: 20px;
 }
 
 .warehouse-progress div {
   height: 100%;
-
   background: #5b1e05;
-
   border-radius: 20px;
-
   transition: width 0.3s ease;
 }
+
 .warehouse-action-cell {
   position: relative;
-
   overflow: visible;
 }
 
 .warehouse-actions {
   position: relative;
-
   display: flex;
   align-items: center;
   gap: 8px;
@@ -346,17 +257,13 @@ input[type="checkbox"] {
 .warehouse-more-button {
   width: 32px;
   height: 32px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border: 1px solid #eadbd0;
   border-radius: 8px;
-
   background: #ffffff;
   color: #211b17;
-
   cursor: pointer;
 }
 
@@ -370,48 +277,33 @@ input[type="checkbox"] {
 
 .warehouse-action-menu {
   position: absolute;
-
   top: 38px;
   right: 0;
   z-index: 999;
-
   width: 120px;
-
   padding: 6px;
-
   display: flex;
   flex-direction: column;
   gap: 3px;
-
   background: #ffffff;
-
   border: 1px solid #eadbd0;
   border-radius: 10px;
-
-  box-shadow:
-    0 12px 28px
-    rgba(44, 25, 14, 0.16);
+  box-shadow: 0 12px 28px rgba(44, 25, 14, 0.16);
 }
 
 .warehouse-action-menu button {
   width: 100%;
   height: 31px;
-
   padding: 0 10px;
-
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 7px;
-
   border: none;
   border-radius: 7px;
-
   background: transparent;
   color: #302a26;
-
   font-size: 10px;
-
   cursor: pointer;
 }
 
@@ -429,28 +321,22 @@ input[type="checkbox"] {
 
 .warehouse-empty-state {
   height: 100px;
-
   text-align: center !important;
-
   color: #8f8983 !important;
 }
+
 .warehouse-pagination {
   min-height: 48px;
-
   padding: 0 14px;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   border-top: 1px solid #f0e8e2;
 }
 
 .warehouse-pagination p {
   margin: 0;
-
   color: #332e2a;
-
   font-size: 9px;
 }
 
@@ -458,40 +344,27 @@ input[type="checkbox"] {
   position: fixed;
   inset: 0;
   z-index: 1000;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   padding: 20px;
-
-  background:
-    rgba(0, 0, 0, 0.48);
-
+  background: rgba(0, 0, 0, 0.48);
   backdrop-filter: blur(3px);
 }
 
 .warehouse-modal {
-  width: min(
-    620px,
-    calc(100% - 40px)
-  );
-
+  width: min(620px, calc(100% - 40px));
+  max-height: calc(100vh - 40px);
   padding: 22px;
-
+  overflow-y: auto;
   background: #ffffff;
-
   border: 1px solid #f0ddcf;
   border-radius: 18px;
-
-  box-shadow:
-    0 22px 60px
-    rgba(0, 0, 0, 0.22);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.22);
 }
 
 .warehouse-modal-header {
   margin-bottom: 18px;
-
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -499,43 +372,32 @@ input[type="checkbox"] {
 
 .warehouse-modal-header h2 {
   margin: 0;
-
   color: #17130f;
-
   font-size: 20px;
 }
 
 .warehouse-modal-header p {
   margin: 4px 0 0;
-
   color: #766d66;
-
   font-size: 11px;
 }
 
 .warehouse-modal-header button {
   width: 34px;
   height: 34px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border: 1px solid #eadbd0;
   border-radius: 8px;
-
   background: #ffffff;
   color: #5b1e05;
-
   cursor: pointer;
 }
 
 .warehouse-modal-grid {
   display: grid;
-
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -543,9 +405,7 @@ input[type="checkbox"] {
   display: flex;
   flex-direction: column;
   gap: 6px;
-
   color: #332e2a;
-
   font-size: 10px;
   font-weight: 600;
 }
@@ -554,13 +414,10 @@ input[type="checkbox"] {
 .warehouse-modal-grid select {
   width: 100%;
   height: 42px;
-
   padding: 0 12px;
-
   border: 1px solid #eadbd0;
   border-radius: 9px;
   outline: none;
-
   background: #ffffff;
   color: #302a26;
 }
@@ -568,10 +425,7 @@ input[type="checkbox"] {
 .warehouse-modal-grid input:focus,
 .warehouse-modal-grid select:focus {
   border-color: #b87549;
-
-  box-shadow:
-    0 0 0 3px
-    rgba(184, 117, 73, 0.12);
+  box-shadow: 0 0 0 3px rgba(184, 117, 73, 0.12);
 }
 
 .warehouse-full-field {
@@ -580,22 +434,16 @@ input[type="checkbox"] {
 
 .warehouse-modal-note {
   margin-top: 14px;
-
   padding: 10px 12px;
-
   color: #6a5e55;
-
   background: #fff8f2;
-
   border: 1px solid #f0ddcf;
   border-radius: 9px;
-
   font-size: 9px;
 }
 
 .warehouse-modal-actions {
   margin-top: 20px;
-
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -604,44 +452,37 @@ input[type="checkbox"] {
 .warehouse-modal-actions button {
   height: 38px;
   padding: 0 17px;
-
   border-radius: 8px;
-
   font-size: 10px;
   font-weight: 600;
-
   cursor: pointer;
 }
 
 .warehouse-cancel-button {
   border: 1px solid #eadbd0;
-
   background: #ffffff;
   color: #302a26;
 }
 
 .warehouse-save-button {
   border: none;
-
   background: #5b1e05;
   color: #ffffff;
 }
 
-.warehouse-main::-webkit-scrollbar {
+.warehouse-main::-webkit-scrollbar,
+.warehouse-modal::-webkit-scrollbar {
   width: 5px;
 }
 
-.warehouse-main::-webkit-scrollbar-thumb {
+.warehouse-main::-webkit-scrollbar-thumb,
+.warehouse-modal::-webkit-scrollbar-thumb {
   background: #d9cec5;
-
   border-radius: 10px;
 }
-@media (max-width: 900px) {
-  .warehouse-table-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
 
+@media (max-width: 900px) {
+  .warehouse-table-toolbar,
   .warehouse-filters {
     align-items: stretch;
     flex-direction: column;
@@ -653,11 +494,64 @@ input[type="checkbox"] {
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
+  .warehouse-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: calc(100vh - 70px);
+    margin: 0 !important;
+    padding: 14px !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
   .warehouse-title-section {
     align-items: flex-start;
     flex-direction: column;
     gap: 12px;
+  }
+
+  .add-warehouse-button {
+    width: 100%;
+  }
+
+  .warehouse-table-card {
+    overflow: hidden;
+  }
+
+  .warehouse-table-toolbar {
+    padding: 12px;
+  }
+
+  .warehouse-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .warehouse-table-wrapper table {
+    width: 940px;
+    min-width: 940px;
+  }
+
+  .warehouse-pagination {
+    gap: 12px;
+    overflow-x: auto;
+  }
+
+  .warehouse-pagination p {
+    min-width: max-content;
+  }
+
+  .warehouse-modal-overlay {
+    padding: 12px;
+  }
+
+  .warehouse-modal {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    padding: 18px;
   }
 
   .warehouse-modal-grid {
@@ -666,5 +560,39 @@ input[type="checkbox"] {
 
   .warehouse-full-field {
     grid-column: auto;
+  }
+
+  .warehouse-modal-actions {
+    width: 100%;
+  }
+
+  .warehouse-modal-actions button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 500px) {
+  .warehouse-main {
+    padding: 12px !important;
+  }
+
+  .warehouse-title-section h1 {
+    font-size: 21px;
+  }
+
+  .warehouse-title-section p {
+    font-size: 11px;
+  }
+
+  .warehouse-modal-header h2 {
+    font-size: 18px;
+  }
+
+  .warehouse-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .warehouse-modal-actions button {
+    width: 100%;
   }
 }

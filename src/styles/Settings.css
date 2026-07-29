@@ -25,10 +25,10 @@
 }
 
 .settings-card {
+  overflow: hidden;
   border: 1px solid #f0ddcf;
   border-radius: 14px;
   background: #fffdfb;
-  overflow: hidden;
 }
 
 .settings-tabs {
@@ -37,12 +37,19 @@
   display: flex;
   align-items: stretch;
   gap: 28px;
+  overflow-x: auto;
   border-bottom: 1px solid #f0ddcf;
   background: #ffffff;
+  scrollbar-width: none;
+}
+
+.settings-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .settings-tabs button {
   position: relative;
+  min-width: max-content;
   border: none;
   background: transparent;
   color: #71675f;
@@ -71,8 +78,7 @@
 
 .general-settings-grid {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -86,6 +92,7 @@
 
 .general-settings-grid input,
 .general-settings-grid select {
+  width: 100%;
   height: 42px;
   padding: 0 12px;
   border: 1px solid #eadbd0;
@@ -97,8 +104,7 @@
 .permissions-layout {
   min-height: 580px;
   display: grid;
-  grid-template-columns:
-    220px 220px minmax(0, 1fr);
+  grid-template-columns: 220px 220px minmax(0, 1fr);
   background: #fffdfb;
 }
 
@@ -233,8 +239,8 @@
 }
 
 .permissions-panel {
-  padding: 16px;
   min-width: 0;
+  padding: 16px;
 }
 
 .permissions-panel-header {
@@ -243,6 +249,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   border: 1px solid #f0ddcf;
   border-radius: 10px;
   background: #ffffff;
@@ -269,14 +276,17 @@
 }
 
 .permission-table {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid #f0ddcf;
   border-radius: 10px;
   background: #ffffff;
+  -webkit-overflow-scrolling: touch;
 }
 
 .permission-table-header,
 .permission-table-row {
+  min-width: 560px;
   display: grid;
   grid-template-columns:
     minmax(160px, 1.5fr)
@@ -309,9 +319,9 @@
 }
 
 .permission-switch input {
-  opacity: 0;
   width: 0;
   height: 0;
+  opacity: 0;
 }
 
 .permission-switch span {
@@ -326,10 +336,10 @@
 .permission-switch span::before {
   content: "";
   position: absolute;
+  top: 2px;
+  left: 2px;
   width: 13px;
   height: 13px;
-  left: 2px;
-  top: 2px;
   border-radius: 50%;
   background: #ffffff;
   transition: 0.2s;
@@ -348,6 +358,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .permissions-footer span {
@@ -360,6 +371,7 @@
   padding: 0 16px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   border: none;
   border-radius: 8px;
@@ -370,8 +382,7 @@
   cursor: pointer;
 }
 
-.general-settings-panel
-.settings-save-button {
+.general-settings-panel .settings-save-button {
   margin-top: 20px;
   margin-left: auto;
 }
@@ -380,6 +391,7 @@
   position: fixed;
   inset: 0;
   z-index: 1000;
+  padding: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -387,11 +399,10 @@
 }
 
 .settings-role-modal {
-  width: min(
-    500px,
-    calc(100% - 40px)
-  );
+  width: min(500px, calc(100% - 40px));
+  max-height: calc(100vh - 40px);
   padding: 22px;
+  overflow-y: auto;
   border-radius: 18px;
   background: #ffffff;
 }
@@ -400,6 +411,7 @@
   margin-bottom: 18px;
   display: flex;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .settings-role-modal-header h2 {
@@ -416,6 +428,7 @@
 .settings-role-modal-header button {
   width: 34px;
   height: 34px;
+  flex-shrink: 0;
   border: 1px solid #eadbd0;
   border-radius: 8px;
   background: #ffffff;
@@ -432,6 +445,7 @@
 
 .settings-role-modal input,
 .settings-role-modal textarea {
+  width: 100%;
   padding: 0 12px;
   border: 1px solid #eadbd0;
   border-radius: 9px;
@@ -463,27 +477,141 @@
   background: #ffffff;
 }
 
-.settings-role-modal-actions
-.create-role-button {
+.settings-role-modal-actions .create-role-button {
   border: none;
   background: #713006;
   color: #ffffff;
 }
 
+.settings-main::-webkit-scrollbar,
+.settings-role-modal::-webkit-scrollbar,
+.permission-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.settings-main::-webkit-scrollbar-thumb,
+.settings-role-modal::-webkit-scrollbar-thumb,
+.permission-list::-webkit-scrollbar-thumb {
+  background: #d9cec5;
+  border-radius: 10px;
+}
+
 @media (max-width: 1100px) {
   .permissions-layout {
-    grid-template-columns:
-      190px 190px minmax(500px, 1fr);
+    grid-template-columns: 190px 190px minmax(500px, 1fr);
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
+  .settings-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: calc(100vh - 70px);
+    margin: 0 !important;
+    padding: 14px !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
+  .settings-tabs {
+    padding: 0 14px;
+    gap: 22px;
+  }
+
+  .general-settings-panel {
+    padding: 16px;
+  }
+
   .general-settings-grid {
     grid-template-columns: 1fr;
   }
 
-  .settings-tabs {
-    overflow-x: auto;
+  .general-settings-panel .settings-save-button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .permissions-layout {
+    min-height: auto;
+    display: block;
+    overflow: visible;
+  }
+
+  .permission-column {
+    border-right: none;
+    border-bottom: 1px solid #f0ddcf;
+  }
+
+  .permission-list {
+    max-height: 220px;
+  }
+
+  .permissions-panel {
+    padding: 14px;
+  }
+
+  .permissions-panel-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .permissions-panel-header select {
+    width: 100%;
+  }
+
+  .permissions-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .permissions-footer .settings-save-button {
+    width: 100%;
+  }
+
+  .settings-modal-overlay {
+    padding: 12px;
+  }
+
+  .settings-role-modal {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    padding: 18px;
+  }
+
+  .settings-role-modal-actions {
+    width: 100%;
+  }
+
+  .settings-role-modal-actions button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 500px) {
+  .settings-main {
+    padding: 12px !important;
+  }
+
+  .settings-title-section h1 {
+    font-size: 21px;
+  }
+
+  .settings-title-section p {
+    font-size: 11px;
+  }
+
+  .settings-role-modal-header h2 {
+    font-size: 18px;
+  }
+
+  .settings-role-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .settings-role-modal-actions button {
+    width: 100%;
   }
 }

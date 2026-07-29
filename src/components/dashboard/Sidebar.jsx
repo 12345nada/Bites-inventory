@@ -1,4 +1,13 @@
-import { useNavigate } from "react-router-dom";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
 import {
   FiGrid,
   FiCalendar,
@@ -11,73 +20,74 @@ import {
   FiFileText,
   FiSettings,
   FiChevronDown,
+  FiMenu,
+  FiX,
 } from "react-icons/fi";
 
 const menuItems = [
   {
     title: "Dashboard",
-    icon: <FiGrid />,
+    icon: FiGrid,
     path: "/",
     pageName: "dashboard",
   },
   {
     title: "Events",
-    icon: <FiCalendar />,
+    icon: FiCalendar,
     path: "/events",
     pageName: "events",
   },
   {
     title: "Items",
-    icon: <FiBox />,
+    icon: FiBox,
     path: "/items",
     pageName: "items",
   },
   {
     title: "Purchase",
-    icon: <FiShoppingCart />,
+    icon: FiShoppingCart,
     path: "/purchase",
     pageName: "purchase",
   },
   {
     title: "Suppliers",
-    icon: <FiUsers />,
+    icon: FiUsers,
     path: "/suppliers",
     pageName: "suppliers",
   },
   {
     title: "Warehouse",
-    icon: <FiHome />,
+    icon: FiHome,
     path: "/warehouse",
     pageName: "warehouse",
   },
-
   {
-  title: "Staff",
-  icon: <FiUsers />,
-  path: "/staff",
-  pageName: "staff",
-},
+    title: "Staff",
+    icon: FiUsers,
+    path: "/staff",
+    pageName: "staff",
+  },
   {
     title: "Dispatch",
-    icon: <FiTruck />,
+    icon: FiTruck,
     path: "/dispatch",
     pageName: "dispatch",
   },
   {
     title: "Returns",
-    icon: <FiCornerUpLeft />,
+    icon: FiCornerUpLeft,
     path: "/returns",
     pageName: "returns",
   },
   {
     title: "Reports",
-    icon: <FiFileText />,
+    icon: FiFileText,
     path: "/reports",
     pageName: "reports",
   },
   {
     title: "Settings",
-    icon: <FiSettings />,
+    icon: FiSettings,
     path: "/settings",
     pageName: "settings",
   },
@@ -87,104 +97,158 @@ export default function Sidebar({
   activePage = "dashboard",
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [
+    isSidebarOpen,
+    setIsSidebarOpen,
+  ] = useState(false);
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
 
   const handleNavigation = (path) => {
     navigate(path);
+    closeSidebar();
   };
 
-  const handleKeyboardNavigation = (
-    event,
-    path
-  ) => {
-    if (
-      event.key === "Enter" ||
-      event.key === " "
-    ) {
-      event.preventDefault();
-      navigate(path);
-    }
-  };
+  useEffect(() => {
+    closeSidebar();
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        closeSidebar();
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle(
+      "dashboard-sidebar-is-open",
+      isSidebarOpen
+    );
+
+    return () => {
+      document.body.classList.remove(
+        "dashboard-sidebar-is-open"
+      );
+    };
+  }, [isSidebarOpen]);
 
   return (
-    <aside className="dashboard-sidebar">
-      <div className="sidebar-top">
-        <div
-          className="dashboard-logo"
-          onClick={() => navigate("/")}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(event) =>
-            handleKeyboardNavigation(
-              event,
-              "/"
-            )
-          }
-        >
-          bites
+    <>
+      <button
+        type="button"
+        className="dashboard-mobile-menu-button"
+        onClick={() =>
+          setIsSidebarOpen((current) => !current)
+        }
+        aria-label={
+          isSidebarOpen
+            ? "Close sidebar"
+            : "Open sidebar"
+        }
+        aria-expanded={isSidebarOpen}
+      >
+        {isSidebarOpen ? <FiX /> : <FiMenu />}
+      </button>
+
+      <button
+        type="button"
+        className={`dashboard-sidebar-overlay ${
+          isSidebarOpen ? "show" : ""
+        }`}
+        onClick={closeSidebar}
+        aria-label="Close sidebar"
+      />
+
+      <aside
+        className={`dashboard-sidebar ${
+          isSidebarOpen ? "mobile-open" : ""
+        }`}
+      >
+        <div className="sidebar-top">
+          <button
+            type="button"
+            className="dashboard-logo"
+            onClick={() =>
+              handleNavigation("/")
+            }
+          >
+            bites
+          </button>
+
+          <nav
+            className="sidebar-nav"
+            aria-label="Dashboard navigation"
+          >
+            <ul className="dashboard-menu">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+
+                const isActive =
+                  activePage === item.pageName;
+
+                return (
+                  <li
+                    key={item.pageName}
+                    className={
+                      isActive ? "active" : ""
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="dashboard-menu-button"
+                      onClick={() =>
+                        handleNavigation(item.path)
+                      }
+                      aria-current={
+                        isActive
+                          ? "page"
+                          : undefined
+                      }
+                    >
+                      <span className="dashboard-menu-icon">
+                        <Icon />
+                      </span>
+
+                      <span className="dashboard-menu-text">
+                        {item.title}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
         </div>
 
-        <nav
-          className="sidebar-nav"
-          aria-label="Dashboard navigation"
-        >
-          <ul className="dashboard-menu">
-            {menuItems.map((item) => {
-              const isActive =
-                activePage ===
-                item.pageName;
+        <div className="dashboard-user">
+          <div className="dashboard-avatar" />
 
-              return (
-                <li
-                  key={item.title}
-                  className={
-                    isActive
-                      ? "active"
-                      : ""
-                  }
-                  onClick={() =>
-                    handleNavigation(
-                      item.path
-                    )
-                  }
-                  onKeyDown={(event) =>
-                    handleKeyboardNavigation(
-                      event,
-                      item.path
-                    )
-                  }
-                  role="button"
-                  tabIndex={0}
-                  aria-current={
-                    isActive
-                      ? "page"
-                      : undefined
-                  }
-                >
-                  <span className="dashboard-menu-icon">
-                    {item.icon}
-                  </span>
+          <div className="dashboard-user-info">
+            <strong>Admin User</strong>
+            <small>Administrator</small>
+          </div>
 
-                  <span className="dashboard-menu-text">
-                    {item.title}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      </div>
-      <div className="dashboard-user">
-        <div className="dashboard-avatar" />
-        <div className="dashboard-user-info">
-          <strong>
-            Admin User
-          </strong>
-          <small>
-            Administrator
-          </small>
+          <FiChevronDown className="user-arrow" />
         </div>
-        <FiChevronDown className="user-arrow" />
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

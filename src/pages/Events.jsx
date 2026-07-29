@@ -5,6 +5,7 @@ import { useEvents } from "../context/EventsContext";
 
 import "../styles/dashboard.css";
 import "../styles/Events.css";
+import "../styles/mobile-sidebar-offcanvas-clean-highlight.css";
 
 import {
   FiBell,
@@ -110,19 +111,6 @@ function Events() {
         selectedBranch === "All Branches" ||
         event.branch === selectedBranch;
 
-      const handleDeleteEvent = (eventId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this event?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    deleteEvent(eventId);
-    setOpenActionId(null);
-  };
-
   return (
         matchesSearch &&
         matchesTab &&
@@ -147,6 +135,19 @@ function Events() {
 
   const getStatusClass = (status) =>
     status.toLowerCase().replace(/\s+/g, "-");
+
+  const handleDeleteEvent = (eventId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this event?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    deleteEvent(eventId);
+    setOpenActionId(null);
+  };
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;

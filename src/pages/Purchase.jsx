@@ -3,6 +3,7 @@ import {
   useState,
 } from "react";
 
+import "../styles/mobile-sidebar-offcanvas-clean-highlight.css";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 

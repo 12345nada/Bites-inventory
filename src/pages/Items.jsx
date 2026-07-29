@@ -7,6 +7,8 @@ import { useItems } from "../context/ItemsContext";
 
 import "../styles/dashboard.css";
 import "../styles/Items.css";
+import "../styles/mobile-sidebar-offcanvas-clean-highlight.css";
+
 
 import {
   FiBox,

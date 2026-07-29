@@ -3,6 +3,9 @@ import {
   useState,
 } from "react";
 
+import "../styles/dashboard.css";
+import "../styles/mobile-sidebar-offcanvas.css";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import StatCard from "../components/dashboard/StatCard";
