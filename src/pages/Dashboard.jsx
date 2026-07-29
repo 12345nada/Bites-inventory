@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState,
+} from "react";
 
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
@@ -15,7 +18,13 @@ import {
   FiCreditCard,
 } from "react-icons/fi";
 
-import { useEvents } from "../context/EventsContext";
+import {
+  useEvents,
+} from "../context/EventsContext";
+
+import {
+  useItems,
+} from "../context/ItemsContext";
 
 const dashboardEventDetails = {
   "EVT-001": {
@@ -23,7 +32,6 @@ const dashboardEventDetails = {
     waiters: 12,
     driver: "Ahmed Samy",
     hasDrinks: true,
-    cost: 12000,
   },
 
   "EVT-002": {
@@ -31,7 +39,6 @@ const dashboardEventDetails = {
     waiters: 18,
     driver: "Omar Khaled",
     hasDrinks: true,
-    cost: 10500,
   },
 
   "EVT-003": {
@@ -39,7 +46,6 @@ const dashboardEventDetails = {
     waiters: 6,
     driver: "Mohamed Ali",
     hasDrinks: true,
-    cost: 6500,
   },
 
   "EVT-004": {
@@ -47,7 +53,6 @@ const dashboardEventDetails = {
     waiters: 8,
     driver: "Youseef Magdy",
     hasDrinks: true,
-    cost: 8000,
   },
 
   "EVT-005": {
@@ -55,7 +60,6 @@ const dashboardEventDetails = {
     waiters: 10,
     driver: "Tamer Hassan",
     hasDrinks: false,
-    cost: 6500,
   },
 
   "EVT-006": {
@@ -63,12 +67,12 @@ const dashboardEventDetails = {
     waiters: 5,
     driver: "Ahmed Samy",
     hasDrinks: false,
-    cost: 5000,
   },
 };
 
 export default function Dashboard() {
   const { events } = useEvents();
+  const { items } = useItems();
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -76,7 +80,8 @@ export default function Dashboard() {
   const dashboardEvents = useMemo(() => {
     return events.map((event) => {
       const details =
-        dashboardEventDetails[event.id] || {};
+        dashboardEventDetails[event.id] ||
+        {};
 
       return {
         ...event,
@@ -101,11 +106,6 @@ export default function Dashboard() {
           event.hasDrinks ??
           details.hasDrinks ??
           false,
-
-        cost:
-          event.cost ??
-          details.cost ??
-          0,
       };
     });
   }, [events]);
@@ -121,10 +121,33 @@ export default function Dashboard() {
       (event) => event.hasDrinks
     ).length;
 
-  const totalCost =
+  const totalWaiters =
     dashboardEvents.reduce(
       (total, event) =>
-        total + Number(event.cost || 0),
+        total +
+        Number(event.waiters || 0),
+      0
+    );
+
+  const totalInventoryCost =
+    items.reduce(
+      (total, item) => {
+        const availableQuantity =
+          Number(
+            item.available || 0
+          );
+
+        const purchaseCost =
+          Number(
+            item.purchaseCost || 0
+          );
+
+        return (
+          total +
+          availableQuantity *
+            purchaseCost
+        );
+      },
       0
     );
 
@@ -148,7 +171,10 @@ export default function Dashboard() {
     {
       icon: <FiUsers />,
       title: "Total Waiters",
-      value: "86",
+      value:
+        totalWaiters.toLocaleString(
+          "en-US"
+        ),
       subtitle: "Assigned waiters",
     },
 
@@ -156,18 +182,18 @@ export default function Dashboard() {
       icon: <FiCoffee />,
       title: "Events With Drinks",
       value: String(eventsWithDrinks),
-      subtitle: "Events serving drinks",
+      subtitle:
+        "Events serving drinks",
     },
 
     {
-      icon: <FiCreditCard />,
-      title: "Total Cost",
-      value:
-        totalCost > 0
-          ? totalCost.toLocaleString()
-          : "48,500",
-      subtitle: "Overall event cost",
-    },
+  icon: <FiCreditCard />,
+  title: "Total Inventory Cost",
+  value: totalInventoryCost.toLocaleString(
+    "en-US"
+  ),
+  subtitle: "EGP",
+},
   ];
 
   return (
@@ -177,7 +203,9 @@ export default function Dashboard() {
       <main className="dashboard-main">
         <Topbar
           searchValue={searchValue}
-          onSearchChange={setSearchValue}
+          onSearchChange={
+            setSearchValue
+          }
         />
 
         <h1 className="dashboard-welcome">
@@ -200,7 +228,9 @@ export default function Dashboard() {
         <EventTable
           events={dashboardEvents}
           searchValue={searchValue}
-          onSearchChange={setSearchValue}
+          onSearchChange={
+            setSearchValue
+          }
         />
 
         <DashboardCharts

@@ -6,9 +6,7 @@ import {
 import {
   FiCalendar,
   FiChevronDown,
-  FiEdit2,
   FiList,
-  FiMoreVertical,
   FiSearch,
 } from "react-icons/fi";
 
@@ -156,7 +154,6 @@ export default function EventTable({
               <th># of Waiters</th>
               <th>Driver</th>
               <th>Status</th>
-              <th>Actions</th>
             </tr>
           </thead>
 
@@ -201,8 +198,7 @@ export default function EventTable({
                         </span>
 
                         <span>
-                          {event.time ||
-                            ""}
+                          {event.time || ""}
                         </span>
                       </div>
                     </td>
@@ -214,8 +210,7 @@ export default function EventTable({
                         </span>
 
                         <span>
-                          {event.area ||
-                            ""}
+                          {event.area || ""}
                         </span>
                       </div>
                     </td>
@@ -241,33 +236,13 @@ export default function EventTable({
                         {event.status}
                       </span>
                     </td>
-
-                    <td>
-                      <div className="actions">
-                        <button
-                          type="button"
-                          className="dashboard-table-action"
-                          aria-label={`Edit ${event.eventType}`}
-                        >
-                          <FiEdit2 />
-                        </button>
-
-                        <button
-                          type="button"
-                          className="dashboard-table-action more"
-                          aria-label={`More actions for ${event.eventType}`}
-                        >
-                          <FiMoreVertical />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 )
               )
             ) : (
               <tr>
                 <td
-                  colSpan="10"
+                  colSpan="9"
                   className="dashboard-empty-table"
                 >
                   No events match your

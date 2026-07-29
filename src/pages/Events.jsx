@@ -19,6 +19,7 @@ import {
   FiChevronDown,
   FiList,
   FiX,
+  FiTrash2,
 } from "react-icons/fi";
 
 const tabs = [
@@ -46,7 +47,12 @@ const emptyForm = {
 };
 
 function Events() {
-  const { events, addEvent } = useEvents();
+  const {
+    events,
+    addEvent,
+    updateEvent,
+    deleteEvent,
+  } = useEvents();
 
   const [searchValue, setSearchValue] = useState("");
   const [activeTab, setActiveTab] =
@@ -55,8 +61,14 @@ function Events() {
   const [selectedBranch, setSelectedBranch] =
     useState("All Branches");
 
-  const [showAddEvent, setShowAddEvent] =
+  const [showEventModal, setShowEventModal] =
     useState(false);
+
+  const [editingEventId, setEditingEventId] =
+    useState(null);
+
+  const [openActionId, setOpenActionId] =
+    useState(null);
 
   const [formData, setFormData] =
     useState(emptyForm);
@@ -98,7 +110,20 @@ function Events() {
         selectedBranch === "All Branches" ||
         event.branch === selectedBranch;
 
-      return (
+      const handleDeleteEvent = (eventId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this event?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    deleteEvent(eventId);
+    setOpenActionId(null);
+  };
+
+  return (
         matchesSearch &&
         matchesTab &&
         matchesBranch
@@ -132,12 +157,39 @@ function Events() {
     }));
   };
 
+  const openAddModal = () => {
+    setEditingEventId(null);
+    setFormData(emptyForm);
+    setOpenActionId(null);
+    setShowEventModal(true);
+  };
+
+  const openEditModal = (event) => {
+    setEditingEventId(event.id);
+    setFormData({
+      name: event.name,
+      client: event.client,
+      date: event.date,
+      departureTime: event.departureTime,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      location: event.location,
+      area: event.area,
+      branch: event.branch,
+      driver: event.driver,
+      status: event.status,
+    });
+    setOpenActionId(null);
+    setShowEventModal(true);
+  };
+
   const closeModal = () => {
-    setShowAddEvent(false);
+    setShowEventModal(false);
+    setEditingEventId(null);
     setFormData(emptyForm);
   };
 
-  const handleAddEvent = (event) => {
+  const handleSaveEvent = (event) => {
     event.preventDefault();
 
     const requiredFields = [
@@ -162,7 +214,12 @@ function Events() {
       return;
     }
 
-    addEvent(formData);
+    if (editingEventId) {
+      updateEvent(editingEventId, formData);
+    } else {
+      addEvent(formData);
+    }
+
     closeModal();
   };
 
@@ -204,7 +261,7 @@ function Events() {
           <button
             type="button"
             className="add-event-button"
-            onClick={() => setShowAddEvent(true)}
+            onClick={openAddModal}
           >
             <FiPlus />
             <span>Add New Event</span>
@@ -438,22 +495,59 @@ function Events() {
                         </span>
                       </td>
 
-                      <td>
+                      <td className="event-action-cell">
                         <div className="event-actions">
                           <button
                             type="button"
+                            onClick={() =>
+                              openEditModal(event)
+                            }
                             aria-label={`Edit ${event.name}`}
                           >
                             <FiEdit2 />
                           </button>
 
-                          <button
-                            type="button"
-                            className="more-action-button"
-                            aria-label={`More actions for ${event.name}`}
-                          >
-                            <FiMoreVertical />
-                          </button>
+                          <div className="event-more-wrapper">
+                            <button
+                              type="button"
+                              className="more-action-button"
+                              onClick={() =>
+                                setOpenActionId((currentId) =>
+                                  currentId === event.id
+                                    ? null
+                                    : event.id
+                                )
+                              }
+                              aria-label={`More actions for ${event.name}`}
+                            >
+                              <FiMoreVertical />
+                            </button>
+
+                            {openActionId === event.id && (
+                              <div className="event-action-menu">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openEditModal(event)
+                                  }
+                                >
+                                  <FiEdit2 />
+                                  Edit
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="event-delete-action"
+                                  onClick={() =>
+                                    handleDeleteEvent(event.id)
+                                  }
+                                >
+                                  <FiTrash2 />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -510,7 +604,7 @@ function Events() {
         </section>
       </main>
 
-      {showAddEvent && (
+      {showEventModal && (
         <div
           className="event-modal-overlay"
           onMouseDown={closeModal}
@@ -518,16 +612,18 @@ function Events() {
         >
           <form
             className="event-modal"
-            onSubmit={handleAddEvent}
+            onSubmit={handleSaveEvent}
             onMouseDown={(event) =>
               event.stopPropagation()
             }
           >
             <div className="event-modal-header">
               <div>
-                <h2>Add New Event</h2>
+                <h2>{editingEventId ? "Edit Event" : "Add New Event"}</h2>
                 <p>
-                  Enter the new event details.
+                  {editingEventId
+                    ? "Update the event details."
+                    : "Enter the new event details."}
                 </p>
               </div>
 
@@ -570,8 +666,9 @@ function Events() {
                 Date
 
                 <input
-                  type="date"
+                  type="text"
                   name="date"
+                  placeholder="17 July 2024"
                   value={formData.date}
                   onChange={handleFormChange}
                 />
@@ -582,8 +679,9 @@ function Events() {
                   Departure Time
 
                   <input
-                    type="time"
+                    type="text"
                     name="departureTime"
+                    placeholder="09:00 PM"
                     value={
                       formData.departureTime
                     }
@@ -595,8 +693,9 @@ function Events() {
                   Event Start Time
 
                   <input
-                    type="time"
+                    type="text"
                     name="startTime"
+                    placeholder="11:00 PM"
                     value={formData.startTime}
                     onChange={handleFormChange}
                   />
@@ -606,8 +705,9 @@ function Events() {
                   Event End Time
 
                   <input
-                    type="time"
+                    type="text"
                     name="endTime"
+                    placeholder="03:00 AM"
                     value={formData.endTime}
                     onChange={handleFormChange}
                   />
@@ -712,7 +812,9 @@ function Events() {
                 type="submit"
                 className="save-button"
               >
-                Save Event
+                {editingEventId
+                  ? "Save Changes"
+                  : "Save Event"}
               </button>
             </div>
           </form>
