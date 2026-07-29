@@ -1245,68 +1245,164 @@ body {
     font-size: 7.5px;
   }
 }
-
-
-@media (max-width: 768px) {
-  html,
-  body,
-  #root {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    overflow: auto;
-  }
-
-  body {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
-
+@media screen and (max-width: 768px) {
   .dashboard-page {
-    width: 1440px;
-    min-width: 1440px;
-    height: 100vh;
-    overflow: hidden;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 100vh;
+    display: block !important;
+    overflow: visible !important;
   }
 
   .dashboard-sidebar {
-    width: 220px;
-    min-width: 220px;
-    height: 100vh;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 70px !important;
+    min-height: 70px !important;
+    position: relative !important;
+  }
+
+  .sidebar-top {
+    height: 70px;
+    display: flex;
+    flex-direction: row;
+  }
+
+  .dashboard-logo,
+  .dashboard-user {
+    display: none !important;
+  }
+
+  .sidebar-nav {
+    width: 100%;
+    padding: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  .dashboard-menu {
+    width: max-content;
+    min-width: 100%;
+    min-height: 70px !important;
+    padding: 0 8px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-around;
+  }
+
+  .dashboard-menu li,
+  .dashboard-menu li.active {
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    margin: 0 3px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    border-radius: 12px !important;
+  }
+
+  .dashboard-menu li.active::before,
+  .dashboard-menu li.active::after {
+    display: none !important;
+  }
+
+  .dashboard-menu-text {
+    display: none !important;
   }
 
   .dashboard-main {
-    width: calc(1440px - 234px);
-    min-width: calc(1440px - 234px);
-    height: calc(100vh - 28px);
-    margin: 14px 14px 14px 0;
-    padding: 16px 28px;
-    overflow-x: hidden;
-    overflow-y: auto;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: calc(100vh - 70px);
+    margin: 0 !important;
+    padding: 14px !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-topbar {
+    gap: 10px;
   }
 
   .dashboard-search {
-    width: 45%;
-    min-width: 380px;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .dashboard-topbar-actions {
+    gap: 12px;
+  }
+
+  .dashboard-welcome {
+    font-size: 17px;
   }
 
   .dashboard-stats {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
   }
 
-  .dashboard-charts {
-    grid-template-columns: 1fr 1fr 1.08fr;
+  .stat-card {
+    width: 100% !important;
+    height: 115px;
+    padding: 12px 10px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+
+  .stat-content h2 {
+    font-size: 23px;
+  }
+
+  .dashboard-event-filters {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 120px 36px;
+    gap: 6px;
+  }
+
+  .dashboard-event-search {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .dashboard-branch-filter {
+    width: 120px !important;
   }
 
   .dashboard-table-wrapper {
-    width: 100%;
-    overflow-x: hidden;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   .table-card table {
-    width: 100%;
-    min-width: 0;
+    width: 900px !important;
+    min-width: 900px !important;
     table-layout: fixed;
+  }
+
+  .dashboard-charts {
+    grid-template-columns: 1fr !important;
+  }
+
+  .chart-card {
+    width: 100% !important;
+    height: 280px;
+  }
+
+  .dashboard-notification-dropdown {
+    position: fixed;
+    top: 65px;
+    right: 10px;
+    width: calc(100% - 20px);
   }
 }
