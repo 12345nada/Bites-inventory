@@ -5,8 +5,7 @@ import { useEvents } from "../context/EventsContext";
 
 import "../styles/dashboard.css";
 import "../styles/Events.css";
-import "../styles/mobile-sidebar-offcanvas-clean-highlight.css";
-
+import "../styles/mobile-sidebar-offcanvas.css";
 import {
   FiBell,
   FiSearch,

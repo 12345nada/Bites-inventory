@@ -5,9 +5,10 @@ import Topbar from "../components/dashboard/Topbar";
 
 import { useItems } from "../context/ItemsContext";
 
+import "../styles/mobile-sidebar-offcanvas.css";
+
 import "../styles/dashboard.css";
 import "../styles/Items.css";
-import "../styles/mobile-sidebar-offcanvas-clean-highlight.css";
 
 
 import {

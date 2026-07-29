@@ -291,10 +291,11 @@
     width: 100% !important;
     min-width: 0 !important;
     height: auto !important;
-    min-height: calc(100vh - 70px);
+    min-height: 100vh !important;
     margin: 0 !important;
-    padding: 14px !important;
+    padding: 48px 12px 12px !important;
     overflow: visible !important;
+    background: #ffffff !important;
     border-radius: 0 !important;
   }
 
@@ -333,7 +334,7 @@
 
 @media (max-width: 500px) {
   .reports-main {
-    padding: 12px !important;
+    padding: 48px 10px 10px !important;
   }
 
   .reports-title-section h1 {

@@ -61,16 +61,25 @@
 }
 
 .staff-tabs {
+  width: 100%;
   align-self: stretch;
   display: flex;
   align-items: center;
   gap: 24px;
+  padding-bottom: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.staff-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .staff-tabs button {
   position: relative;
   height: 100%;
-  padding: 0 3px;
+  min-width: max-content;
+  padding: 12px 3px 8px;
   border: none;
   background: transparent;
   font-size: 10px;
@@ -86,10 +95,11 @@
   content: "";
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: -11px;
   left: 0;
   height: 3px;
   background: #6f2607;
+  border-radius: 10px;
 }
 
 .staff-filters {
@@ -388,20 +398,25 @@
 }
 
 .staff-modal-actions {
-  margin-top: 20px;
+  width: 100%;
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
 }
 
 .staff-modal-actions button {
-  height: 38px;
-  padding: 0 17px;
-  border-radius: 8px;
+  flex: 1;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .staff-cancel-button {
-  border: 1px solid #eadbd0;
+  border: 1px solid #d9d9d9;
   background: #ffffff;
 }
 
@@ -462,10 +477,11 @@
     width: 100% !important;
     min-width: 0 !important;
     height: auto !important;
-    min-height: calc(100vh - 70px);
+    min-height: 100vh !important;
     margin: 0 !important;
-    padding: 14px !important;
+    padding: 48px 12px 12px !important;
     overflow: visible !important;
+    background: #ffffff !important;
     border-radius: 0 !important;
   }
 
@@ -483,6 +499,12 @@
 
   .staff-toolbar {
     padding: 10px 12px 12px;
+    gap: 8px;
+  }
+
+  .staff-tabs {
+    padding-bottom: 10px;
+    gap: 18px;
   }
 
   .staff-table-wrapper {
@@ -523,7 +545,7 @@
 
 @media (max-width: 500px) {
   .staff-main {
-    padding: 12px !important;
+    padding: 48px 10px 10px !important;
   }
 
   .staff-title-section h1 {
@@ -532,6 +554,10 @@
 
   .staff-title-section p {
     font-size: 11px;
+  }
+
+  .staff-tabs {
+    gap: 14px;
   }
 
   .staff-modal-header h2 {

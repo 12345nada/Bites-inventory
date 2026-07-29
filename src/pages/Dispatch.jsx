@@ -5,6 +5,7 @@ import {
 
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
+import "../styles/mobile-sidebar-offcanvas.css";
 
 import {
   useDispatches,

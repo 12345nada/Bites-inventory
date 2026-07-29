@@ -4,6 +4,8 @@ import {
 } from "react";
 
 import Sidebar from "../components/dashboard/Sidebar";
+import "../styles/mobile-sidebar-offcanvas.css";
+
 import Topbar from "../components/dashboard/Topbar";
 
 import {

@@ -89,19 +89,30 @@
 }
 
 .returns-tabs {
+  width: 100%;
   align-self: stretch;
 
   display: flex;
   align-items: center;
   gap: 24px;
+
+  padding-bottom: 10px;
+
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.returns-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .returns-tabs button {
   position: relative;
 
   height: 100%;
+  min-width: max-content;
 
-  padding: 0 3px;
+  padding: 12px 3px 8px;
 
   border: none;
 
@@ -127,7 +138,7 @@
 
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: -11px;
 
   height: 3px;
 
@@ -709,28 +720,30 @@ input[type="checkbox"] {
 }
 
 .returns-modal-actions {
-  margin-top: 20px;
+  width: 100%;
+  margin-top: 24px;
 
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
 }
 
 .returns-modal-actions button {
-  height: 38px;
+  flex: 1;
+  min-height: 42px;
 
-  padding: 0 17px;
+  padding: 0 18px;
 
-  border-radius: 8px;
+  border-radius: 10px;
 
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 
   cursor: pointer;
 }
 
 .returns-cancel-button {
-  border: 1px solid #eadbd0;
+  border: 1px solid #d9d9d9;
 
   background: #ffffff;
   color: #302a26;
@@ -787,10 +800,11 @@ input[type="checkbox"] {
     width:100%!important;
     min-width:0!important;
     height:auto!important;
-    min-height:calc(100vh - 70px);
+    min-height:100vh!important;
     margin:0!important;
-    padding:14px!important;
+    padding:48px 12px 12px!important;
     overflow:visible!important;
+    background:#ffffff!important;
     border-radius:0!important;
   }
 
@@ -806,6 +820,16 @@ input[type="checkbox"] {
   }
 
   .returns-table-card{overflow:hidden;}
+
+  .returns-table-toolbar{
+    padding:10px 12px 12px;
+    gap:8px;
+  }
+
+  .returns-tabs{
+    padding-bottom:10px;
+    gap:18px;
+  }
 
   .returns-table-wrapper{
     overflow-x:auto;
@@ -853,7 +877,7 @@ input[type="checkbox"] {
 }
 
 @media (max-width:500px){
-  .returns-main{padding:12px!important;}
+  .returns-main{padding:48px 10px 10px!important;}
 
   .returns-title-section h1{font-size:21px;}
   .returns-title-section p{font-size:11px;}

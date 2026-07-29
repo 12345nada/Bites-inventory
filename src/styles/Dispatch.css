@@ -95,18 +95,24 @@
   border-bottom: 1px solid #f0ddcf;
 }
 .dispatch-tabs {
-  align-self: stretch;
-
-  display: flex;
-  align-items: center;
-  gap: 24px;
+  width:100%;
+  align-self:stretch;
+  display:flex;
+  align-items:center;
+  gap:24px;
+  padding-bottom:10px;
+  overflow-x:auto;
+  scrollbar-width:none;
 }
+.dispatch-tabs::-webkit-scrollbar{display:none;}
 .dispatch-tabs button {
   position: relative;
 
   height: 100%;
 
-  padding: 0 3px;
+  min-width:max-content;
+
+  padding: 12px 3px 8px;
 
   border: none;
 
@@ -130,7 +136,7 @@
 
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: -11px;
 
   height: 3px;
 
@@ -379,7 +385,7 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: center;
 
-  border: 1px solid #eadbd0;
+  border: 1px solid #d9d9d9;
   border-radius: 8px;
 
   background: #ffffff;
@@ -516,23 +522,70 @@ input[type="checkbox"] {
   background: #fff0ef !important;
 }
 .dispatch-pagination {
-  min-height: 44px;
-
-  padding: 0 14px;
+  min-height: 52px;
+  padding: 8px 14px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 14px;
 
   border-top: 1px solid #f0e8e2;
+  background: #fffdfb;
+  border-radius: 0 0 14px 14px;
 }
 
 .dispatch-pagination p {
   margin: 0;
+  color: #6f675f;
+  font-size: 9px;
+  white-space: nowrap;
+}
 
-  color: #332e2a;
+.dispatch-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dispatch-pagination button {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #eadbd0;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #4c4540;
 
   font-size: 9px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dispatch-pagination button:hover {
+  transform: translateY(-1px);
+  border-color: #c99875;
+  background: #fff7f1;
+  color: #6f2607;
+}
+
+.dispatch-pagination button.active {
+  border-color: #713006;
+  background: #713006;
+  color: #ffffff;
 }
 
 .dispatch-empty-state {
@@ -756,20 +809,21 @@ input[type="checkbox"] {
   font-size: 9px;
 }
 .dispatch-modal-actions {
-  margin-top: 20px;
-
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  width:100%;
+  margin-top:24px;
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
 }
 
 .dispatch-modal-actions button {
-  height: 38px;
-  padding: 0 17px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
+  flex:1;
+  min-height:42px;
+  padding:0 18px;
+  border-radius:10px;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
 }
 .dispatch-cancel-button {
   border: 1px solid #eadbd0;
@@ -832,9 +886,9 @@ input[type="checkbox"] {
     width:100%!important;
     min-width:0!important;
     height:auto!important;
-    min-height:calc(100vh - 70px);
+    min-height:100vh!important;
     margin:0!important;
-    padding:14px!important;
+    padding:48px 12px 12px!important;
     overflow:visible!important;
     border-radius:0!important;
   }
@@ -859,6 +913,23 @@ input[type="checkbox"] {
 
   .dispatch-table-wrapper table{
     min-width:1080px;
+  }
+
+  .dispatch-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 10px 12px;
+  }
+
+  .dispatch-pagination > div {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .dispatch-pagination > div::-webkit-scrollbar {
+    display: none;
   }
 
   .dispatch-modal-overlay{padding:12px;}
@@ -902,7 +973,7 @@ input[type="checkbox"] {
 }
 
 @media (max-width:500px){
-  .dispatch-main{padding:12px!important;}
+  .dispatch-main{padding:48px 10px 10px!important;}
 
   .dispatch-title-section h1{font-size:21px;}
   .dispatch-title-section p{font-size:11px;}
