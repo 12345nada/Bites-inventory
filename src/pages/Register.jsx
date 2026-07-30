@@ -1,5 +1,8 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+} from "react-router-dom";
 
 import {
   FiUser,
@@ -14,8 +17,11 @@ import Background from "../assets/images/register-background.png";
 import "../styles/register.css";
 
 const Register = () => {
+  const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -46,12 +52,28 @@ const Register = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
+    if (
+      formData.password !==
+      formData.confirmPassword
+    ) {
       alert("Passwords do not match");
       return;
     }
 
-    console.log("Form submitted:", formData);
+    const userData = {
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim().toLowerCase(),
+      password: formData.password,
+    };
+
+    localStorage.setItem(
+      "registeredUser",
+      JSON.stringify(userData)
+    );
+
+    alert("Account created successfully");
+
+    navigate("/login");
   };
 
   return (
@@ -72,7 +94,9 @@ const Register = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="input-group">
-              <label htmlFor="fullName">Full Name</label>
+              <label htmlFor="fullName">
+                Full Name
+              </label>
 
               <div className="input-wrapper">
                 <FiUser className="input-icon" />
@@ -91,7 +115,9 @@ const Register = () => {
             </div>
 
             <div className="input-group">
-              <label htmlFor="email">Email Address</label>
+              <label htmlFor="email">
+                Email Address
+              </label>
 
               <div className="input-wrapper">
                 <FiMail className="input-icon" />
@@ -110,14 +136,20 @@ const Register = () => {
             </div>
 
             <div className="input-group">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">
+                Password
+              </label>
 
               <div className="input-wrapper">
                 <FiLock className="input-icon" />
 
                 <input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
                   name="password"
                   placeholder="Enter your password"
                   value={formData.password}
@@ -129,20 +161,44 @@ const Register = () => {
                 <button
                   type="button"
                   className="toggle-icon"
-                  onClick={() => setShowPassword((previous) => !previous)}
+                  onClick={() =>
+                    setShowPassword(
+                      (previous) => !previous
+                    )
+                  }
                   aria-label={
-                    showPassword ? "Hide password" : "Show password"
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
                   }
                 >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                  {showPassword ? (
+                    <FiEyeOff />
+                  ) : (
+                    <FiEye />
+                  )}
                 </button>
               </div>
 
               <div className="password-strength">
                 <div className="strength-bar">
-                  <span className={strength >= 1 ? "active" : ""}></span>
-                  <span className={strength >= 2 ? "active" : ""}></span>
-                  <span className={strength >= 3 ? "active" : ""}></span>
+                  <span
+                    className={
+                      strength >= 1 ? "active" : ""
+                    }
+                  ></span>
+
+                  <span
+                    className={
+                      strength >= 2 ? "active" : ""
+                    }
+                  ></span>
+
+                  <span
+                    className={
+                      strength >= 3 ? "active" : ""
+                    }
+                  ></span>
                 </div>
 
                 <small>Password strength</small>
@@ -159,7 +215,11 @@ const Register = () => {
 
                 <input
                   id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={
+                    showConfirmPassword
+                      ? "text"
+                      : "password"
+                  }
                   name="confirmPassword"
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
@@ -172,7 +232,9 @@ const Register = () => {
                   type="button"
                   className="toggle-icon"
                   onClick={() =>
-                    setShowConfirmPassword((previous) => !previous)
+                    setShowConfirmPassword(
+                      (previous) => !previous
+                    )
                   }
                   aria-label={
                     showConfirmPassword
@@ -180,12 +242,19 @@ const Register = () => {
                       : "Show confirm password"
                   }
                 >
-                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                  {showConfirmPassword ? (
+                    <FiEyeOff />
+                  ) : (
+                    <FiEye />
+                  )}
                 </button>
               </div>
             </div>
 
-            <button type="submit" className="create-btn">
+            <button
+              type="submit"
+              className="create-btn"
+            >
               Create Account
               <FiArrowRight />
             </button>
@@ -196,7 +265,9 @@ const Register = () => {
 
             <p className="signin-text">
               Already have an account?
-              <Link to="/login">Sign In →</Link>
+              <Link to="/login">
+                Sign In →
+              </Link>
             </p>
           </form>
         </div>

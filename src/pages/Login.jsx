@@ -1,5 +1,8 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+} from "react-router-dom";
 
 import {
   FiMail,
@@ -13,7 +16,10 @@ import Background from "../assets/images/Background2.png";
 import "../styles/register.css";
 
 const Login = () => {
-  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const [showPassword, setShowPassword] =
+    useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -22,18 +28,69 @@ const Login = () => {
   });
 
   const handleChange = (event) => {
-    const { name, value, type, checked } = event.target;
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = event.target;
 
     setFormData((previousData) => ({
       ...previousData,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
     }));
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    console.log("Login data:", formData);
+    const savedUser = JSON.parse(
+      localStorage.getItem("registeredUser")
+    );
+
+    if (!savedUser) {
+      alert(
+        "No account found. Please create an account first."
+      );
+
+      navigate("/register");
+      return;
+    }
+
+    const enteredEmail = formData.email
+      .trim()
+      .toLowerCase();
+
+    const isEmailCorrect =
+      savedUser.email === enteredEmail;
+
+    const isPasswordCorrect =
+      savedUser.password === formData.password;
+
+    if (
+      !isEmailCorrect ||
+      !isPasswordCorrect
+    ) {
+      alert("Incorrect email or password");
+      return;
+    }
+
+    if (formData.rememberMe) {
+      localStorage.setItem(
+        "isLoggedIn",
+        "true"
+      );
+    } else {
+      sessionStorage.setItem(
+        "isLoggedIn",
+        "true"
+      );
+    }
+
+    navigate("/dashboard");
   };
 
   return (
@@ -54,7 +111,9 @@ const Login = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="input-group">
-              <label htmlFor="email">Email Address</label>
+              <label htmlFor="email">
+                Email Address
+              </label>
 
               <div className="input-wrapper">
                 <FiMail className="input-icon" />
@@ -73,14 +132,20 @@ const Login = () => {
             </div>
 
             <div className="input-group">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">
+                Password
+              </label>
 
               <div className="input-wrapper">
                 <FiLock className="input-icon" />
 
                 <input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
                   name="password"
                   placeholder="Enter your password"
                   value={formData.password}
@@ -93,7 +158,9 @@ const Login = () => {
                   type="button"
                   className="toggle-icon"
                   onClick={() =>
-                    setShowPassword((previous) => !previous)
+                    setShowPassword(
+                      (previous) => !previous
+                    )
                   }
                   aria-label={
                     showPassword
@@ -101,7 +168,11 @@ const Login = () => {
                       : "Show password"
                   }
                 >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                  {showPassword ? (
+                    <FiEyeOff />
+                  ) : (
+                    <FiEye />
+                  )}
                 </button>
               </div>
             </div>
@@ -118,12 +189,15 @@ const Login = () => {
                 <span>Remember me</span>
               </label>
 
-              <a href="/forgot-password">
+              <Link to="/forgot-password">
                 Forgot Password?
-              </a>
+              </Link>
             </div>
 
-            <button type="submit" className="create-btn">
+            <button
+              type="submit"
+              className="create-btn"
+            >
               Sign In
               <FiArrowRight />
             </button>
@@ -134,7 +208,9 @@ const Login = () => {
 
             <p className="signin-text">
               Don&apos;t have an account?
-              <Link to="/register">Sign Up →</Link>
+              <Link to="/register">
+                Sign Up →
+              </Link>
             </p>
           </form>
         </div>

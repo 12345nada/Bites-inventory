@@ -4,6 +4,10 @@ import {
   Route,
 } from "react-router-dom";
 
+import GetStarted from "./pages/GetStarted";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+
 import Dashboard from "./pages/Dashboard";
 import Events from "./pages/Events";
 import Items from "./pages/Items";
@@ -20,8 +24,26 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* أول شاشة تظهر عند فتح المشروع */}
         <Route
           path="/"
+          element={<GetStarted />}
+        />
+
+        {/* Authentication */}
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          path="/register"
+          element={<Register />}
+        />
+
+        {/* Dashboard */}
+        <Route
+          path="/dashboard"
           element={<Dashboard />}
         />
 
