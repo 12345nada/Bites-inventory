@@ -2,17 +2,26 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { FiArrowRight } from "react-icons/fi";
 
-import Background from "../assets/images/Get_start.png";
+import DesktopBackground from "../assets/images/Get_start.png";
+import MobileBackground from "../assets/images/Get_startedMobile.png";
+
 import "../styles/getStarted.css";
 
 const GetStarted = () => {
   return (
     <div className="get-started-page">
-      <img
-        src={Background}
-        alt="Bites inventory landing page"
-        className="get-started-background"
-      />
+      <picture className="get-started-picture">
+        <source
+          media="(max-width: 600px)"
+          srcSet={MobileBackground}
+        />
+
+        <img
+          src={DesktopBackground}
+          alt="Bites inventory landing page"
+          className="get-started-background"
+        />
+      </picture>
 
       <div className="get-started-actions">
         <Link

@@ -20,6 +20,8 @@ import {
 } from "../lib/supabase";
 
 import Background from "../assets/images/Background2.png";
+import MobileBackground from "../assets/images/registerMobile.png";
+
 import "../styles/register.css";
 
 const Login = () => {
@@ -76,9 +78,6 @@ const Login = () => {
         .toLowerCase();
 
     try {
-      /*
-        تسجيل الدخول الحقيقي من Supabase Auth.
-      */
       const {
         data: authData,
         error: authError,
@@ -100,12 +99,6 @@ const Login = () => {
         );
       }
 
-      /*
-        بعد نجاح تسجيل الدخول نجيب:
-        - بيانات الموظف
-        - حالة الحساب
-        - الـRole الخاص به
-      */
       const {
         data: profile,
         error: profileError,
@@ -150,7 +143,10 @@ const Login = () => {
         );
       }
 
-      if (!profile.role_id || !profile.roles) {
+      if (
+        !profile.role_id ||
+        !profile.roles
+      ) {
         await supabase.auth.signOut({
           scope: "local",
         });
@@ -160,13 +156,6 @@ const Login = () => {
         );
       }
 
-      /*
-        تخزين بيانات العرض فقط.
-
-        مهم:
-        ده مش بديل عن Supabase Auth أو RLS.
-        الجلسة الحقيقية محفوظة عند Supabase.
-      */
       localStorage.setItem(
         "bitesUserProfile",
         JSON.stringify({
@@ -228,11 +217,18 @@ const Login = () => {
 
   return (
     <div className="register-page">
-      <img
-        src={Background}
-        alt="Bites login background"
-        className="register-background"
-      />
+      <picture className="register-picture">
+        <source
+          media="(max-width: 600px)"
+          srcSet={MobileBackground}
+        />
+
+        <img
+          src={Background}
+          alt="Bites login background"
+          className="register-background"
+        />
+      </picture>
 
       <div className="register-content login-content">
         <div className="register-card login-card">

@@ -20,7 +20,9 @@ import {
   supabase,
 } from "../lib/supabase";
 
-import Background from "../assets/images/register-background.png";
+import Background from "../assets/images/Background2.png";
+import MobileBackground from "../assets/images/registerMobile.png";
+
 import "../styles/register.css";
 
 const Register = () => {
@@ -185,15 +187,6 @@ const Register = () => {
         confirmPassword: "",
       });
 
-      /*
-        لو Email Confirmation مفعّلة:
-        المستخدم هيفتح رسالة التأكيد الأول.
-
-        لو غير مفعّلة:
-        Supabase ممكن تعمل Session تلقائيًا،
-        لذلك بنعمل Sign Out علشان يرجع يسجل
-        من شاشة Login.
-      */
       if (data.session) {
         await supabase.auth.signOut();
       }
@@ -218,11 +211,18 @@ const Register = () => {
 
   return (
     <div className="register-page">
-      <img
-        src={Background}
-        alt="Bites registration background"
-        className="register-background"
-      />
+      <picture className="register-picture">
+        <source
+          media="(max-width: 600px)"
+          srcSet={MobileBackground}
+        />
+
+        <img
+          src={Background}
+          alt="Bites registration background"
+          className="register-background"
+        />
+      </picture>
 
       <div className="register-content">
         <div className="register-card">
