@@ -348,11 +348,20 @@ export default function Settings() {
   };
 
   const openUserModal = () => {
+    const defaultRole =
+      roles.find(
+        (role) =>
+          role.name ===
+          "Warehouse Employee"
+      ) || roles[0];
+
     setUserForm({
       ...emptyUserForm,
 
       roleId:
-        roles[0]?.id || "",
+        defaultRole?.id
+          ? String(defaultRole.id)
+          : "",
     });
 
     setShowUserModal(true);
@@ -430,8 +439,42 @@ export default function Settings() {
       return;
     }
 
+    const selectedUserRole =
+      roles.find(
+        (role) =>
+          String(role.id) ===
+          String(userForm.roleId)
+      );
+
+    if (!selectedUserRole) {
+      alert(
+        "The selected role is no longer available. Please close the form and select the role again."
+      );
+
+      return;
+    }
+
     try {
       setSaving(true);
+
+      const currentRoleId =
+        Number(selectedUserRole.id);
+
+      if (!Number.isInteger(currentRoleId)) {
+        alert(
+          "The selected role has an invalid ID."
+        );
+        return;
+      }
+
+      console.log(
+        "Creating user with role:",
+        {
+          roleId: currentRoleId,
+          roleName:
+            selectedUserRole.name,
+        }
+      );
 
       const newUser =
         await createSystemUser({
@@ -440,7 +483,9 @@ export default function Settings() {
           password:
             userForm.password,
           roleId:
-            userForm.roleId,
+            currentRoleId,
+          roleName:
+            selectedUserRole.name,
           branch:
             userForm.branch,
         });

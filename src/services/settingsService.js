@@ -57,19 +57,16 @@ const normalizePermissions = (
           row.view ??
           false
       ),
-
       add: Boolean(
         row.can_add ??
           row.add ??
           false
       ),
-
       edit: Boolean(
         row.can_edit ??
           row.edit ??
           false
       ),
-
       delete: Boolean(
         row.can_delete ??
           row.delete ??
@@ -83,19 +80,14 @@ const normalizePermissions = (
 
 const mapRole = (role) => ({
   id: role.id,
-
-  name:
-    role.name || "",
-
+  name: role.name || "",
   description:
     role.description || "",
-
   isSystem: Boolean(
     role.is_system ||
       role.is_default ||
       false
   ),
-
   permissions:
     normalizePermissions(
       role.role_permissions || []
@@ -104,28 +96,18 @@ const mapRole = (role) => ({
 
 const mapEmployee = (profile) => ({
   id: profile.id,
-
   name:
     profile.full_name ||
     profile.name ||
     "",
-
-  email:
-    profile.email || "",
-
-  roleId:
-    profile.role_id || "",
-
-  branch:
-    profile.branch || "",
-
+  email: profile.email || "",
+  roleId: profile.role_id || "",
+  branch: profile.branch || "",
   isActive:
     profile.is_active !== false,
-
-  mustChangePassword:
-    Boolean(
-      profile.must_change_password
-    ),
+  mustChangePassword: Boolean(
+    profile.must_change_password
+  ),
 });
 
 const mapGeneralSettings = (
@@ -136,31 +118,24 @@ const mapGeneralSettings = (
     warehouses[0] || null;
 
   return {
-    id:
-      settings?.id || null,
-
+    id: settings?.id || null,
     companyName:
       settings?.company_name ||
       settings?.name ||
       "Bites Catering",
-
     companyEmail:
       settings?.company_email ||
       settings?.email ||
       "info@bites.com",
-
     phone:
       settings?.phone || "",
-
     defaultWarehouseId:
       settings?.default_warehouse_id ||
       settings?.warehouse_id ||
       firstWarehouse?.id ||
       "",
-
     currency:
       settings?.currency || "EGP",
-
     dateFormat:
       settings?.date_format ||
       "DD/MM/YYYY",
@@ -270,24 +245,15 @@ export async function getSettingsData() {
     warehousesResult.data || [];
 
   return {
-    modules:
-      SETTINGS_MODULES,
-
-    actions:
-      SETTINGS_ACTIONS,
-
-    roles:
-      (
-        rolesResult.data || []
-      ).map(mapRole),
-
-    employees:
-      (
-        profilesResult.data || []
-      ).map(mapEmployee),
-
+    modules: SETTINGS_MODULES,
+    actions: SETTINGS_ACTIONS,
+    roles: (
+      rolesResult.data || []
+    ).map(mapRole),
+    employees: (
+      profilesResult.data || []
+    ).map(mapEmployee),
     warehouses,
-
     generalSettings:
       mapGeneralSettings(
         settingsResult.data,
@@ -302,25 +268,18 @@ export async function saveGeneralSettings(
   const payload = {
     company_name:
       settings.companyName.trim(),
-
     company_email:
       settings.companyEmail
         .trim()
         .toLowerCase(),
-
-    phone:
-      settings.phone.trim(),
-
+    phone: settings.phone.trim(),
     default_warehouse_id:
       settings.defaultWarehouseId
         ? Number(
             settings.defaultWarehouseId
           )
         : null,
-
-    currency:
-      settings.currency,
-
+    currency: settings.currency,
     date_format:
       settings.dateFormat,
   };
@@ -338,10 +297,7 @@ export async function saveGeneralSettings(
       .insert(payload);
   }
 
-  const {
-    data,
-    error,
-  } = await query
+  const { data, error } = await query
     .select("*")
     .single();
 
@@ -351,30 +307,22 @@ export async function saveGeneralSettings(
 
   return {
     ...settings,
-
-    id:
-      data.id,
-
+    id: data.id,
     companyName:
       data.company_name ||
       settings.companyName,
-
     companyEmail:
       data.company_email ||
       settings.companyEmail,
-
     phone:
       data.phone ||
       settings.phone,
-
     defaultWarehouseId:
       data.default_warehouse_id ||
       settings.defaultWarehouseId,
-
     currency:
       data.currency ||
       settings.currency,
-
     dateFormat:
       data.date_format ||
       settings.dateFormat,
@@ -384,15 +332,10 @@ export async function saveGeneralSettings(
 export async function createRole(
   roleData
 ) {
-  const {
-    data,
-    error,
-  } = await supabase
+  const { data, error } = await supabase
     .from("roles")
     .insert({
-      name:
-        roleData.name.trim(),
-
+      name: roleData.name.trim(),
       description:
         roleData.description.trim(),
     })
@@ -408,18 +351,11 @@ export async function createRole(
   }
 
   return {
-    id:
-      data.id,
-
-    name:
-      data.name,
-
+    id: data.id,
+    name: data.name,
     description:
       data.description || "",
-
-    isSystem:
-      false,
-
+    isSystem: false,
     permissions:
       createEmptyPermissions(),
   };
@@ -428,6 +364,15 @@ export async function createRole(
 export async function createSystemUser(
   userData
 ) {
+  const roleId =
+    Number(userData.roleId);
+
+  if (!Number.isInteger(roleId)) {
+    throw new Error(
+      "The selected role has an invalid ID."
+    );
+  }
+
   const {
     data,
     error,
@@ -437,18 +382,17 @@ export async function createSystemUser(
       body: {
         fullName:
           userData.fullName.trim(),
-
         email:
           userData.email
             .trim()
             .toLowerCase(),
-
         password:
           userData.password,
-
-        roleId:
-          Number(userData.roleId),
-
+        roleId,
+        roleName:
+          String(
+            userData.roleName || ""
+          ).trim(),
         branch:
           userData.branch,
       },
@@ -476,24 +420,13 @@ export async function createSystemUser(
   }
 
   return {
-    id:
-      data.user.id,
-
-    name:
-      data.user.name || "",
-
-    email:
-      data.user.email || "",
-
-    roleId:
-      data.user.roleId || "",
-
-    branch:
-      data.user.branch || "",
-
+    id: data.user.id,
+    name: data.user.name || "",
+    email: data.user.email || "",
+    roleId: data.user.roleId || "",
+    branch: data.user.branch || "",
     isActive:
       data.user.isActive !== false,
-
     mustChangePassword:
       Boolean(
         data.user.mustChangePassword
@@ -505,48 +438,26 @@ export async function saveRolePermissions(
   roleId,
   permissions
 ) {
-  const rows =
-    SETTINGS_MODULES.map(
-      (moduleName) => ({
-        role_id:
-          Number(roleId),
+  const rows = SETTINGS_MODULES.map(
+    (moduleName) => ({
+      role_id: Number(roleId),
+      module_name: moduleName,
+      can_view: Boolean(
+        permissions[moduleName]?.view
+      ),
+      can_add: Boolean(
+        permissions[moduleName]?.add
+      ),
+      can_edit: Boolean(
+        permissions[moduleName]?.edit
+      ),
+      can_delete: Boolean(
+        permissions[moduleName]?.delete
+      ),
+    })
+  );
 
-        module_name:
-          moduleName,
-
-        can_view:
-          Boolean(
-            permissions[
-              moduleName
-            ]?.view
-          ),
-
-        can_add:
-          Boolean(
-            permissions[
-              moduleName
-            ]?.add
-          ),
-
-        can_edit:
-          Boolean(
-            permissions[
-              moduleName
-            ]?.edit
-          ),
-
-        can_delete:
-          Boolean(
-            permissions[
-              moduleName
-            ]?.delete
-          ),
-      })
-    );
-
-  const {
-    error,
-  } = await supabase
+  const { error } = await supabase
     .from("role_permissions")
     .upsert(rows, {
       onConflict:
@@ -564,14 +475,10 @@ export async function assignEmployeeRole(
   employeeId,
   roleId
 ) {
-  const {
-    data,
-    error,
-  } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .update({
-      role_id:
-        Number(roleId),
+      role_id: Number(roleId),
     })
     .eq("id", employeeId)
     .select(`
@@ -618,15 +525,11 @@ export async function deleteRole(
       "This role is assigned to an employee."
     );
 
-    error.code =
-      "ROLE_IN_USE";
-
+    error.code = "ROLE_IN_USE";
     throw error;
   }
 
-  const {
-    error,
-  } = await supabase
+  const { error } = await supabase
     .from("roles")
     .delete()
     .eq(
