@@ -15,12 +15,10 @@ const GetStarted = () => {
       />
 
       <div className="get-started-actions">
-        <Link to="/register" className="get-started-btn">
-          Get Started
-          <FiArrowRight />
-        </Link>
-
-        <Link to="/login" className="sign-in-btn">
+        <Link
+          to="/login"
+          className="get-started-btn"
+        >
           Sign In
           <FiArrowRight />
         </Link>

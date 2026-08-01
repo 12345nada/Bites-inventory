@@ -43,7 +43,7 @@ body {
   user-select: none;
 }
 
-/* Buttons container */
+/* Sign in button container */
 
 .get-started-actions {
   position: absolute;
@@ -55,12 +55,10 @@ body {
   width: 185px;
 
   display: flex;
-  flex-direction: column;
   align-items: flex-start;
-  gap: 13px;
 }
 
-/* Get Started button */
+/* Main Sign In button */
 
 .get-started-btn {
   width: 165px;
@@ -102,29 +100,6 @@ body {
     rgba(159, 78, 37, 0.25);
 }
 
-/* Sign in button */
-
-.sign-in-btn {
-  margin-left: 5px;
-
-  display: flex;
-  align-items: center;
-  gap: 14px;
-
-  color: #a45128;
-
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-
-  transition: color 0.2s ease;
-}
-
-.sign-in-btn:hover {
-  color: #843f1d;
-  text-decoration: underline;
-}
-
 /* Smaller desktop screens */
 
 @media (
@@ -137,15 +112,11 @@ body {
     top: 69%;
 
     width: 175px;
-    gap: 11px;
   }
 
   .get-started-btn {
     width: 160px;
     height: 43px;
-  }
-
-  .sign-in-btn {
     font-size: 13px;
   }
 }
@@ -193,15 +164,11 @@ body {
     bottom: 8%;
 
     width: 180px;
-    gap: 12px;
   }
 
   .get-started-btn {
     width: 170px;
     height: 45px;
-  }
-
-  .sign-in-btn {
     font-size: 13px;
   }
 }
@@ -267,7 +234,6 @@ body {
     width: 100%;
 
     align-items: stretch;
-    gap: 12px;
   }
 
   .get-started-btn {
@@ -279,17 +245,6 @@ body {
     border-radius: 10px;
 
     font-size: 15px;
-  }
-
-  .sign-in-btn {
-    width: 100%;
-    min-height: 42px;
-
-    margin-left: 0;
-
-    justify-content: center;
-
-    font-size: 14px;
   }
 }
 
@@ -308,10 +263,6 @@ body {
   .get-started-btn {
     height: 48px;
     font-size: 14px;
-  }
-
-  .sign-in-btn {
-    font-size: 13px;
   }
 }
 
@@ -343,10 +294,5 @@ body {
   .get-started-btn {
     width: 165px;
     height: 42px;
-  }
-
-  .sign-in-btn {
-    width: auto;
-    justify-content: flex-start;
   }
 }
