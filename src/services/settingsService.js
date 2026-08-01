@@ -57,16 +57,19 @@ const normalizePermissions = (
           row.view ??
           false
       ),
+
       add: Boolean(
         row.can_add ??
           row.add ??
           false
       ),
+
       edit: Boolean(
         row.can_edit ??
           row.edit ??
           false
       ),
+
       delete: Boolean(
         row.can_delete ??
           row.delete ??
@@ -80,14 +83,19 @@ const normalizePermissions = (
 
 const mapRole = (role) => ({
   id: role.id,
-  name: role.name || "",
+
+  name:
+    role.name || "",
+
   description:
     role.description || "",
+
   isSystem: Boolean(
     role.is_system ||
       role.is_default ||
       false
   ),
+
   permissions:
     normalizePermissions(
       role.role_permissions || []
@@ -96,14 +104,28 @@ const mapRole = (role) => ({
 
 const mapEmployee = (profile) => ({
   id: profile.id,
+
   name:
     profile.full_name ||
     profile.name ||
     "",
-  email: profile.email || "",
-  roleId: profile.role_id || "",
+
+  email:
+    profile.email || "",
+
+  roleId:
+    profile.role_id || "",
+
+  branch:
+    profile.branch || "",
+
   isActive:
     profile.is_active !== false,
+
+  mustChangePassword:
+    Boolean(
+      profile.must_change_password
+    ),
 });
 
 const mapGeneralSettings = (
@@ -114,28 +136,64 @@ const mapGeneralSettings = (
     warehouses[0] || null;
 
   return {
-    id: settings?.id || null,
+    id:
+      settings?.id || null,
+
     companyName:
       settings?.company_name ||
       settings?.name ||
       "Bites Catering",
+
     companyEmail:
       settings?.company_email ||
       settings?.email ||
       "info@bites.com",
+
     phone:
       settings?.phone || "",
+
     defaultWarehouseId:
       settings?.default_warehouse_id ||
       settings?.warehouse_id ||
       firstWarehouse?.id ||
       "",
+
     currency:
       settings?.currency || "EGP",
+
     dateFormat:
       settings?.date_format ||
       "DD/MM/YYYY",
   };
+};
+
+const getFunctionErrorMessage = async (
+  error,
+  fallbackMessage
+) => {
+  let message =
+    error?.message ||
+    fallbackMessage;
+
+  try {
+    if (
+      error?.context &&
+      typeof error.context.json ===
+        "function"
+    ) {
+      const responseBody =
+        await error.context.json();
+
+      if (responseBody?.error) {
+        message =
+          responseBody.error;
+      }
+    }
+  } catch {
+    // Keep the original message.
+  }
+
+  return message;
 };
 
 export async function getSettingsData() {
@@ -171,7 +229,9 @@ export async function getSettingsData() {
         full_name,
         email,
         role_id,
-        is_active
+        branch,
+        is_active,
+        must_change_password
       `)
       .order("full_name", {
         ascending: true,
@@ -210,15 +270,24 @@ export async function getSettingsData() {
     warehousesResult.data || [];
 
   return {
-    modules: SETTINGS_MODULES,
-    actions: SETTINGS_ACTIONS,
-    roles: (
-      rolesResult.data || []
-    ).map(mapRole),
-    employees: (
-      profilesResult.data || []
-    ).map(mapEmployee),
+    modules:
+      SETTINGS_MODULES,
+
+    actions:
+      SETTINGS_ACTIONS,
+
+    roles:
+      (
+        rolesResult.data || []
+      ).map(mapRole),
+
+    employees:
+      (
+        profilesResult.data || []
+      ).map(mapEmployee),
+
     warehouses,
+
     generalSettings:
       mapGeneralSettings(
         settingsResult.data,
@@ -233,18 +302,25 @@ export async function saveGeneralSettings(
   const payload = {
     company_name:
       settings.companyName.trim(),
+
     company_email:
       settings.companyEmail
         .trim()
         .toLowerCase(),
-    phone: settings.phone.trim(),
+
+    phone:
+      settings.phone.trim(),
+
     default_warehouse_id:
       settings.defaultWarehouseId
         ? Number(
             settings.defaultWarehouseId
           )
         : null,
-    currency: settings.currency,
+
+    currency:
+      settings.currency,
+
     date_format:
       settings.dateFormat,
   };
@@ -262,7 +338,10 @@ export async function saveGeneralSettings(
       .insert(payload);
   }
 
-  const { data, error } = await query
+  const {
+    data,
+    error,
+  } = await query
     .select("*")
     .single();
 
@@ -272,22 +351,30 @@ export async function saveGeneralSettings(
 
   return {
     ...settings,
-    id: data.id,
+
+    id:
+      data.id,
+
     companyName:
       data.company_name ||
       settings.companyName,
+
     companyEmail:
       data.company_email ||
       settings.companyEmail,
+
     phone:
       data.phone ||
       settings.phone,
+
     defaultWarehouseId:
       data.default_warehouse_id ||
       settings.defaultWarehouseId,
+
     currency:
       data.currency ||
       settings.currency,
+
     dateFormat:
       data.date_format ||
       settings.dateFormat,
@@ -297,10 +384,15 @@ export async function saveGeneralSettings(
 export async function createRole(
   roleData
 ) {
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from("roles")
     .insert({
-      name: roleData.name.trim(),
+      name:
+        roleData.name.trim(),
+
       description:
         roleData.description.trim(),
     })
@@ -316,13 +408,96 @@ export async function createRole(
   }
 
   return {
-    id: data.id,
-    name: data.name,
+    id:
+      data.id,
+
+    name:
+      data.name,
+
     description:
       data.description || "",
-    isSystem: false,
+
+    isSystem:
+      false,
+
     permissions:
       createEmptyPermissions(),
+  };
+}
+
+export async function createSystemUser(
+  userData
+) {
+  const {
+    data,
+    error,
+  } = await supabase.functions.invoke(
+    "create-user",
+    {
+      body: {
+        fullName:
+          userData.fullName.trim(),
+
+        email:
+          userData.email
+            .trim()
+            .toLowerCase(),
+
+        password:
+          userData.password,
+
+        roleId:
+          Number(userData.roleId),
+
+        branch:
+          userData.branch,
+      },
+    }
+  );
+
+  if (error) {
+    const message =
+      await getFunctionErrorMessage(
+        error,
+        "Could not create user."
+      );
+
+    throw new Error(message);
+  }
+
+  if (
+    !data?.success ||
+    !data?.user
+  ) {
+    throw new Error(
+      data?.error ||
+        "Could not create user."
+    );
+  }
+
+  return {
+    id:
+      data.user.id,
+
+    name:
+      data.user.name || "",
+
+    email:
+      data.user.email || "",
+
+    roleId:
+      data.user.roleId || "",
+
+    branch:
+      data.user.branch || "",
+
+    isActive:
+      data.user.isActive !== false,
+
+    mustChangePassword:
+      Boolean(
+        data.user.mustChangePassword
+      ),
   };
 }
 
@@ -330,26 +505,48 @@ export async function saveRolePermissions(
   roleId,
   permissions
 ) {
-  const rows = SETTINGS_MODULES.map(
-    (moduleName) => ({
-      role_id: roleId,
-      module_name: moduleName,
-      can_view: Boolean(
-        permissions[moduleName]?.view
-      ),
-      can_add: Boolean(
-        permissions[moduleName]?.add
-      ),
-      can_edit: Boolean(
-        permissions[moduleName]?.edit
-      ),
-      can_delete: Boolean(
-        permissions[moduleName]?.delete
-      ),
-    })
-  );
+  const rows =
+    SETTINGS_MODULES.map(
+      (moduleName) => ({
+        role_id:
+          Number(roleId),
 
-  const { error } = await supabase
+        module_name:
+          moduleName,
+
+        can_view:
+          Boolean(
+            permissions[
+              moduleName
+            ]?.view
+          ),
+
+        can_add:
+          Boolean(
+            permissions[
+              moduleName
+            ]?.add
+          ),
+
+        can_edit:
+          Boolean(
+            permissions[
+              moduleName
+            ]?.edit
+          ),
+
+        can_delete:
+          Boolean(
+            permissions[
+              moduleName
+            ]?.delete
+          ),
+      })
+    );
+
+  const {
+    error,
+  } = await supabase
     .from("role_permissions")
     .upsert(rows, {
       onConflict:
@@ -367,10 +564,14 @@ export async function assignEmployeeRole(
   employeeId,
   roleId
 ) {
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from("profiles")
     .update({
-      role_id: roleId,
+      role_id:
+        Number(roleId),
     })
     .eq("id", employeeId)
     .select(`
@@ -378,7 +579,9 @@ export async function assignEmployeeRole(
       full_name,
       email,
       role_id,
-      is_active
+      branch,
+      is_active,
+      must_change_password
     `)
     .single();
 
@@ -401,7 +604,10 @@ export async function deleteRole(
       count: "exact",
       head: true,
     })
-    .eq("role_id", roleId);
+    .eq(
+      "role_id",
+      Number(roleId)
+    );
 
   if (countError) {
     throw countError;
@@ -412,14 +618,21 @@ export async function deleteRole(
       "This role is assigned to an employee."
     );
 
-    error.code = "ROLE_IN_USE";
+    error.code =
+      "ROLE_IN_USE";
+
     throw error;
   }
 
-  const { error } = await supabase
+  const {
+    error,
+  } = await supabase
     .from("roles")
     .delete()
-    .eq("id", roleId);
+    .eq(
+      "id",
+      Number(roleId)
+    );
 
   if (error) {
     throw error;

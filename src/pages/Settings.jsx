@@ -5,20 +5,21 @@ import {
 } from "react";
 
 import Sidebar from "../components/dashboard/Sidebar";
-import "../styles/mobile-sidebar-offcanvas.css";
 import Topbar from "../components/dashboard/Topbar";
+
+import "../styles/mobile-sidebar-offcanvas.css";
+import "../styles/dashboard.css";
+import "../styles/Settings.css";
 
 import {
   assignEmployeeRole,
   createRole,
+  createSystemUser,
   deleteRole,
   getSettingsData,
   saveGeneralSettings,
   saveRolePermissions,
 } from "../services/settingsService";
-
-import "../styles/dashboard.css";
-import "../styles/Settings.css";
 
 import {
   FiSearch,
@@ -29,6 +30,15 @@ import {
   FiUser,
   FiX,
 } from "react-icons/fi";
+
+const emptyUserForm = {
+  fullName: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  roleId: "",
+  branch: "Cairo",
+};
 
 export default function Settings() {
   const [modules, setModules] =
@@ -91,11 +101,19 @@ export default function Settings() {
     setShowRoleModal,
   ] = useState(false);
 
+  const [
+    showUserModal,
+    setShowUserModal,
+  ] = useState(false);
+
   const [roleForm, setRoleForm] =
     useState({
       name: "",
       description: "",
     });
+
+  const [userForm, setUserForm] =
+    useState(emptyUserForm);
 
   useEffect(() => {
     loadSettings();
@@ -113,6 +131,7 @@ export default function Settings() {
       setRoles(data.roles);
       setEmployees(data.employees);
       setWarehouses(data.warehouses);
+
       setGeneralSettings(
         data.generalSettings
       );
@@ -123,8 +142,8 @@ export default function Settings() {
       const firstRole =
         data.roles.find(
           (role) =>
-            role.id ===
-            firstEmployee?.roleId
+            String(role.id) ===
+            String(firstEmployee?.roleId)
         ) || data.roles[0];
 
       setSelectedEmployeeId(
@@ -221,10 +240,12 @@ export default function Settings() {
     setPermissionDraft(
       (currentPermissions) => ({
         ...currentPermissions,
+
         [moduleName]: {
           ...currentPermissions[
             moduleName
           ],
+
           [action]:
             !currentPermissions[
               moduleName
@@ -254,6 +275,7 @@ export default function Settings() {
           String(selectedRoleId)
             ? {
                 ...role,
+
                 permissions:
                   structuredClone(
                     permissionDraft
@@ -290,6 +312,7 @@ export default function Settings() {
       alert(
         "Please enter the role name."
       );
+
       return;
     }
 
@@ -324,6 +347,140 @@ export default function Settings() {
     }
   };
 
+  const openUserModal = () => {
+    setUserForm({
+      ...emptyUserForm,
+
+      roleId:
+        roles[0]?.id || "",
+    });
+
+    setShowUserModal(true);
+  };
+
+  const closeUserModal = () => {
+    if (saving) {
+      return;
+    }
+
+    setShowUserModal(false);
+    setUserForm(emptyUserForm);
+  };
+
+  const handleUserFormChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setUserForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }));
+  };
+
+  const handleCreateUser = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    const fullName =
+      userForm.fullName.trim();
+
+    const email =
+      userForm.email
+        .trim()
+        .toLowerCase();
+
+    if (
+      !fullName ||
+      !email ||
+      !userForm.password ||
+      !userForm.confirmPassword ||
+      !userForm.roleId ||
+      !userForm.branch
+    ) {
+      alert(
+        "Please complete all user fields."
+      );
+
+      return;
+    }
+
+    if (
+      userForm.password.length < 6
+    ) {
+      alert(
+        "Password must contain at least 6 characters."
+      );
+
+      return;
+    }
+
+    if (
+      userForm.password !==
+      userForm.confirmPassword
+    ) {
+      alert(
+        "Passwords do not match."
+      );
+
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const newUser =
+        await createSystemUser({
+          fullName,
+          email,
+          password:
+            userForm.password,
+          roleId:
+            userForm.roleId,
+          branch:
+            userForm.branch,
+        });
+
+      setEmployees(
+        (currentEmployees) => [
+          ...currentEmployees,
+          newUser,
+        ]
+      );
+
+      setSelectedEmployeeId(
+        newUser.id
+      );
+
+      setSelectedRoleId(
+        newUser.roleId
+      );
+
+      setUserForm(emptyUserForm);
+      setShowUserModal(false);
+
+      alert(
+        "User created successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Create user error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not create user."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const removeRole = async (
     roleId
   ) => {
@@ -339,6 +496,7 @@ export default function Settings() {
       alert(
         "The Administrator role cannot be deleted."
       );
+
       return;
     }
 
@@ -381,7 +539,10 @@ export default function Settings() {
   };
 
   const handleEmployeeRoleChange =
-    async (employeeId, roleId) => {
+    async (
+      employeeId,
+      roleId
+    ) => {
       try {
         const updatedEmployee =
           await assignEmployeeRole(
@@ -434,6 +595,7 @@ export default function Settings() {
         alert(
           "Please enter the company name and email."
         );
+
         return;
       }
 
@@ -469,7 +631,9 @@ export default function Settings() {
       <main className="settings-main">
         <Topbar
           searchValue={searchValue}
-          onSearchChange={setSearchValue}
+          onSearchChange={
+            setSearchValue
+          }
         />
 
         <section className="settings-title-section">
@@ -477,8 +641,8 @@ export default function Settings() {
             <h1>Settings</h1>
 
             <p>
-              Manage general settings and user
-              permissions
+              Manage general settings
+              and user permissions
             </p>
           </div>
         </section>
@@ -502,7 +666,8 @@ export default function Settings() {
             <button
               type="button"
               className={
-                activeTab === "permissions"
+                activeTab ===
+                "permissions"
                   ? "active"
                   : ""
               }
@@ -589,10 +754,16 @@ export default function Settings() {
                     {warehouses.map(
                       (warehouse) => (
                         <option
-                          key={warehouse.id}
-                          value={warehouse.id}
+                          key={
+                            warehouse.id
+                          }
+                          value={
+                            warehouse.id
+                          }
                         >
-                          {warehouse.name}
+                          {
+                            warehouse.name
+                          }
                         </option>
                       )
                     )}
@@ -675,6 +846,15 @@ export default function Settings() {
 
                   <FiUser />
                 </div>
+
+                <button
+                  type="button"
+                  className="add-user-inline"
+                  onClick={openUserModal}
+                >
+                  <FiPlus />
+                  Add New User
+                </button>
 
                 <div className="permission-search-box">
                   <FiSearch />
@@ -799,6 +979,7 @@ export default function Settings() {
                                 role.id
                               )
                             }
+                            aria-label={`Delete ${role.name}`}
                           >
                             <FiTrash2 />
                           </button>
@@ -824,13 +1005,16 @@ export default function Settings() {
                 <div className="permissions-panel-header">
                   <div>
                     <h2>
-                      Choose a role to configure
-                      permissions
+                      Choose a role to
+                      configure permissions
                     </h2>
 
                     <p>
                       {selectedEmployee
-                        ? `${selectedEmployee.name} is assigned to ${selectedRole?.name || "No Role"}`
+                        ? `${selectedEmployee.name} is assigned to ${
+                            selectedRole?.name ||
+                            "No Role"
+                          }`
                         : "Select an employee or role"}
                     </p>
                   </div>
@@ -852,14 +1036,16 @@ export default function Settings() {
                         Select role
                       </option>
 
-                      {roles.map((role) => (
-                        <option
-                          key={role.id}
-                          value={role.id}
-                        >
-                          {role.name}
-                        </option>
-                      ))}
+                      {roles.map(
+                        (role) => (
+                          <option
+                            key={role.id}
+                            value={role.id}
+                          >
+                            {role.name}
+                          </option>
+                        )
+                      )}
                     </select>
                   )}
                 </div>
@@ -896,7 +1082,8 @@ export default function Settings() {
                                     moduleName
                                   ]?.[
                                     action
-                                  ] || false
+                                  ] ||
+                                  false
                                 }
                                 onChange={() =>
                                   handlePermissionToggle(
@@ -995,6 +1182,7 @@ export default function Settings() {
                   setRoleForm(
                     (currentData) => ({
                       ...currentData,
+
                       name:
                         event.target.value,
                     })
@@ -1017,6 +1205,7 @@ export default function Settings() {
                   setRoleForm(
                     (currentData) => ({
                       ...currentData,
+
                       description:
                         event.target.value,
                     })
@@ -1050,7 +1239,207 @@ export default function Settings() {
           </form>
         </div>
       )}
+
+      {showUserModal && (
+        <div
+          className="settings-modal-overlay"
+          onMouseDown={closeUserModal}
+        >
+          <form
+            className="settings-user-modal"
+            onSubmit={handleCreateUser}
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="settings-role-modal-header">
+              <div>
+                <h2>Add New User</h2>
+
+                <p>
+                  Create login details
+                  and assign a role.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeUserModal}
+                disabled={saving}
+                aria-label="Close"
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <div className="settings-user-section">
+              <div className="settings-user-section-header">
+                <span>1</span>
+
+                <div>
+                  <h3>
+                    Account Information
+                  </h3>
+
+                  <p>
+                    Enter employee login
+                    details.
+                  </p>
+                </div>
+              </div>
+
+              <div className="settings-user-grid">
+                <label>
+                  Full Name
+
+                  <input
+                    name="fullName"
+                    value={
+                      userForm.fullName
+                    }
+                    placeholder="Ahmed Samy"
+                    onChange={
+                      handleUserFormChange
+                    }
+                    disabled={saving}
+                  />
+                </label>
+
+                <label>
+                  Email Address
+
+                  <input
+                    type="email"
+                    name="email"
+                    value={
+                      userForm.email
+                    }
+                    placeholder="ahmed@bites.com"
+                    onChange={
+                      handleUserFormChange
+                    }
+                    disabled={saving}
+                  />
+                </label>
+
+                <label>
+                  Temporary Password
+
+                  <input
+                    type="password"
+                    name="password"
+                    value={
+                      userForm.password
+                    }
+                    placeholder="Minimum 6 characters"
+                    onChange={
+                      handleUserFormChange
+                    }
+                    disabled={saving}
+                  />
+                </label>
+
+                <label>
+                  Confirm Password
+
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={
+                      userForm.confirmPassword
+                    }
+                    placeholder="Repeat password"
+                    onChange={
+                      handleUserFormChange
+                    }
+                    disabled={saving}
+                  />
+                </label>
+
+                <label>
+                  Role
+
+                  <select
+                    name="roleId"
+                    value={
+                      userForm.roleId
+                    }
+                    onChange={
+                      handleUserFormChange
+                    }
+                    disabled={saving}
+                  >
+                    <option value="">
+                      Select role
+                    </option>
+
+                    {roles.map(
+                      (role) => (
+                        <option
+                          key={role.id}
+                          value={role.id}
+                        >
+                          {role.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+
+                <label>
+                  Branch
+
+                  <select
+                    name="branch"
+                    value={
+                      userForm.branch
+                    }
+                    onChange={
+                      handleUserFormChange
+                    }
+                    disabled={saving}
+                  >
+                    <option value="Cairo">
+                      Cairo
+                    </option>
+
+                    <option value="Alex">
+                      Alex
+                    </option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="settings-user-note">
+                New users start as
+                Active and must change
+                the temporary password
+                on first login.
+              </div>
+            </div>
+
+            <div className="settings-role-modal-actions">
+              <button
+                type="button"
+                onClick={closeUserModal}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="create-role-button"
+                disabled={saving}
+              >
+                {saving
+                  ? "Creating..."
+                  : "Create User"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
-
