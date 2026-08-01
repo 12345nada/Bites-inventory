@@ -1,17 +1,20 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
 
-
-
 import "../styles/mobile-sidebar-offcanvas.css";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
-  useWarehouses,
-} from "../context/WarehousesContext";
+  createWarehouse,
+  getWarehouses,
+  removeWarehouse,
+  updateWarehouse,
+} from "../services/warehouseService";
 
 import "../styles/dashboard.css";
 import "../styles/Warehouse.css";
@@ -34,12 +37,14 @@ const emptyForm = {
 };
 
 export default function Warehouse() {
-  const {
-    warehouses,
-    addWarehouse,
-    updateWarehouse,
-    deleteWarehouse,
-  } = useWarehouses();
+  const [warehouses, setWarehouses] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -67,6 +72,33 @@ export default function Warehouse() {
   const [formData, setFormData] =
     useState(emptyForm);
 
+  useEffect(() => {
+    loadWarehouses();
+  }, []);
+
+  const loadWarehouses = async () => {
+    try {
+      setLoading(true);
+
+      const warehouseData =
+        await getWarehouses();
+
+      setWarehouses(warehouseData);
+    } catch (error) {
+      console.error(
+        "Error loading warehouses:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not load warehouses."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredWarehouses = useMemo(() => {
     const normalizedSearch =
       searchValue.trim().toLowerCase();
@@ -75,12 +107,12 @@ export default function Warehouse() {
       const matchesSearch =
         normalizedSearch === "" ||
         [
-          warehouse.id,
+          warehouse.warehouseCode,
           warehouse.name,
           warehouse.branch,
           warehouse.location,
         ].some((value) =>
-          String(value)
+          String(value || "")
             .toLowerCase()
             .includes(normalizedSearch)
         );
@@ -131,14 +163,16 @@ export default function Warehouse() {
   };
 
   const closeModal = () => {
+    if (saving) {
+      return;
+    }
+
     setShowWarehouseModal(false);
     setEditingWarehouseId(null);
     setFormData(emptyForm);
   };
 
-  const handleSaveWarehouse = (event) => {
-    event.preventDefault();
-
+  const validateWarehouseForm = () => {
     const requiredFields = [
       "name",
       "branch",
@@ -150,7 +184,7 @@ export default function Warehouse() {
       requiredFields.some(
         (field) =>
           String(
-            formData[field]
+            formData[field] || ""
           ).trim() === ""
       );
 
@@ -158,14 +192,23 @@ export default function Warehouse() {
       alert(
         "Please complete all warehouse fields."
       );
-      return;
+
+      return false;
     }
 
-    if (Number(formData.capacity) <= 0) {
+    const capacity = Number(
+      formData.capacity
+    );
+
+    if (
+      !Number.isFinite(capacity) ||
+      capacity <= 0
+    ) {
       alert(
         "Total capacity must be greater than zero."
       );
-      return;
+
+      return false;
     }
 
     if (editingWarehouseId) {
@@ -178,7 +221,7 @@ export default function Warehouse() {
 
       if (
         currentWarehouse &&
-        Number(formData.capacity) <
+        capacity <
           Number(
             currentWarehouse.usedCapacity
           )
@@ -186,21 +229,80 @@ export default function Warehouse() {
         alert(
           "Total capacity cannot be less than the current used capacity."
         );
-        return;
-      }
 
-      updateWarehouse(
-        editingWarehouseId,
-        formData
-      );
-    } else {
-      addWarehouse(formData);
+        return false;
+      }
     }
 
-    closeModal();
+    return true;
   };
 
-  const handleDeleteWarehouse = (
+  const handleSaveWarehouse = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (!validateWarehouseForm()) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      if (editingWarehouseId) {
+        const updatedWarehouse =
+          await updateWarehouse(
+            editingWarehouseId,
+            formData
+          );
+
+        setWarehouses(
+          (currentWarehouses) =>
+            currentWarehouses.map(
+              (warehouse) =>
+                warehouse.id ===
+                editingWarehouseId
+                  ? updatedWarehouse
+                  : warehouse
+            )
+        );
+      } else {
+        const newWarehouse =
+          await createWarehouse(formData);
+
+        setWarehouses(
+          (currentWarehouses) => [
+            newWarehouse,
+            ...currentWarehouses,
+          ]
+        );
+      }
+
+      setShowWarehouseModal(false);
+      setEditingWarehouseId(null);
+      setFormData(emptyForm);
+    } catch (error) {
+      console.error(
+        "Error saving warehouse:",
+        error
+      );
+
+      if (error.code === "23505") {
+        alert(
+          "A warehouse with this name already exists."
+        );
+      } else {
+        alert(
+          error.message ||
+            "Could not save warehouse."
+        );
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteWarehouse = async (
     warehouseId
   ) => {
     const warehouse = warehouses.find(
@@ -215,6 +317,7 @@ export default function Warehouse() {
       alert(
         "You cannot delete a warehouse that contains inventory."
       );
+
       setOpenActionId(null);
       return;
     }
@@ -227,8 +330,36 @@ export default function Warehouse() {
       return;
     }
 
-    deleteWarehouse(warehouseId);
-    setOpenActionId(null);
+    try {
+      await removeWarehouse(warehouseId);
+
+      setWarehouses(
+        (currentWarehouses) =>
+          currentWarehouses.filter(
+            (currentWarehouse) =>
+              currentWarehouse.id !==
+              warehouseId
+          )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      console.error(
+        "Error deleting warehouse:",
+        error
+      );
+
+      if (error.code === "23503") {
+        alert(
+          "This warehouse cannot be deleted because it is connected to events, purchases, dispatches, or company settings."
+        );
+      } else {
+        alert(
+          error.message ||
+            "Could not delete warehouse."
+        );
+      }
+    }
   };
 
   const getCapacityData = (warehouse) => {
@@ -287,7 +418,6 @@ export default function Warehouse() {
             onClick={openAddModal}
           >
             <FiPlus />
-
             <span>Add New Warehouse</span>
           </button>
         </section>
@@ -325,7 +455,7 @@ export default function Warehouse() {
                   )
                 }
               >
-                <option>
+                <option value="All Branches">
                   All Branches
                 </option>
 
@@ -362,8 +492,17 @@ export default function Warehouse() {
               </thead>
 
               <tbody>
-                {filteredWarehouses.length >
-                0 ? (
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan="8"
+                      className="warehouse-empty-state"
+                    >
+                      Loading warehouses...
+                    </td>
+                  </tr>
+                ) : filteredWarehouses.length >
+                  0 ? (
                   filteredWarehouses.map(
                     (warehouse) => {
                       const {
@@ -399,7 +538,9 @@ export default function Warehouse() {
                                 </strong>
 
                                 <span>
-                                  {warehouse.id}
+                                  {
+                                    warehouse.warehouseCode
+                                  }
                                 </span>
                               </div>
                             </div>
@@ -571,6 +712,7 @@ export default function Warehouse() {
                 type="button"
                 onClick={closeModal}
                 aria-label="Close form"
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -586,6 +728,7 @@ export default function Warehouse() {
                   value={formData.name}
                   onChange={handleFormChange}
                   placeholder="Cairo Warehouse"
+                  disabled={saving}
                 />
               </label>
 
@@ -596,6 +739,7 @@ export default function Warehouse() {
                   name="branch"
                   value={formData.branch}
                   onChange={handleFormChange}
+                  disabled={saving}
                 >
                   <option value="Cairo">
                     Cairo
@@ -616,6 +760,7 @@ export default function Warehouse() {
                   value={formData.location}
                   onChange={handleFormChange}
                   placeholder="New Cairo, Cairo"
+                  disabled={saving}
                 />
               </label>
 
@@ -629,6 +774,7 @@ export default function Warehouse() {
                   value={formData.capacity}
                   onChange={handleFormChange}
                   placeholder="5000"
+                  disabled={saving}
                 />
               </label>
             </div>
@@ -644,6 +790,7 @@ export default function Warehouse() {
                 type="button"
                 className="warehouse-cancel-button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -651,10 +798,13 @@ export default function Warehouse() {
               <button
                 type="submit"
                 className="warehouse-save-button"
+                disabled={saving}
               >
-                {editingWarehouseId
-                  ? "Save Changes"
-                  : "Save Warehouse"}
+                {saving
+                  ? "Saving..."
+                  : editingWarehouseId
+                    ? "Save Changes"
+                    : "Save Warehouse"}
               </button>
             </div>
           </form>

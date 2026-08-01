@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -8,8 +9,13 @@ import Topbar from "../components/dashboard/Topbar";
 import "../styles/mobile-sidebar-offcanvas.css";
 
 import {
-  useDispatches,
-} from "../context/DispatchesContext";
+  createDispatch,
+  getDispatchPageData,
+  getWarehouseItems,
+  removeDispatch,
+  updateDispatch,
+  updateDispatchStatus,
+} from "../services/dispatchService";
 
 import "../styles/dashboard.css";
 import "../styles/Dispatch.css";
@@ -34,44 +40,51 @@ const tabs = [
   "Cancelled",
 ];
 
-const itemOptions = [
-  "Dinner Plate",
-  "Water Glass",
-  "Chair",
-  "Chafing Dish",
-  "Cutlery Set",
-  "Table Napkin",
-];
-
 const getTodayDate = () =>
   new Date().toISOString().split("T")[0];
 
 const createEmptyItem = () => ({
-  name: "",
+  itemId: "",
   quantity: "",
 });
 
-const emptyForm = {
-  eventReference: "",
-  fromWarehouse: "Cairo Warehouse",
+const createEmptyForm = () => ({
+  eventId: "",
+  warehouseId: "",
   toLocation: "",
   area: "",
-  driver: "",
+  driverId: "",
   date: getTodayDate(),
   time: "",
   items: [createEmptyItem()],
-};
+});
 
 export default function Dispatch() {
-  const {
-    dispatches,
-    addDispatch,
-    updateDispatch,
-    startDispatch,
-    markDelivered,
-    cancelDispatch,
-    deleteDispatch,
-  } = useDispatches();
+  const [dispatches, setDispatches] =
+    useState([]);
+
+  const [events, setEvents] =
+    useState([]);
+
+  const [warehouses, setWarehouses] =
+    useState([]);
+
+  const [drivers, setDrivers] =
+    useState([]);
+
+  const [itemOptions, setItemOptions] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [
+    loadingItems,
+    setLoadingItems,
+  ] = useState(false);
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -95,7 +108,69 @@ export default function Dispatch() {
   ] = useState(null);
 
   const [formData, setFormData] =
-    useState(emptyForm);
+    useState(createEmptyForm());
+
+  useEffect(() => {
+    loadDispatchData();
+  }, []);
+
+  const loadDispatchData = async () => {
+    try {
+      setLoading(true);
+
+      const data =
+        await getDispatchPageData();
+
+      setDispatches(data.dispatches);
+      setEvents(data.events);
+      setWarehouses(data.warehouses);
+      setDrivers(data.drivers);
+    } catch (error) {
+      console.error(
+        "Error loading dispatches:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not load dispatches."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadWarehouseItems = async (
+    warehouseId
+  ) => {
+    if (!warehouseId) {
+      setItemOptions([]);
+      return;
+    }
+
+    try {
+      setLoadingItems(true);
+
+      const items =
+        await getWarehouseItems(
+          warehouseId
+        );
+
+      setItemOptions(items);
+    } catch (error) {
+      console.error(
+        "Error loading warehouse items:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not load warehouse items."
+      );
+    } finally {
+      setLoadingItems(false);
+    }
+  };
 
   const filteredDispatches = useMemo(() => {
     const search =
@@ -105,13 +180,14 @@ export default function Dispatch() {
       const itemSearchValues =
         dispatch.items.flatMap((item) => [
           item.name,
+          item.itemCode,
           item.quantity,
         ]);
 
       const matchesSearch =
         search === "" ||
         [
-          dispatch.id,
+          dispatch.dispatchCode,
           dispatch.eventReference,
           dispatch.fromWarehouse,
           dispatch.toLocation,
@@ -121,7 +197,7 @@ export default function Dispatch() {
           dispatch.status,
           ...itemSearchValues,
         ].some((value) =>
-          String(value)
+          String(value || "")
             .toLowerCase()
             .includes(search)
         );
@@ -138,9 +214,48 @@ export default function Dispatch() {
     activeTab,
   ]);
 
+  const handleFormChange = async (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
 
-  const handleFormChange = (event) => {
-    const { name, value } = event.target;
+    if (name === "eventId") {
+      const selectedEvent = events.find(
+        (currentEvent) =>
+          String(currentEvent.id) ===
+          String(value)
+      );
+
+      setFormData((currentData) => ({
+        ...currentData,
+        eventId: value,
+        toLocation:
+          selectedEvent?.location ||
+          currentData.toLocation,
+        area:
+          selectedEvent?.area ||
+          currentData.area,
+        driverId:
+          selectedEvent?.driver_id ||
+          currentData.driverId,
+      }));
+
+      return;
+    }
+
+    if (name === "warehouseId") {
+      setFormData((currentData) => ({
+        ...currentData,
+        warehouseId: value,
+        items: [createEmptyItem()],
+      }));
+
+      await loadWarehouseItems(value);
+      return;
+    }
 
     setFormData((currentData) => ({
       ...currentData,
@@ -192,54 +307,62 @@ export default function Dispatch() {
 
   const openAddModal = () => {
     setEditingDispatchId(null);
-    setFormData({
-      ...emptyForm,
-      date: getTodayDate(),
-      items: [createEmptyItem()],
-    });
+    setOpenActionId(null);
+    setItemOptions([]);
+    setFormData(createEmptyForm());
     setShowDispatchModal(true);
   };
 
-  const openEditModal = (dispatch) => {
+  const openEditModal = async (
+    dispatch
+  ) => {
     setEditingDispatchId(dispatch.id);
 
     setFormData({
-      eventReference:
-        dispatch.eventReference,
-      fromWarehouse:
-        dispatch.fromWarehouse,
+      eventId: String(
+        dispatch.eventId || ""
+      ),
+      warehouseId: String(
+        dispatch.warehouseId || ""
+      ),
       toLocation: dispatch.toLocation,
       area: dispatch.area,
-      driver: dispatch.driver,
+      driverId: String(
+        dispatch.driverId || ""
+      ),
       date: dispatch.date,
       time: dispatch.time,
       items: dispatch.items.map((item) => ({
-        ...item,
+        itemId: String(item.itemId),
+        quantity: item.quantity,
       })),
     });
 
     setOpenActionId(null);
+    await loadWarehouseItems(
+      dispatch.warehouseId
+    );
     setShowDispatchModal(true);
   };
 
   const closeModal = () => {
+    if (saving) {
+      return;
+    }
+
     setShowDispatchModal(false);
     setEditingDispatchId(null);
-    setFormData({
-      ...emptyForm,
-      date: getTodayDate(),
-      items: [createEmptyItem()],
-    });
+    setItemOptions([]);
+    setFormData(createEmptyForm());
   };
 
-  const handleSaveDispatch = (event) => {
-    event.preventDefault();
-
+  const validateDispatchForm = () => {
     const requiredFields = [
-      "eventReference",
+      "eventId",
+      "warehouseId",
       "toLocation",
       "area",
-      "driver",
+      "driverId",
       "date",
       "time",
     ];
@@ -248,7 +371,7 @@ export default function Dispatch() {
       requiredFields.some(
         (field) =>
           String(
-            formData[field]
+            formData[field] || ""
           ).trim() === ""
       );
 
@@ -256,14 +379,14 @@ export default function Dispatch() {
       alert(
         "Please complete all dispatch fields."
       );
-
-      return;
+      return null;
     }
 
     const validItems =
       formData.items.filter(
         (item) =>
-          item.name.trim() !== "" &&
+          String(item.itemId).trim() !==
+            "" &&
           Number(item.quantity) > 0
       );
 
@@ -271,57 +394,153 @@ export default function Dispatch() {
       alert(
         "Please add at least one item with a valid quantity."
       );
-      return;
+      return null;
     }
 
-    const itemNames = validItems.map(
-      (item) =>
-        item.name.trim().toLowerCase()
+    const itemIds = validItems.map(
+      (item) => String(item.itemId)
     );
 
     const hasDuplicateItems =
-      itemNames.some(
-        (itemName, index) =>
-          itemNames.indexOf(itemName) !==
-          index
+      itemIds.some(
+        (itemId, index) =>
+          itemIds.indexOf(itemId) !== index
       );
 
     if (hasDuplicateItems) {
       alert(
         "The same item cannot be added more than once."
       );
-      return;
+      return null;
     }
 
-    const normalizedData = {
+    const hasInvalidQuantity =
+      validItems.some((item) => {
+        const selectedItem =
+          itemOptions.find(
+            (option) =>
+              String(option.id) ===
+              String(item.itemId)
+          );
+
+        return (
+          !selectedItem ||
+          Number(item.quantity) >
+            selectedItem.availableQuantity
+        );
+      });
+
+    if (hasInvalidQuantity) {
+      alert(
+        "One or more quantities exceed the available stock."
+      );
+      return null;
+    }
+
+    return {
       ...formData,
       items: validItems,
     };
+  };
 
-    if (editingDispatchId) {
-      updateDispatch(
-        editingDispatchId,
-        normalizedData
-      );
-    } else {
-      addDispatch(normalizedData);
+  const handleSaveDispatch = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    const normalizedData =
+      validateDispatchForm();
+
+    if (!normalizedData) {
+      return;
     }
 
-    closeModal();
+    try {
+      setSaving(true);
+
+      if (editingDispatchId) {
+        const updatedDispatch =
+          await updateDispatch(
+            editingDispatchId,
+            normalizedData
+          );
+
+        setDispatches(
+          (currentDispatches) =>
+            currentDispatches.map(
+              (dispatch) =>
+                dispatch.id ===
+                editingDispatchId
+                  ? updatedDispatch
+                  : dispatch
+            )
+        );
+      } else {
+        const newDispatch =
+          await createDispatch(
+            normalizedData
+          );
+
+        setDispatches(
+          (currentDispatches) => [
+            newDispatch,
+            ...currentDispatches,
+          ]
+        );
+      }
+
+      setShowDispatchModal(false);
+      setEditingDispatchId(null);
+      setItemOptions([]);
+      setFormData(createEmptyForm());
+    } catch (error) {
+      console.error(
+        "Error saving dispatch:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not save dispatch."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleStartDispatch = (
-    dispatchId
+  const changeDispatchStatus = async (
+    dispatchId,
+    status
   ) => {
-    startDispatch(dispatchId);
-    setOpenActionId(null);
-  };
+    try {
+      const updatedDispatch =
+        await updateDispatchStatus(
+          dispatchId,
+          status
+        );
 
-  const handleDeliveredDispatch = (
-    dispatchId
-  ) => {
-    markDelivered(dispatchId);
-    setOpenActionId(null);
+      setDispatches(
+        (currentDispatches) =>
+          currentDispatches.map(
+            (dispatch) =>
+              dispatch.id === dispatchId
+                ? updatedDispatch
+                : dispatch
+          )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      console.error(
+        "Error changing dispatch status:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not update dispatch status."
+      );
+    }
   };
 
   const handleCancelDispatch = (
@@ -335,11 +554,13 @@ export default function Dispatch() {
       return;
     }
 
-    cancelDispatch(dispatchId);
-    setOpenActionId(null);
+    changeDispatchStatus(
+      dispatchId,
+      "Cancelled"
+    );
   };
 
-  const handleDeleteDispatch = (
+  const handleDeleteDispatch = async (
     dispatchId
   ) => {
     const confirmed = window.confirm(
@@ -350,15 +571,41 @@ export default function Dispatch() {
       return;
     }
 
-    deleteDispatch(dispatchId);
-    setOpenActionId(null);
+    try {
+      await removeDispatch(dispatchId);
+
+      setDispatches(
+        (currentDispatches) =>
+          currentDispatches.filter(
+            (dispatch) =>
+              dispatch.id !== dispatchId
+          )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      console.error(
+        "Error deleting dispatch:",
+        error
+      );
+
+      if (error.code === "23503") {
+        alert(
+          "This dispatch cannot be deleted because it is connected to a return."
+        );
+      } else {
+        alert(
+          error.message ||
+            "Could not delete dispatch."
+        );
+      }
+    }
   };
 
-  const getStatusClass = (status) => {
-    return status
+  const getStatusClass = (status) =>
+    status
       .toLowerCase()
       .replace(/\s+/g, "-");
-  };
 
   const formatDate = (dateValue) => {
     if (!dateValue) {
@@ -394,13 +641,12 @@ export default function Dispatch() {
     });
   };
 
-  const getTotalQuantity = (dispatch) => {
-    return dispatch.items.reduce(
+  const getTotalQuantity = (dispatch) =>
+    dispatch.items.reduce(
       (total, item) =>
         total + Number(item.quantity),
       0
     );
-  };
 
   return (
     <div className="dashboard-page">
@@ -491,8 +737,17 @@ export default function Dispatch() {
               </thead>
 
               <tbody>
-                {filteredDispatches.length >
-                0 ? (
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan="10"
+                      className="dispatch-empty-state"
+                    >
+                      Loading dispatches...
+                    </td>
+                  </tr>
+                ) : filteredDispatches.length >
+                  0 ? (
                   filteredDispatches.map(
                     (dispatch) => (
                       <tr key={dispatch.id}>
@@ -509,13 +764,17 @@ export default function Dispatch() {
                             </div>
 
                             <strong>
-                              {dispatch.id}
+                              {
+                                dispatch.dispatchCode
+                              }
                             </strong>
                           </div>
                         </td>
 
                         <td>
-                          {dispatch.eventReference}
+                          {
+                            dispatch.eventReference
+                          }
                         </td>
 
                         <td>
@@ -539,7 +798,8 @@ export default function Dispatch() {
                         </td>
 
                         <td>
-                          {dispatch.driver}
+                          {dispatch.driver ||
+                            "-"}
                         </td>
 
                         <td>
@@ -561,7 +821,10 @@ export default function Dispatch() {
                         <td>
                           <div className="dispatch-items-summary">
                             <strong>
-                              {dispatch.items.length}{" "}
+                              {
+                                dispatch.items
+                                  .length
+                              }{" "}
                               item types
                             </strong>
 
@@ -632,8 +895,9 @@ export default function Dispatch() {
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        handleStartDispatch(
-                                          dispatch.id
+                                        changeDispatchStatus(
+                                          dispatch.id,
+                                          "In Transit"
                                         )
                                       }
                                     >
@@ -647,8 +911,9 @@ export default function Dispatch() {
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        handleDeliveredDispatch(
-                                          dispatch.id
+                                        changeDispatchStatus(
+                                          dispatch.id,
+                                          "Delivered"
                                         )
                                       }
                                     >
@@ -728,27 +993,47 @@ export default function Dispatch() {
           </div>
 
           <div className="dispatch-pagination">
-            <p>
-              Showing{" "}
-              {filteredDispatches.length} of{" "}
-              {dispatches.length} dispatches
-            </p>
+  <p>
+    Showing{" "}
+    {filteredDispatches.length} of{" "}
+    {dispatches.length} dispatches
+  </p>
 
-            <div>
-              <button type="button">‹</button>
-              <button
-                type="button"
-                className="active"
-              >
-                1
-              </button>
-              <button type="button">2</button>
-              <button type="button">3</button>
-              <button type="button">...</button>
-              <button type="button">26</button>
-              <button type="button">›</button>
-            </div>
-          </div>
+  {dispatches.length > 0 && (
+    <div>
+      <button type="button">
+        ‹
+      </button>
+
+      <button
+        type="button"
+        className="active"
+      >
+        1
+      </button>
+
+      <button type="button">
+        2
+      </button>
+
+      <button type="button">
+        3
+      </button>
+
+      <button type="button">
+        ...
+      </button>
+
+      <button type="button">
+        26
+      </button>
+
+      <button type="button">
+        ›
+      </button>
+    </div>
+  )}
+</div>
         </section>
       </main>
 
@@ -780,6 +1065,7 @@ export default function Dispatch() {
               <button
                 type="button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -789,31 +1075,53 @@ export default function Dispatch() {
               <label>
                 Event Reference
 
-                <input
-                  type="text"
-                  name="eventReference"
-                  value={formData.eventReference}
+                <select
+                  name="eventId"
+                  value={formData.eventId}
                   onChange={handleFormChange}
-                />
+                  disabled={saving}
+                >
+                  <option value="">
+                    Select event
+                  </option>
+
+                  {events.map((event) => (
+                    <option
+                      key={event.id}
+                      value={event.id}
+                    >
+                      {event.event_code} -{" "}
+                      {event.event_type}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label>
                 From Warehouse
 
                 <select
-                  name="fromWarehouse"
+                  name="warehouseId"
                   value={
-                    formData.fromWarehouse
+                    formData.warehouseId
                   }
                   onChange={handleFormChange}
+                  disabled={saving}
                 >
-                  <option>
-                    Cairo Warehouse
+                  <option value="">
+                    Select warehouse
                   </option>
 
-                  <option>
-                    Alexandria Warehouse
-                  </option>
+                  {warehouses.map(
+                    (warehouse) => (
+                      <option
+                        key={warehouse.id}
+                        value={warehouse.id}
+                      >
+                        {warehouse.name}
+                      </option>
+                    )
+                  )}
                 </select>
               </label>
 
@@ -827,6 +1135,7 @@ export default function Dispatch() {
                     formData.toLocation
                   }
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
@@ -838,18 +1147,35 @@ export default function Dispatch() {
                   name="area"
                   value={formData.area}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
               <label>
                 Driver
 
-                <input
-                  type="text"
-                  name="driver"
-                  value={formData.driver}
+                <select
+                  name="driverId"
+                  value={formData.driverId}
                   onChange={handleFormChange}
-                />
+                  disabled={saving}
+                >
+                  <option value="">
+                    Select driver
+                  </option>
+
+                  {drivers.map((driver) => (
+                    <option
+                      key={driver.id}
+                      value={driver.id}
+                    >
+                      {driver.full_name}
+                      {driver.staff_code
+                        ? ` (${driver.staff_code})`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label>
@@ -860,6 +1186,7 @@ export default function Dispatch() {
                   name="date"
                   value={formData.date}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
@@ -871,6 +1198,7 @@ export default function Dispatch() {
                   name="time"
                   value={formData.time}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
             </div>
@@ -878,7 +1206,10 @@ export default function Dispatch() {
             <div className="dispatch-items-section">
               <div className="dispatch-items-heading">
                 <div>
-                  <h3>Items & Quantities</h3>
+                  <h3>
+                    Items & Quantities
+                  </h3>
+
                   <p>
                     Add the items leaving the selected warehouse.
                   </p>
@@ -887,6 +1218,10 @@ export default function Dispatch() {
                 <button
                   type="button"
                   onClick={addItemRow}
+                  disabled={
+                    saving ||
+                    !formData.warehouseId
+                  }
                 >
                   <FiPlus />
                   Add Item
@@ -904,26 +1239,44 @@ export default function Dispatch() {
                         Item
 
                         <select
-                          value={item.name}
+                          value={item.itemId}
                           onChange={(event) =>
                             handleItemChange(
                               itemIndex,
-                              "name",
+                              "itemId",
                               event.target.value
                             )
                           }
+                          disabled={
+                            saving ||
+                            loadingItems ||
+                            !formData.warehouseId
+                          }
                         >
                           <option value="">
-                            Select item
+                            {loadingItems
+                              ? "Loading items..."
+                              : "Select item"}
                           </option>
 
                           {itemOptions.map(
                             (itemOption) => (
                               <option
-                                key={itemOption}
-                                value={itemOption}
+                                key={
+                                  itemOption.id
+                                }
+                                value={
+                                  itemOption.id
+                                }
                               >
-                                {itemOption}
+                                {
+                                  itemOption.name
+                                }{" "}
+                                (
+                                {
+                                  itemOption.availableQuantity
+                                }{" "}
+                                available)
                               </option>
                             )
                           )}
@@ -945,6 +1298,7 @@ export default function Dispatch() {
                             )
                           }
                           placeholder="100"
+                          disabled={saving}
                         />
                       </label>
 
@@ -952,8 +1306,11 @@ export default function Dispatch() {
                         type="button"
                         className="dispatch-remove-item"
                         onClick={() =>
-                          removeItemRow(itemIndex)
+                          removeItemRow(
+                            itemIndex
+                          )
                         }
+                        disabled={saving}
                       >
                         <FiTrash2 />
                       </button>
@@ -972,6 +1329,7 @@ export default function Dispatch() {
                 type="button"
                 className="dispatch-cancel-button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -979,10 +1337,13 @@ export default function Dispatch() {
               <button
                 type="submit"
                 className="dispatch-save-button"
+                disabled={saving}
               >
-                {editingDispatchId
-                  ? "Save Changes"
-                  : "Save Dispatch"}
+                {saving
+                  ? "Saving..."
+                  : editingDispatchId
+                    ? "Save Changes"
+                    : "Save Dispatch"}
               </button>
             </div>
           </form>

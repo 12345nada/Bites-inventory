@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -11,20 +12,12 @@ import "../styles/mobile-sidebar-offcanvas.css";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
-  useItems,
-} from "../context/ItemsContext";
-
-import {
-  usePurchases,
-} from "../context/PurchasesContext";
-
-import {
-  useDispatches,
-} from "../context/DispatchesContext";
-
-import {
-  useReturns,
-} from "../context/ReturnsContext";
+  getDispatchReportRows,
+  getInventoryReportRows,
+  getPurchaseReportRows,
+  getReportsData,
+  getReturnsReportRows,
+} from "../services/reportsService";
 
 import "../styles/dashboard.css";
 import "../styles/Reports.css";
@@ -35,25 +28,6 @@ import {
   FiDownload,
   FiFilter,
 } from "react-icons/fi";
-
-const reportTypes = {
-  inventory: {
-    title: "Inventory Report",
-    dateField: null,
-  },
-  purchases: {
-    title: "Purchase Report",
-    dateField: "orderDate",
-  },
-  dispatches: {
-    title: "Dispatch Report",
-    dateField: "date",
-  },
-  returns: {
-    title: "Returns Report",
-    dateField: "returnDate",
-  },
-};
 
 const formatDate = (dateValue) => {
   if (!dateValue) {
@@ -68,58 +42,41 @@ const formatDate = (dateValue) => {
     return dateValue;
   }
 
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-const getReturnTotals = (items = []) => {
-  return items.reduce(
-    (totals, item) => {
-      totals.sent += Number(
-        item.dispatchedQuantity || 0
-      );
-
-      totals.returned += Number(
-        item.goodReturned || 0
-      );
-
-      totals.damaged += Number(
-        item.damaged || 0
-      );
-
-      totals.missing += Number(
-        item.missing || 0
-      );
-
-      return totals;
-    },
+  return date.toLocaleDateString(
+    "en-GB",
     {
-      sent: 0,
-      returned: 0,
-      damaged: 0,
-      missing: 0,
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     }
   );
 };
 
-const getDispatchTotalQuantity = (
-  items = []
-) => {
-  return items.reduce(
-    (total, item) =>
-      total + Number(item.quantity || 0),
-    0
-  );
+const reportTitles = {
+  inventory: "Inventory Report",
+  purchases: "Purchase Report",
+  dispatches: "Dispatch Report",
+  returns: "Returns Report",
 };
 
 export default function Reports() {
-  const { items } = useItems();
-  const { purchases } = usePurchases();
-  const { dispatches } = useDispatches();
-  const { returns } = useReturns();
+  const [inventory, setInventory] =
+    useState([]);
+
+  const [purchases, setPurchases] =
+    useState([]);
+
+  const [dispatches, setDispatches] =
+    useState([]);
+
+  const [returns, setReturns] =
+    useState([]);
+
+  const [warehouses, setWarehouses] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -133,85 +90,70 @@ export default function Reports() {
   const [toDate, setToDate] =
     useState("");
 
-  const [warehouse, setWarehouse] =
-    useState("All Warehouses");
+  const [
+    selectedWarehouse,
+    setSelectedWarehouse,
+  ] = useState("All Warehouses");
 
   const [status, setStatus] =
     useState("All Statuses");
 
+  useEffect(() => {
+    loadReports();
+  }, []);
+
+  const loadReports = async () => {
+    try {
+      setLoading(true);
+
+      const data =
+        await getReportsData();
+
+      setInventory(data.inventory);
+      setPurchases(data.purchases);
+      setDispatches(data.dispatches);
+      setReturns(data.returns);
+      setWarehouses(data.warehouses);
+    } catch (error) {
+      console.error(
+        "Error loading reports:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not load report data."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const reportConfig = useMemo(() => {
     if (reportType === "inventory") {
       return {
-        title: "Inventory Report",
-
+        title: reportTitles.inventory,
         columns: [
           "Item Code",
           "Item",
           "Category",
           "Warehouse",
           "Available",
-          
           "Damaged",
           "Missing",
           "Minimum Stock",
           "Stock Level",
         ],
-
-        rows: items.map((item) => {
-          const isLowStock =
-            Number(item.available) <=
-            Number(item.minimumStock || 0);
-
-          return {
-            searchValues: [
-              item.id,
-              item.name,
-              item.category,
-              item.warehouse,
-              isLowStock
-                ? "Low Stock"
-                : "In Stock",
-            ],
-
-            warehouse: item.warehouse,
-
-            status: isLowStock
-              ? "Low Stock"
-              : "In Stock",
-
-            date: "",
-
-            cells: [
-              item.id,
-              item.name,
-              item.category,
-              item.warehouse,
-              Number(
-                item.available || 0
-              ).toLocaleString(),
-             
-              Number(
-                item.damaged || 0
-              ).toLocaleString(),
-              Number(
-                item.missing || 0
-              ).toLocaleString(),
-              Number(
-                item.minimumStock || 0
-              ).toLocaleString(),
-              isLowStock
-                ? "Low Stock"
-                : "In Stock",
-            ],
-          };
-        }),
+        rows:
+          getInventoryReportRows(
+            inventory
+          ),
       };
     }
 
     if (reportType === "purchases") {
       return {
-        title: "Purchase Report",
-
+        title: reportTitles.purchases,
         columns: [
           "PO Number",
           "Supplier",
@@ -222,55 +164,16 @@ export default function Reports() {
           "Order Date",
           "Status",
         ],
-
-        rows: purchases.map((purchase) => ({
-          searchValues: [
-            purchase.id,
-            purchase.supplier,
-            purchase.itemName,
-            purchase.warehouse,
-            purchase.status,
-          ],
-
-          warehouse:
-            purchase.warehouse ||
-            purchase.branch,
-
-          status: purchase.status,
-
-          date:
-            purchase.orderDate ||
-            purchase.date,
-
-          cells: [
-            purchase.id,
-            purchase.supplier,
-            purchase.itemName || "-",
-            purchase.warehouse ||
-              purchase.branch ||
-              "-",
-            Number(
-              purchase.quantity ||
-                purchase.items ||
-                0
-            ).toLocaleString(),
-            `${Number(
-              purchase.totalAmount || 0
-            ).toLocaleString()} EGP`,
-            formatDate(
-              purchase.orderDate ||
-                purchase.date
-            ),
-            purchase.status,
-          ],
-        })),
+        rows:
+          getPurchaseReportRows(
+            purchases
+          ),
       };
     }
 
     if (reportType === "dispatches") {
       return {
-        title: "Dispatch Report",
-
+        title: reportTitles.dispatches,
         columns: [
           "Dispatch ID",
           "Event Reference",
@@ -281,48 +184,15 @@ export default function Reports() {
           "Total Quantity",
           "Status",
         ],
-
-        rows: dispatches.map((dispatch) => ({
-          searchValues: [
-            dispatch.id,
-            dispatch.eventReference,
-            dispatch.fromWarehouse,
-            dispatch.toLocation,
-            dispatch.area,
-            dispatch.driver,
-            dispatch.status,
-          ],
-
-          warehouse:
-            dispatch.fromWarehouse,
-
-          status: dispatch.status,
-
-          date: dispatch.date,
-
-          cells: [
-            dispatch.id,
-            dispatch.eventReference,
-            dispatch.fromWarehouse,
-            `${dispatch.toLocation}${
-              dispatch.area
-                ? `, ${dispatch.area}`
-                : ""
-            }`,
-            dispatch.driver,
-            formatDate(dispatch.date),
-            getDispatchTotalQuantity(
-              dispatch.items
-            ).toLocaleString(),
-            dispatch.status,
-          ],
-        })),
+        rows:
+          getDispatchReportRows(
+            dispatches
+          ),
       };
     }
 
     return {
-      title: "Returns Report",
-
+      title: reportTitles.returns,
       columns: [
         "Return ID",
         "Event Reference",
@@ -334,55 +204,12 @@ export default function Reports() {
         "Damaged",
         "Missing",
       ],
-
-      rows: returns.map((returnRecord) => {
-        const totals = getReturnTotals(
-          returnRecord.items
-        );
-
-        const returnStatus =
-          totals.missing > 0
-            ? "Has Missing"
-            : totals.damaged > 0
-              ? "Has Damage"
-              : "Clear";
-
-        return {
-          searchValues: [
-            returnRecord.id,
-            returnRecord.dispatchId,
-            returnRecord.eventReference,
-            returnRecord.warehouse,
-            returnRecord.returnedBy,
-            returnStatus,
-          ],
-
-          warehouse:
-            returnRecord.warehouse,
-
-          status: returnStatus,
-
-          date: returnRecord.returnDate,
-
-          cells: [
-            returnRecord.id,
-            returnRecord.eventReference,
-            returnRecord.warehouse,
-            formatDate(
-              returnRecord.returnDate
-            ),
-            returnRecord.returnedBy,
-            totals.sent.toLocaleString(),
-            totals.returned.toLocaleString(),
-            totals.damaged.toLocaleString(),
-            totals.missing.toLocaleString(),
-          ],
-        };
-      }),
+      rows:
+        getReturnsReportRows(returns),
     };
   }, [
     reportType,
-    items,
+    inventory,
     purchases,
     dispatches,
     returns,
@@ -413,7 +240,6 @@ export default function Reports() {
         "Prepared",
         "In Transit",
         "Delivered",
-        "Returned",
         "Cancelled",
       ];
     }
@@ -434,15 +260,20 @@ export default function Reports() {
       (row) => {
         const matchesSearch =
           normalizedSearch === "" ||
-          row.searchValues.some((value) =>
-            String(value)
-              .toLowerCase()
-              .includes(normalizedSearch)
+          row.searchValues.some(
+            (value) =>
+              String(value || "")
+                .toLowerCase()
+                .includes(
+                  normalizedSearch
+                )
           );
 
         const matchesWarehouse =
-          warehouse === "All Warehouses" ||
-          row.warehouse === warehouse;
+          selectedWarehouse ===
+            "All Warehouses" ||
+          String(row.warehouseId) ===
+            String(selectedWarehouse);
 
         const matchesStatus =
           status === "All Statuses" ||
@@ -470,7 +301,7 @@ export default function Reports() {
   }, [
     reportConfig,
     searchValue,
-    warehouse,
+    selectedWarehouse,
     status,
     fromDate,
     toDate,
@@ -489,8 +320,35 @@ export default function Reports() {
     setSearchValue("");
     setFromDate("");
     setToDate("");
-    setWarehouse("All Warehouses");
+    setSelectedWarehouse(
+      "All Warehouses"
+    );
     setStatus("All Statuses");
+  };
+
+  const getExportCells = (row) => {
+    if (reportType === "inventory") {
+      return row.cells;
+    }
+
+    return row.cells.map(
+      (cell, index) => {
+        const isDateColumn =
+          (reportType ===
+            "purchases" &&
+            index === 6) ||
+          (reportType ===
+            "dispatches" &&
+            index === 5) ||
+          (reportType ===
+            "returns" &&
+            index === 3);
+
+        return isDateColumn
+          ? formatDate(cell)
+          : cell;
+      }
+    );
   };
 
   const exportPdf = () => {
@@ -516,6 +374,13 @@ export default function Reports() {
 
     document.setFontSize(9);
 
+    const selectedWarehouseName =
+      warehouses.find(
+        (warehouse) =>
+          String(warehouse.id) ===
+          String(selectedWarehouse)
+      )?.name;
+
     const filterText = [
       fromDate
         ? `From: ${formatDate(fromDate)}`
@@ -523,8 +388,12 @@ export default function Reports() {
       toDate
         ? `To: ${formatDate(toDate)}`
         : "",
-      warehouse !== "All Warehouses"
-        ? `Warehouse: ${warehouse}`
+      selectedWarehouse !==
+      "All Warehouses"
+        ? `Warehouse: ${
+            selectedWarehouseName ||
+            selectedWarehouse
+          }`
         : "",
       status !== "All Statuses"
         ? `Status: ${status}`
@@ -544,24 +413,20 @@ export default function Reports() {
       startY: 28,
       head: [reportConfig.columns],
       body: filteredRows.map(
-        (row) => row.cells
+        getExportCells
       ),
-
       styles: {
         fontSize: 7,
         cellPadding: 2,
         overflow: "linebreak",
       },
-
       headStyles: {
         fillColor: [113, 48, 6],
         textColor: [255, 255, 255],
       },
-
       alternateRowStyles: {
         fillColor: [255, 248, 242],
       },
-
       margin: {
         left: 10,
         right: 10,
@@ -573,6 +438,23 @@ export default function Reports() {
         .toLowerCase()
         .replace(/\s+/g, "-")}.pdf`
     );
+  };
+
+  const renderCell = (
+    cell,
+    cellIndex
+  ) => {
+    const isDateColumn =
+      (reportType === "purchases" &&
+        cellIndex === 6) ||
+      (reportType === "dispatches" &&
+        cellIndex === 5) ||
+      (reportType === "returns" &&
+        cellIndex === 3);
+
+    return isDateColumn
+      ? formatDate(cell)
+      : cell;
   };
 
   return (
@@ -598,6 +480,7 @@ export default function Reports() {
             type="button"
             className="export-pdf-button"
             onClick={exportPdf}
+            disabled={loading}
           >
             <FiDownload />
             Export PDF
@@ -610,6 +493,7 @@ export default function Reports() {
 
             <div>
               <h3>Report Filters</h3>
+
               <p>
                 Select a report type and narrow
                 the results.
@@ -626,6 +510,7 @@ export default function Reports() {
                 onChange={
                   handleReportTypeChange
                 }
+                disabled={loading}
               >
                 <option value="inventory">
                   Inventory Report
@@ -652,7 +537,9 @@ export default function Reports() {
                 type="date"
                 value={fromDate}
                 disabled={
-                  reportType === "inventory"
+                  loading ||
+                  reportType ===
+                    "inventory"
                 }
                 onChange={(event) =>
                   setFromDate(
@@ -669,7 +556,9 @@ export default function Reports() {
                 type="date"
                 value={toDate}
                 disabled={
-                  reportType === "inventory"
+                  loading ||
+                  reportType ===
+                    "inventory"
                 }
                 onChange={(event) =>
                   setToDate(
@@ -683,28 +572,28 @@ export default function Reports() {
               Warehouse
 
               <select
-                value={warehouse}
+                value={selectedWarehouse}
                 onChange={(event) =>
-                  setWarehouse(
+                  setSelectedWarehouse(
                     event.target.value
                   )
                 }
+                disabled={loading}
               >
-                <option>
+                <option value="All Warehouses">
                   All Warehouses
                 </option>
 
-                
-
-                
-
-                <option value="Cairo">
-                  Cairo
-                </option>
-
-                <option value="Alex">
-                  Alex
-                </option>
+                {warehouses.map(
+                  (warehouse) => (
+                    <option
+                      key={warehouse.id}
+                      value={warehouse.id}
+                    >
+                      {warehouse.name}
+                    </option>
+                  )
+                )}
               </select>
             </label>
 
@@ -718,6 +607,7 @@ export default function Reports() {
                     event.target.value
                   )
                 }
+                disabled={loading}
               >
                 {statusOptions.map(
                   (statusOption) => (
@@ -736,6 +626,7 @@ export default function Reports() {
               type="button"
               className="reset-report-button"
               onClick={resetFilters}
+              disabled={loading}
             >
               Reset Filters
             </button>
@@ -754,8 +645,8 @@ export default function Reports() {
               </div>
 
               <p>
-                Showing {filteredRows.length}{" "}
-                records
+                Showing{" "}
+                {filteredRows.length} records
               </p>
             </div>
 
@@ -771,6 +662,7 @@ export default function Reports() {
                     event.target.value
                   )
                 }
+                disabled={loading}
               />
             </div>
           </div>
@@ -790,7 +682,19 @@ export default function Reports() {
               </thead>
 
               <tbody>
-                {filteredRows.length > 0 ? (
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={
+                        reportConfig.columns
+                          .length
+                      }
+                      className="report-empty-state"
+                    >
+                      Loading report data...
+                    </td>
+                  </tr>
+                ) : filteredRows.length > 0 ? (
                   filteredRows.map(
                     (row, rowIndex) => (
                       <tr key={rowIndex}>
@@ -802,7 +706,10 @@ export default function Reports() {
                             <td
                               key={`${rowIndex}-${cellIndex}`}
                             >
-                              {cell}
+                              {renderCell(
+                                cell,
+                                cellIndex
+                              )}
                             </td>
                           )
                         )}

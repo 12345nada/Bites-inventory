@@ -12,6 +12,7 @@ import {
 
 export default function EventTable({
   events = [],
+  loading = false,
   searchValue = "",
   onSearchChange,
 }) {
@@ -28,7 +29,7 @@ export default function EventTable({
       const matchesSearch =
         normalizedSearch === "" ||
         [
-          event.id,
+          event.eventCode,
           event.eventType,
           event.name,
           event.client,
@@ -72,11 +73,10 @@ export default function EventTable({
     ];
   }, [events]);
 
-  const getStatusClass = (status) => {
-    return String(status)
+  const getStatusClass = (status) =>
+    String(status)
       .toLowerCase()
       .replace(/\s+/g, "-");
-  };
 
   return (
     <div className="table-card">
@@ -108,7 +108,7 @@ export default function EventTable({
                 )
               }
             >
-              <option>
+              <option value="All Branches">
                 All Branches
               </option>
 
@@ -158,7 +158,16 @@ export default function EventTable({
           </thead>
 
           <tbody>
-            {filteredRows.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td
+                  colSpan="9"
+                  className="dashboard-empty-table"
+                >
+                  Loading events...
+                </td>
+              </tr>
+            ) : filteredRows.length > 0 ? (
               filteredRows.map(
                 (event) => (
                   <tr key={event.id}>
@@ -181,7 +190,7 @@ export default function EventTable({
                           </strong>
 
                           <span>
-                            {event.id}
+                            {event.eventCode}
                           </span>
                         </div>
                       </div>
@@ -255,44 +264,46 @@ export default function EventTable({
       </div>
 
       <div className="dashboard-table-pagination">
-        <p>
-          Showing {filteredRows.length} of{" "}
-          {events.length} events
-        </p>
+  <p>
+    Showing {filteredRows.length} of{" "}
+    {events.length} events
+  </p>
 
-        <div>
-          <button type="button">
-            ‹
-          </button>
+  {events.length > 0 && (
+    <div>
+      <button type="button">
+        ‹
+      </button>
 
-          <button
-            type="button"
-            className="active"
-          >
-            1
-          </button>
+      <button
+        type="button"
+        className="active"
+      >
+        1
+      </button>
 
-          <button type="button">
-            2
-          </button>
+      <button type="button">
+        2
+      </button>
 
-          <button type="button">
-            3
-          </button>
+      <button type="button">
+        3
+      </button>
 
-          <button type="button">
-            ...
-          </button>
+      <button type="button">
+        ...
+      </button>
 
-          <button type="button">
-            22
-          </button>
+      <button type="button">
+        22
+      </button>
 
-          <button type="button">
-            ›
-          </button>
-        </div>
-      </div>
+      <button type="button">
+        ›
+      </button>
+    </div>
+  )}
+</div>
     </div>
   );
 }

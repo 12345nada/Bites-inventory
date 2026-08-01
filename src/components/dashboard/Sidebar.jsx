@@ -28,7 +28,7 @@ const menuItems = [
   {
     title: "Dashboard",
     icon: FiGrid,
-    path: "/",
+    path: "/dashboard",
     pageName: "dashboard",
   },
   {
@@ -156,7 +156,9 @@ export default function Sidebar({
         type="button"
         className="dashboard-mobile-menu-button"
         onClick={() =>
-          setIsSidebarOpen((current) => !current)
+          setIsSidebarOpen(
+            (current) => !current
+          )
         }
         aria-label={
           isSidebarOpen
@@ -165,7 +167,11 @@ export default function Sidebar({
         }
         aria-expanded={isSidebarOpen}
       >
-        {isSidebarOpen ? <FiX /> : <FiMenu />}
+        {isSidebarOpen ? (
+          <FiX />
+        ) : (
+          <FiMenu />
+        )}
       </button>
 
       <button
@@ -179,7 +185,9 @@ export default function Sidebar({
 
       <aside
         className={`dashboard-sidebar ${
-          isSidebarOpen ? "mobile-open" : ""
+          isSidebarOpen
+            ? "mobile-open"
+            : ""
         }`}
       >
         <div className="sidebar-top">
@@ -187,7 +195,9 @@ export default function Sidebar({
             type="button"
             className="dashboard-logo"
             onClick={() =>
-              handleNavigation("/")
+              handleNavigation(
+                "/dashboard"
+              )
             }
           >
             bites
@@ -199,23 +209,29 @@ export default function Sidebar({
           >
             <ul className="dashboard-menu">
               {menuItems.map((item) => {
-                const Icon = item.icon;
+                const Icon =
+                  item.icon;
 
                 const isActive =
-                  activePage === item.pageName;
+                  activePage ===
+                  item.pageName;
 
                 return (
                   <li
                     key={item.pageName}
                     className={
-                      isActive ? "active" : ""
+                      isActive
+                        ? "active"
+                        : ""
                     }
                   >
                     <button
                       type="button"
                       className="dashboard-menu-button"
                       onClick={() =>
-                        handleNavigation(item.path)
+                        handleNavigation(
+                          item.path
+                        )
                       }
                       aria-current={
                         isActive
@@ -242,8 +258,13 @@ export default function Sidebar({
           <div className="dashboard-avatar" />
 
           <div className="dashboard-user-info">
-            <strong>Admin User</strong>
-            <small>Administrator</small>
+            <strong>
+              Admin User
+            </strong>
+
+            <small>
+              Administrator
+            </small>
           </div>
 
           <FiChevronDown className="user-arrow" />

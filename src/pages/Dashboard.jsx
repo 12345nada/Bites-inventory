@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -12,8 +13,6 @@ import StatCard from "../components/dashboard/StatCard";
 import EventTable from "../components/dashboard/EventTable";
 import DashboardCharts from "../components/dashboard/DashboardCharts";
 
-import "../styles/dashboard.css";
-
 import {
   FiCalendar,
   FiUsers,
@@ -22,181 +21,147 @@ import {
 } from "react-icons/fi";
 
 import {
-  useEvents,
-} from "../context/EventsContext";
-
-import {
-  useItems,
-} from "../context/ItemsContext";
-
-const dashboardEventDetails = {
-  "EVT-001": {
-    eventType: "Wedding",
-    waiters: 12,
-    driver: "Ahmed Samy",
-    hasDrinks: true,
-  },
-
-  "EVT-002": {
-    eventType: "Corporate Dinner",
-    waiters: 18,
-    driver: "Omar Khaled",
-    hasDrinks: true,
-  },
-
-  "EVT-003": {
-    eventType: "Birthday Party",
-    waiters: 6,
-    driver: "Mohamed Ali",
-    hasDrinks: true,
-  },
-
-  "EVT-004": {
-    eventType: "Engagement Party",
-    waiters: 8,
-    driver: "Youseef Magdy",
-    hasDrinks: true,
-  },
-
-  "EVT-005": {
-    eventType: "Team Building",
-    waiters: 10,
-    driver: "Tamer Hassan",
-    hasDrinks: false,
-  },
-
-  "EVT-006": {
-    eventType: "Private Event",
-    waiters: 5,
-    driver: "Ahmed Samy",
-    hasDrinks: false,
-  },
-};
+  getDashboardData,
+} from "../services/dashboardService";
 
 export default function Dashboard() {
-  const { events } = useEvents();
-  const { items } = useItems();
+  const [events, setEvents] =
+    useState([]);
+
+  const [
+    totalInventoryCost,
+    setTotalInventoryCost,
+  ] = useState(0);
+
+  const [
+    returnTotals,
+    setReturnTotals,
+  ] = useState({
+    returned: 0,
+    damaged: 0,
+    missing: 0,
+  });
+
+  const [fullName, setFullName] =
+    useState("Admin");
+
+  const [loading, setLoading] =
+    useState(true);
 
   const [searchValue, setSearchValue] =
     useState("");
 
-  const dashboardEvents = useMemo(() => {
-    return events.map((event) => {
-      const details =
-        dashboardEventDetails[event.id] ||
-        {};
+  useEffect(() => {
+    loadDashboard();
+  }, []);
 
-      return {
-        ...event,
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
 
-        eventType:
-          event.eventType ||
-          details.eventType ||
-          event.name ||
-          "Event",
+      const data =
+        await getDashboardData();
 
-        waiters:
-          event.waiters ??
-          details.waiters ??
-          0,
+      setEvents(data.events);
+      setTotalInventoryCost(
+        data.totalInventoryCost
+      );
+      setReturnTotals(
+        data.returnTotals
+      );
+      setFullName(data.fullName);
+    } catch (error) {
+      console.error(
+        "Error loading dashboard:",
+        error
+      );
 
-        driver:
-          event.driver ||
-          details.driver ||
-          "Not Assigned",
+      alert(
+        error.message ||
+          "Could not load dashboard data."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        hasDrinks:
-          event.hasDrinks ??
-          details.hasDrinks ??
-          false,
-      };
-    });
-  }, [events]);
+  const upcomingEvents = useMemo(
+    () =>
+      events.filter(
+        (event) =>
+          event.status === "Upcoming"
+      ).length,
+    [events]
+  );
 
-  const upcomingEvents =
-    dashboardEvents.filter(
-      (event) =>
-        event.status === "Upcoming"
-    ).length;
+  const eventsWithDrinks = useMemo(
+    () =>
+      events.filter(
+        (event) => event.hasDrinks
+      ).length,
+    [events]
+  );
 
-  const eventsWithDrinks =
-    dashboardEvents.filter(
-      (event) => event.hasDrinks
-    ).length;
-
-  const totalWaiters =
-    dashboardEvents.reduce(
-      (total, event) =>
-        total +
-        Number(event.waiters || 0),
-      0
-    );
-
-  const totalInventoryCost =
-    items.reduce(
-      (total, item) => {
-        const availableQuantity =
-          Number(
-            item.available || 0
-          );
-
-        const purchaseCost =
-          Number(
-            item.purchaseCost || 0
-          );
-
-        return (
+  const totalWaiters = useMemo(
+    () =>
+      events.reduce(
+        (total, event) =>
           total +
-          availableQuantity *
-            purchaseCost
-        );
-      },
-      0
-    );
+          Number(event.waiters || 0),
+        0
+      ),
+    [events]
+  );
 
   const stats = [
     {
       icon: <FiCalendar />,
       title: "Total Events",
-      value: String(
-        dashboardEvents.length
-      ),
+      value: loading
+        ? "..."
+        : String(events.length),
       subtitle: "All events",
     },
-
     {
       icon: <FiCalendar />,
       title: "Upcoming Events",
-      value: String(upcomingEvents),
+      value: loading
+        ? "..."
+        : String(upcomingEvents),
       subtitle: "Events upcoming",
     },
-
     {
       icon: <FiUsers />,
       title: "Total Waiters",
-      value:
-        totalWaiters.toLocaleString(
-          "en-US"
-        ),
+      value: loading
+        ? "..."
+        : totalWaiters.toLocaleString(
+            "en-US"
+          ),
       subtitle: "Assigned waiters",
     },
-
     {
       icon: <FiCoffee />,
       title: "Events With Drinks",
-      value: String(eventsWithDrinks),
+      value: loading
+        ? "..."
+        : String(eventsWithDrinks),
       subtitle:
         "Events serving drinks",
     },
-
     {
-  icon: <FiCreditCard />,
-  title: "Total Inventory Cost",
-  value: totalInventoryCost.toLocaleString(
-    "en-US"
-  ),
-  subtitle: "EGP",
-},
+      icon: <FiCreditCard />,
+      title: "Total Inventory Cost",
+      value: loading
+        ? "..."
+        : totalInventoryCost.toLocaleString(
+            "en-US",
+            {
+              maximumFractionDigits: 2,
+            }
+          ),
+      subtitle: "EGP",
+    },
   ];
 
   return (
@@ -212,7 +177,7 @@ export default function Dashboard() {
         />
 
         <h1 className="dashboard-welcome">
-          Welcome back, Admin{" "}
+          Welcome back, {fullName}{" "}
           <span>👋</span>
         </h1>
 
@@ -229,7 +194,8 @@ export default function Dashboard() {
         </section>
 
         <EventTable
-          events={dashboardEvents}
+          events={events}
+          loading={loading}
           searchValue={searchValue}
           onSearchChange={
             setSearchValue
@@ -237,7 +203,8 @@ export default function Dashboard() {
         />
 
         <DashboardCharts
-          events={dashboardEvents}
+          events={events}
+          returnTotals={returnTotals}
         />
       </main>
     </div>

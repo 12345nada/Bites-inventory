@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, {
+  useState,
+} from "react";
+
 import {
   Link,
   useNavigate,
@@ -12,85 +15,215 @@ import {
   FiArrowRight,
 } from "react-icons/fi";
 
+import {
+  supabase,
+} from "../lib/supabase";
+
 import Background from "../assets/images/Background2.png";
 import "../styles/register.css";
 
 const Login = () => {
   const navigate = useNavigate();
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
+
+  const [
+    formData,
+    setFormData,
+  ] = useState({
     email: "",
     password: "",
-    rememberMe: false,
   });
 
   const handleChange = (event) => {
     const {
       name,
       value,
-      type,
-      checked,
     } = event.target;
 
     setFormData((previousData) => ({
       ...previousData,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
+      [name]: value,
     }));
+
+    setErrorMessage("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (
+    event
+  ) => {
     event.preventDefault();
 
-    const savedUser = JSON.parse(
-      localStorage.getItem("registeredUser")
-    );
+    setErrorMessage("");
+    setIsSubmitting(true);
 
-    if (!savedUser) {
-      alert(
-        "No account found. Please create an account first."
-      );
+    const email =
+      formData.email
+        .trim()
+        .toLowerCase();
 
-      navigate("/register");
-      return;
-    }
+    try {
+      /*
+        تسجيل الدخول الحقيقي من Supabase Auth.
+      */
+      const {
+        data: authData,
+        error: authError,
+      } =
+        await supabase.auth
+          .signInWithPassword({
+            email,
+            password:
+              formData.password,
+          });
 
-    const enteredEmail = formData.email
-      .trim()
-      .toLowerCase();
+      if (authError) {
+        throw authError;
+      }
 
-    const isEmailCorrect =
-      savedUser.email === enteredEmail;
+      if (!authData.user) {
+        throw new Error(
+          "Unable to sign in."
+        );
+      }
 
-    const isPasswordCorrect =
-      savedUser.password === formData.password;
+      /*
+        بعد نجاح تسجيل الدخول نجيب:
+        - بيانات الموظف
+        - حالة الحساب
+        - الـRole الخاص به
+      */
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          full_name,
+          email,
+          is_active,
+          role_id,
+          roles (
+            id,
+            name,
+            description,
+            is_system_admin
+          )
+        `)
+        .eq(
+          "id",
+          authData.user.id
+        )
+        .single();
 
-    if (
-      !isEmailCorrect ||
-      !isPasswordCorrect
-    ) {
-      alert("Incorrect email or password");
-      return;
-    }
+      if (profileError) {
+        await supabase.auth.signOut({
+          scope: "local",
+        });
 
-    if (formData.rememberMe) {
+        throw new Error(
+          "Your employee profile was not found. Please contact the administrator."
+        );
+      }
+
+      if (!profile.is_active) {
+        await supabase.auth.signOut({
+          scope: "local",
+        });
+
+        throw new Error(
+          "Your account is inactive. Please contact the administrator."
+        );
+      }
+
+      if (!profile.role_id || !profile.roles) {
+        await supabase.auth.signOut({
+          scope: "local",
+        });
+
+        throw new Error(
+          "No role has been assigned to your account."
+        );
+      }
+
+      /*
+        تخزين بيانات العرض فقط.
+
+        مهم:
+        ده مش بديل عن Supabase Auth أو RLS.
+        الجلسة الحقيقية محفوظة عند Supabase.
+      */
       localStorage.setItem(
-        "isLoggedIn",
-        "true"
+        "bitesUserProfile",
+        JSON.stringify({
+          id: profile.id,
+          fullName:
+            profile.full_name,
+          email: profile.email,
+          role:
+            profile.roles.name,
+          isAdmin:
+            profile.roles
+              .is_system_admin,
+        })
       );
-    } else {
-      sessionStorage.setItem(
-        "isLoggedIn",
-        "true"
-      );
-    }
 
-    navigate("/dashboard");
+      navigate(
+        "/dashboard",
+        {
+          replace: true,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Login error:",
+        error
+      );
+
+      let message =
+        error.message ||
+        "Incorrect email or password.";
+
+      if (
+        message
+          .toLowerCase()
+          .includes(
+            "invalid login credentials"
+          )
+      ) {
+        message =
+          "Incorrect email or password.";
+      }
+
+      if (
+        message
+          .toLowerCase()
+          .includes(
+            "email not confirmed"
+          )
+      ) {
+        message =
+          "Please confirm your email before signing in.";
+      }
+
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -106,7 +239,8 @@ const Login = () => {
           <h2>Welcome Back</h2>
 
           <p className="subtitle">
-            Please sign in to your account
+            Please sign in to your
+            account
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -126,6 +260,7 @@ const Login = () => {
                   value={formData.email}
                   onChange={handleChange}
                   autoComplete="email"
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -148,9 +283,12 @@ const Login = () => {
                   }
                   name="password"
                   placeholder="Enter your password"
-                  value={formData.password}
+                  value={
+                    formData.password
+                  }
                   onChange={handleChange}
                   autoComplete="current-password"
+                  disabled={isSubmitting}
                   required
                 />
 
@@ -159,7 +297,8 @@ const Login = () => {
                   className="toggle-icon"
                   onClick={() =>
                     setShowPassword(
-                      (previous) => !previous
+                      (previous) =>
+                        !previous
                     )
                   }
                   aria-label={
@@ -167,6 +306,7 @@ const Login = () => {
                       ? "Hide password"
                       : "Show password"
                   }
+                  disabled={isSubmitting}
                 >
                   {showPassword ? (
                     <FiEyeOff />
@@ -178,40 +318,35 @@ const Login = () => {
             </div>
 
             <div className="remember-forgot">
-              <label className="remember-me">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                />
-
-                <span>Remember me</span>
-              </label>
+              <span />
 
               <Link to="/forgot-password">
                 Forgot Password?
               </Link>
             </div>
 
+            {errorMessage && (
+              <p
+                className="login-error-message"
+                role="alert"
+              >
+                {errorMessage}
+              </p>
+            )}
+
             <button
               type="submit"
               className="create-btn"
+              disabled={isSubmitting}
             >
-              Sign In
-              <FiArrowRight />
+              {isSubmitting
+                ? "Signing In..."
+                : "Sign In"}
+
+              {!isSubmitting && (
+                <FiArrowRight />
+              )}
             </button>
-
-            <div className="divider">
-              <span>or</span>
-            </div>
-
-            <p className="signin-text">
-              Don&apos;t have an account?
-              <Link to="/register">
-                Sign Up →
-              </Link>
-            </p>
           </form>
         </div>
       </div>

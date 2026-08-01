@@ -1,15 +1,15 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
 
 import "../styles/mobile-sidebar-offcanvas.css";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
-import {
-  useSuppliers,
-} from "../context/SuppliersContext";
+import { supabase } from "../lib/supabase";
 
 import "../styles/dashboard.css";
 import "../styles/Suppliers.css";
@@ -41,14 +41,30 @@ const emptyForm = {
   status: "Active",
 };
 
+const mapSupplierFromDatabase = (supplier) => ({
+  id: supplier.id,
+  supplierCode:
+    supplier.supplier_code ||
+    `SUP-${String(supplier.id).padStart(3, "0")}`,
+  name: supplier.name || "",
+  contactPerson: supplier.contact_person || "",
+  phone: supplier.phone || "",
+  email: supplier.email || "",
+  address: supplier.address || "",
+  status: supplier.status || "Active",
+  createdAt: supplier.created_at,
+  updatedAt: supplier.updated_at,
+});
+
 export default function Suppliers() {
-  const {
-    suppliers,
-    addSupplier,
-    updateSupplier,
-    toggleSupplierStatus,
-    deleteSupplier,
-  } = useSuppliers();
+  const [suppliers, setSuppliers] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -74,6 +90,59 @@ export default function Suppliers() {
   const [formData, setFormData] =
     useState(emptyForm);
 
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const fetchSuppliers = async () => {
+    try {
+      setLoading(true);
+
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("suppliers")
+        .select(`
+          id,
+          supplier_code,
+          name,
+          contact_person,
+          phone,
+          email,
+          address,
+          status,
+          created_at,
+          updated_at
+        `)
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      const formattedSuppliers = (
+        data || []
+      ).map(mapSupplierFromDatabase);
+
+      setSuppliers(formattedSuppliers);
+    } catch (error) {
+      console.error(
+        "Error loading suppliers:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not load suppliers."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredSuppliers = useMemo(() => {
     const normalizedSearch =
       searchValue.trim().toLowerCase();
@@ -82,7 +151,7 @@ export default function Suppliers() {
       const matchesSearch =
         normalizedSearch === "" ||
         [
-          supplier.id,
+          supplier.supplierCode,
           supplier.name,
           supplier.contactPerson,
           supplier.phone,
@@ -90,7 +159,7 @@ export default function Suppliers() {
           supplier.address,
           supplier.status,
         ].some((value) =>
-          String(value)
+          String(value || "")
             .toLowerCase()
             .includes(normalizedSearch)
         );
@@ -110,6 +179,7 @@ export default function Suppliers() {
   const openAddModal = () => {
     setEditingSupplierId(null);
     setFormData(emptyForm);
+    setOpenActionId(null);
     setShowSupplierModal(true);
   };
 
@@ -131,6 +201,10 @@ export default function Suppliers() {
   };
 
   const closeModal = () => {
+    if (saving) {
+      return;
+    }
+
     setShowSupplierModal(false);
     setEditingSupplierId(null);
     setFormData(emptyForm);
@@ -148,9 +222,7 @@ export default function Suppliers() {
     }));
   };
 
-  const handleSaveSupplier = (event) => {
-    event.preventDefault();
-
+  const validateSupplierForm = () => {
     const requiredFields = [
       "name",
       "contactPerson",
@@ -163,7 +235,7 @@ export default function Suppliers() {
       requiredFields.some(
         (field) =>
           String(
-            formData[field]
+            formData[field] || ""
           ).trim() === ""
       );
 
@@ -171,25 +243,215 @@ export default function Suppliers() {
       alert(
         "Please complete all supplier fields."
       );
-      return;
+
+      return false;
     }
 
-    const result = editingSupplierId
-      ? updateSupplier(
-          editingSupplierId,
-          formData
-        )
-      : addSupplier(formData);
+    const normalizedEmail =
+      formData.email.trim();
 
-    if (!result.success) {
-      alert(result.message);
-      return;
+    const emailPattern =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (
+      !emailPattern.test(normalizedEmail)
+    ) {
+      alert(
+        "Please enter a valid email address."
+      );
+
+      return false;
     }
 
-    closeModal();
+    return true;
   };
 
-  const handleDeleteSupplier = (
+  const handleSaveSupplier = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (!validateSupplierForm()) {
+      return;
+    }
+
+    const supplierPayload = {
+      name: formData.name.trim(),
+      contact_person:
+        formData.contactPerson.trim(),
+      phone: formData.phone.trim(),
+      email:
+        formData.email.trim().toLowerCase(),
+      address: formData.address.trim(),
+      status: formData.status,
+    };
+
+    try {
+      setSaving(true);
+
+      if (editingSupplierId) {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("suppliers")
+          .update(supplierPayload)
+          .eq("id", editingSupplierId)
+          .select(`
+            id,
+            supplier_code,
+            name,
+            contact_person,
+            phone,
+            email,
+            address,
+            status,
+            created_at,
+            updated_at
+          `)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        const updatedSupplier =
+          mapSupplierFromDatabase(data);
+
+        setSuppliers(
+          (currentSuppliers) =>
+            currentSuppliers.map(
+              (supplier) =>
+                supplier.id ===
+                editingSupplierId
+                  ? updatedSupplier
+                  : supplier
+            )
+        );
+      } else {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("suppliers")
+          .insert(supplierPayload)
+          .select(`
+            id,
+            supplier_code,
+            name,
+            contact_person,
+            phone,
+            email,
+            address,
+            status,
+            created_at,
+            updated_at
+          `)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        const newSupplier =
+          mapSupplierFromDatabase(data);
+
+        setSuppliers(
+          (currentSuppliers) => [
+            newSupplier,
+            ...currentSuppliers,
+          ]
+        );
+      }
+
+      setShowSupplierModal(false);
+      setEditingSupplierId(null);
+      setFormData(emptyForm);
+    } catch (error) {
+      console.error(
+        "Error saving supplier:",
+        error
+      );
+
+      if (error.code === "23505") {
+        alert(
+          "A supplier with this name or email already exists."
+        );
+      } else {
+        alert(
+          error.message ||
+            "Could not save supplier."
+        );
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleSupplierStatus =
+    async (supplier) => {
+      const newStatus =
+        supplier.status === "Active"
+          ? "Inactive"
+          : "Active";
+
+      try {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("suppliers")
+          .update({
+            status: newStatus,
+          })
+          .eq("id", supplier.id)
+          .select(`
+            id,
+            supplier_code,
+            name,
+            contact_person,
+            phone,
+            email,
+            address,
+            status,
+            created_at,
+            updated_at
+          `)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        const updatedSupplier =
+          mapSupplierFromDatabase(data);
+
+        setSuppliers(
+          (currentSuppliers) =>
+            currentSuppliers.map(
+              (currentSupplier) =>
+                currentSupplier.id ===
+                supplier.id
+                  ? updatedSupplier
+                  : currentSupplier
+            )
+        );
+
+        setOpenActionId(null);
+      } catch (error) {
+        console.error(
+          "Error updating supplier status:",
+          error
+        );
+
+        alert(
+          error.message ||
+            "Could not update supplier status."
+        );
+      }
+    };
+
+  const handleDeleteSupplier = async (
     supplierId
   ) => {
     const confirmed = window.confirm(
@@ -200,11 +462,46 @@ export default function Suppliers() {
       return;
     }
 
-    deleteSupplier(supplierId);
-    setOpenActionId(null);
-  };
+    try {
+      const {
+        error,
+      } = await supabase
+        .from("suppliers")
+        .delete()
+        .eq("id", supplierId);
 
-  return (
+      if (error) {
+        throw error;
+      }
+
+      setSuppliers(
+        (currentSuppliers) =>
+          currentSuppliers.filter(
+            (supplier) =>
+              supplier.id !== supplierId
+          )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      console.error(
+        "Error deleting supplier:",
+        error
+      );
+
+      if (error.code === "23503") {
+        alert(
+          "This supplier cannot be deleted because it is connected to items or purchase orders. You can deactivate it instead."
+        );
+      } else {
+        alert(
+          error.message ||
+            "Could not delete supplier."
+        );
+      }
+    }
+  };
+    return (
     <div className="dashboard-page">
       <Sidebar activePage="suppliers" />
 
@@ -286,7 +583,17 @@ export default function Suppliers() {
               </thead>
 
               <tbody>
-                {filteredSuppliers.length > 0 ? (
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan="7"
+                      className="suppliers-empty-state"
+                    >
+                      Loading suppliers...
+                    </td>
+                  </tr>
+                ) : filteredSuppliers.length >
+                  0 ? (
                   filteredSuppliers.map(
                     (supplier) => (
                       <tr key={supplier.id}>
@@ -302,28 +609,29 @@ export default function Suppliers() {
                               </strong>
 
                               <span>
-                                {supplier.id}
+                                {
+                                  supplier.supplierCode
+                                }
                               </span>
                             </div>
                           </div>
                         </td>
 
                         <td>
-                          {
-                            supplier.contactPerson
-                          }
+                          {supplier.contactPerson ||
+                            "-"}
                         </td>
 
                         <td>
-                          {supplier.phone}
+                          {supplier.phone || "-"}
                         </td>
 
                         <td>
-                          {supplier.email}
+                          {supplier.email || "-"}
                         </td>
 
                         <td>
-                          {supplier.address}
+                          {supplier.address || "-"}
                         </td>
 
                         <td>
@@ -373,14 +681,11 @@ export default function Suppliers() {
                                 <div className="supplier-action-menu">
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      toggleSupplierStatus(
-                                        supplier.id
-                                      );
-                                      setOpenActionId(
-                                        null
-                                      );
-                                    }}
+                                    onClick={() =>
+                                      handleToggleSupplierStatus(
+                                        supplier
+                                      )
+                                    }
                                   >
                                     {supplier.status ===
                                     "Active" ? (
@@ -467,6 +772,7 @@ export default function Suppliers() {
               <button
                 type="button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -481,6 +787,7 @@ export default function Suppliers() {
                   placeholder="Royal Glass"
                   value={formData.name}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
@@ -494,6 +801,7 @@ export default function Suppliers() {
                     formData.contactPerson
                   }
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
@@ -505,6 +813,7 @@ export default function Suppliers() {
                   placeholder="01012345678"
                   value={formData.phone}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
@@ -516,6 +825,7 @@ export default function Suppliers() {
                   placeholder="info@supplier.com"
                   value={formData.email}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
@@ -527,6 +837,7 @@ export default function Suppliers() {
                   placeholder="Supplier address"
                   value={formData.address}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
@@ -536,6 +847,7 @@ export default function Suppliers() {
                   name="status"
                   value={formData.status}
                   onChange={handleFormChange}
+                  disabled={saving}
                 >
                   <option value="Active">
                     Active
@@ -553,6 +865,7 @@ export default function Suppliers() {
                 type="button"
                 className="supplier-cancel-button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -560,10 +873,13 @@ export default function Suppliers() {
               <button
                 type="submit"
                 className="supplier-save-button"
+                disabled={saving}
               >
-                {editingSupplierId
-                  ? "Save Changes"
-                  : "Save Supplier"}
+                {saving
+                  ? "Saving..."
+                  : editingSupplierId
+                    ? "Save Changes"
+                    : "Save Supplier"}
               </button>
             </div>
           </form>

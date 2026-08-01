@@ -1,13 +1,25 @@
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import Sidebar from "../components/dashboard/Sidebar";
-import { useEvents } from "../context/EventsContext";
+import Topbar from "../components/dashboard/Topbar";
+
+import {
+  createEvent,
+  getActiveDrivers,
+  getEvents,
+  removeEvent,
+  updateEvent,
+} from "../services/eventsService";
 
 import "../styles/dashboard.css";
 import "../styles/Events.css";
 import "../styles/mobile-sidebar-offcanvas.css";
+
 import {
-  FiBell,
   FiSearch,
   FiPlus,
   FiCalendar,
@@ -34,53 +46,98 @@ const emptyForm = {
   name: "",
   client: "",
   date: "",
-
   departureTime: "",
   startTime: "",
   endTime: "",
-
   location: "",
   area: "",
   branch: "Cairo",
-  driver: "",
+  driverId: "",
   status: "Upcoming",
 };
 
 function Events() {
-  const {
-    events,
-    addEvent,
-    updateEvent,
-    deleteEvent,
-  } = useEvents();
+  const [events, setEvents] =
+    useState([]);
 
-  const [searchValue, setSearchValue] = useState("");
+  const [drivers, setDrivers] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [searchValue, setSearchValue] =
+    useState("");
+
   const [activeTab, setActiveTab] =
     useState("All Events");
 
-  const [selectedBranch, setSelectedBranch] =
-    useState("All Branches");
+  const [
+    selectedBranch,
+    setSelectedBranch,
+  ] = useState("All Branches");
 
-  const [showEventModal, setShowEventModal] =
-    useState(false);
+  const [
+    showEventModal,
+    setShowEventModal,
+  ] = useState(false);
 
-  const [editingEventId, setEditingEventId] =
-    useState(null);
+  const [
+    editingEventId,
+    setEditingEventId,
+  ] = useState(null);
 
-  const [openActionId, setOpenActionId] =
-    useState(null);
+  const [
+    openActionId,
+    setOpenActionId,
+  ] = useState(null);
 
   const [formData, setFormData] =
     useState(emptyForm);
 
+  useEffect(() => {
+    loadPageData();
+  }, []);
+
+  const loadPageData = async () => {
+    try {
+      setLoading(true);
+
+      const [
+        eventsData,
+        driversData,
+      ] = await Promise.all([
+        getEvents(),
+        getActiveDrivers(),
+      ]);
+
+      setEvents(eventsData);
+      setDrivers(driversData);
+    } catch (error) {
+      console.error(
+        "Error loading events:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not load events."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredEvents = useMemo(() => {
-    const normalizedSearch = searchValue
-      .trim()
-      .toLowerCase();
+    const normalizedSearch =
+      searchValue.trim().toLowerCase();
 
     return events.filter((event) => {
       const searchableValues = [
-        event.id,
+        event.eventCode,
         event.name,
         event.client,
         event.date,
@@ -96,10 +153,11 @@ function Events() {
 
       const matchesSearch =
         normalizedSearch === "" ||
-        searchableValues.some((value) =>
-          String(value || "")
-            .toLowerCase()
-            .includes(normalizedSearch)
+        searchableValues.some(
+          (value) =>
+            String(value || "")
+              .toLowerCase()
+              .includes(normalizedSearch)
         );
 
       const matchesTab =
@@ -107,10 +165,11 @@ function Events() {
         event.status === activeTab;
 
       const matchesBranch =
-        selectedBranch === "All Branches" ||
+        selectedBranch ===
+          "All Branches" ||
         event.branch === selectedBranch;
 
-  return (
+      return (
         matchesSearch &&
         matchesTab &&
         matchesBranch
@@ -126,16 +185,95 @@ function Events() {
   const branches = useMemo(
     () => [
       ...new Set(
-        events.map((event) => event.branch)
+        events
+          .map((event) => event.branch)
+          .filter(Boolean)
       ),
     ],
     [events]
   );
 
-  const getStatusClass = (status) =>
-    status.toLowerCase().replace(/\s+/g, "-");
+  const todayDate = new Date()
+    .toISOString()
+    .slice(0, 10);
 
-  const handleDeleteEvent = (eventId) => {
+  const nextSevenDaysDate =
+    new Date();
+
+  nextSevenDaysDate.setDate(
+    nextSevenDaysDate.getDate() + 7
+  );
+
+  const nextSevenDays =
+    nextSevenDaysDate
+      .toISOString()
+      .slice(0, 10);
+
+  const todayEvents = events.filter(
+    (event) =>
+      event.date === todayDate
+  ).length;
+
+  const upcomingEvents = events.filter(
+    (event) =>
+      event.status === "Upcoming" &&
+      event.date >= todayDate &&
+      event.date <= nextSevenDays
+  ).length;
+
+  const getStatusClass = (status) =>
+    String(status || "")
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) {
+      return "-";
+    }
+
+    const date = new Date(
+      `${dateValue}T00:00:00`
+    );
+
+    return date.toLocaleDateString(
+      "en-GB",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }
+    );
+  };
+
+  const formatTime = (timeValue) => {
+    if (!timeValue) {
+      return "-";
+    }
+
+    const [hours, minutes] =
+      timeValue.split(":");
+
+    const date = new Date();
+
+    date.setHours(
+      Number(hours),
+      Number(minutes),
+      0,
+      0
+    );
+
+    return date.toLocaleTimeString(
+      "en-US",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
+  };
+
+  const handleDeleteEvent = async (
+    eventId
+  ) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this event?"
     );
@@ -144,17 +282,50 @@ function Events() {
       return;
     }
 
-    deleteEvent(eventId);
-    setOpenActionId(null);
+    try {
+      await removeEvent(eventId);
+
+      setEvents((currentEvents) =>
+        currentEvents.filter(
+          (event) =>
+            event.id !== eventId
+        )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      console.error(
+        "Error deleting event:",
+        error
+      );
+
+      if (error.code === "23503") {
+        alert(
+          "This event cannot be deleted because it is connected to a dispatch or another record."
+        );
+      } else {
+        alert(
+          error.message ||
+            "Could not delete event."
+        );
+      }
+    }
   };
 
-  const handleFormChange = (event) => {
-    const { name, value } = event.target;
+  const handleFormChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
 
-    setFormData((currentData) => ({
-      ...currentData,
-      [name]: value,
-    }));
+    setFormData(
+      (currentData) => ({
+        ...currentData,
+        [name]: value,
+      })
+    );
   };
 
   const openAddModal = () => {
@@ -166,32 +337,38 @@ function Events() {
 
   const openEditModal = (event) => {
     setEditingEventId(event.id);
+
     setFormData({
       name: event.name,
       client: event.client,
       date: event.date,
-      departureTime: event.departureTime,
+      departureTime:
+        event.departureTime,
       startTime: event.startTime,
       endTime: event.endTime,
       location: event.location,
       area: event.area,
       branch: event.branch,
-      driver: event.driver,
+      driverId:
+        event.driverId || "",
       status: event.status,
     });
+
     setOpenActionId(null);
     setShowEventModal(true);
   };
 
   const closeModal = () => {
+    if (saving) {
+      return;
+    }
+
     setShowEventModal(false);
     setEditingEventId(null);
     setFormData(emptyForm);
   };
 
-  const handleSaveEvent = (event) => {
-    event.preventDefault();
-
+  const validateEventForm = () => {
     const requiredFields = [
       "name",
       "client",
@@ -201,26 +378,95 @@ function Events() {
       "endTime",
       "location",
       "area",
-      "driver",
+      "branch",
+      "driverId",
+      "status",
     ];
 
-    const hasEmptyField = requiredFields.some(
-      (field) =>
-        !String(formData[field] || "").trim()
-    );
+    const hasEmptyField =
+      requiredFields.some(
+        (field) =>
+          !String(
+            formData[field] || ""
+          ).trim()
+      );
 
     if (hasEmptyField) {
-      alert("Please complete all event fields.");
+      alert(
+        "Please complete all event fields."
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSaveEvent = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (!validateEventForm()) {
       return;
     }
 
-    if (editingEventId) {
-      updateEvent(editingEventId, formData);
-    } else {
-      addEvent(formData);
-    }
+    try {
+      setSaving(true);
 
-    closeModal();
+      if (editingEventId) {
+        const updatedEvent =
+          await updateEvent(
+            editingEventId,
+            formData
+          );
+
+        setEvents(
+          (currentEvents) =>
+            currentEvents.map(
+              (currentEvent) =>
+                currentEvent.id ===
+                editingEventId
+                  ? updatedEvent
+                  : currentEvent
+            )
+        );
+      } else {
+        const newEvent =
+          await createEvent(
+            formData
+          );
+
+        setEvents(
+          (currentEvents) => [
+            newEvent,
+            ...currentEvents,
+          ]
+        );
+      }
+
+      setShowEventModal(false);
+      setEditingEventId(null);
+      setFormData(emptyForm);
+    } catch (error) {
+      console.error(
+        "Error saving event:",
+        error
+      );
+
+      if (error.code === "23505") {
+        alert(
+          "An event with this code already exists."
+        );
+      } else {
+        alert(
+          error.message ||
+            "Could not save event."
+        );
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -228,34 +474,20 @@ function Events() {
       <Sidebar activePage="events" />
 
       <main className="events-main">
-        <div className="events-topbar">
-          <div className="events-search">
-            <FiSearch />
-
-            <input
-              type="text"
-              placeholder="search anything..."
-              value={searchValue}
-              onChange={(event) =>
-                setSearchValue(event.target.value)
-              }
-            />
-          </div>
-
-          <div className="events-topbar-actions">
-            <div className="events-notification">
-              <FiBell />
-              <span />
-            </div>
-
-            <div className="events-profile" />
-          </div>
-        </div>
+        <Topbar
+          searchValue={searchValue}
+          onSearchChange={
+            setSearchValue
+          }
+        />
 
         <section className="events-title-section">
           <div>
             <h1>Events</h1>
-            <p>Manage all your events</p>
+
+            <p>
+              Manage all your events
+            </p>
           </div>
 
           <button
@@ -264,7 +496,10 @@ function Events() {
             onClick={openAddModal}
           >
             <FiPlus />
-            <span>Add New Event</span>
+
+            <span>
+              Add New Event
+            </span>
           </button>
         </section>
 
@@ -279,19 +514,14 @@ function Events() {
           <StatCard
             icon={<FiCheckCircle />}
             title="Today's Events"
-            number="6"
+            number={todayEvents}
             description="Events today"
           />
 
           <StatCard
             icon={<FiCalendar />}
             title="Upcoming Events"
-            number={
-              events.filter(
-                (event) =>
-                  event.status === "Upcoming"
-              ).length
-            }
+            number={upcomingEvents}
             description="Next 7 days"
           />
 
@@ -301,7 +531,8 @@ function Events() {
             number={
               events.filter(
                 (event) =>
-                  event.status === "Confirmed"
+                  event.status ===
+                  "Confirmed"
               ).length
             }
             description="Confirmed"
@@ -314,7 +545,8 @@ function Events() {
             number={
               events.filter(
                 (event) =>
-                  event.status === "Completed"
+                  event.status ===
+                  "Completed"
               ).length
             }
             description="Completed"
@@ -327,7 +559,8 @@ function Events() {
             number={
               events.filter(
                 (event) =>
-                  event.status === "Cancelled"
+                  event.status ===
+                  "Cancelled"
               ).length
             }
             description="Cancelled"
@@ -343,9 +576,13 @@ function Events() {
                   key={tab}
                   type="button"
                   className={
-                    activeTab === tab ? "active" : ""
+                    activeTab === tab
+                      ? "active"
+                      : ""
                   }
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() =>
+                    setActiveTab(tab)
+                  }
                 >
                   {tab}
                 </button>
@@ -379,16 +616,20 @@ function Events() {
                   }
                   aria-label="Filter events by branch"
                 >
-                  <option>All Branches</option>
+                  <option value="All Branches">
+                    All Branches
+                  </option>
 
-                  {branches.map((branch) => (
-                    <option
-                      key={branch}
-                      value={branch}
-                    >
-                      {branch}
-                    </option>
-                  ))}
+                  {branches.map(
+                    (branch) => (
+                      <option
+                        key={branch}
+                        value={branch}
+                      >
+                        {branch}
+                      </option>
+                    )
+                  )}
                 </select>
 
                 <FiChevronDown className="branch-filter-icon" />
@@ -427,139 +668,188 @@ function Events() {
               </thead>
 
               <tbody>
-                {filteredEvents.length > 0 ? (
-                  filteredEvents.map((event) => (
-                    <tr key={event.id}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          aria-label={`Select ${event.name}`}
-                        />
-                      </td>
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan="9"
+                      className="events-empty-state"
+                    >
+                      Loading events...
+                    </td>
+                  </tr>
+                ) : filteredEvents.length >
+                  0 ? (
+                  filteredEvents.map(
+                    (event) => (
+                      <tr key={event.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${event.name}`}
+                          />
+                        </td>
 
-                      <td>
-                        <div className="event-name-cell">
-                          <div className="event-table-icon">
-                            <FiCalendar />
+                        <td>
+                          <div className="event-name-cell">
+                            <div className="event-table-icon">
+                              <FiCalendar />
+                            </div>
+
+                            <div>
+                              <strong>
+                                {event.name}
+                              </strong>
+
+                              <span>
+                                {
+                                  event.eventCode
+                                }
+                              </span>
+                            </div>
                           </div>
+                        </td>
 
-                          <div>
-                            <strong>
-                              {event.name}
-                            </strong>
+                        <td>
+                          {event.client}
+                        </td>
 
-                            <span>{event.id}</span>
+                        <td>
+                          <div className="event-date-times">
+                            <span className="event-date">
+                              {formatDate(
+                                event.date
+                              )}
+                            </span>
+
+                            <span>
+                              <strong>
+                                Start:
+                              </strong>{" "}
+                              {formatTime(
+                                event.startTime
+                              )}
+                            </span>
+
+                            <span>
+                              <strong>
+                                End:
+                              </strong>{" "}
+                              {formatTime(
+                                event.endTime
+                              )}
+                            </span>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td>{event.client}</td>
+                        <td>
+                          <div className="two-lines">
+                            <span>
+                              {
+                                event.location
+                              }
+                            </span>
 
-                      <td>
-                        <div className="event-date-times">
-                          <span className="event-date">
-                            {event.date}
-                          </span>
-                          <span>
-                            <strong>Start:</strong>{" "}
-                            {event.startTime}
-                          </span>
+                            <span>
+                              {event.area}
+                            </span>
+                          </div>
+                        </td>
 
-                          <span>
-                            <strong>End:</strong>{" "}
-                            {event.endTime}
-                          </span>
-                        </div>
-                      </td>
+                        <td>
+                          {event.branch}
+                        </td>
 
-                      <td>
-                        <div className="two-lines">
-                          <span>
-                            {event.location}
-                          </span>
+                        <td>
+                          {event.driver ||
+                            "-"}
+                        </td>
 
-                          <span>{event.area}</span>
-                        </div>
-                      </td>
-
-                      <td>{event.branch}</td>
-                      <td>{event.driver}</td>
-
-                      <td>
-                        <span
-                          className={`event-status ${getStatusClass(
-                            event.status
-                          )}`}
-                        >
-                          {event.status}
-                        </span>
-                      </td>
-
-                      <td className="event-action-cell">
-                        <div className="event-actions">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEditModal(event)
-                            }
-                            aria-label={`Edit ${event.name}`}
+                        <td>
+                          <span
+                            className={`event-status ${getStatusClass(
+                              event.status
+                            )}`}
                           >
-                            <FiEdit2 />
-                          </button>
+                            {event.status}
+                          </span>
+                        </td>
 
-                          <div className="event-more-wrapper">
+                        <td className="event-action-cell">
+                          <div className="event-actions">
                             <button
                               type="button"
-                              className="more-action-button"
                               onClick={() =>
-                                setOpenActionId((currentId) =>
-                                  currentId === event.id
-                                    ? null
-                                    : event.id
+                                openEditModal(
+                                  event
                                 )
                               }
-                              aria-label={`More actions for ${event.name}`}
+                              aria-label={`Edit ${event.name}`}
                             >
-                              <FiMoreVertical />
+                              <FiEdit2 />
                             </button>
 
-                            {openActionId === event.id && (
-                              <div className="event-action-menu">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openEditModal(event)
-                                  }
-                                >
-                                  <FiEdit2 />
-                                  Edit
-                                </button>
+                            <div className="event-more-wrapper">
+                              <button
+                                type="button"
+                                className="more-action-button"
+                                onClick={() =>
+                                  setOpenActionId(
+                                    (
+                                      currentId
+                                    ) =>
+                                      currentId ===
+                                      event.id
+                                        ? null
+                                        : event.id
+                                  )
+                                }
+                                aria-label={`More actions for ${event.name}`}
+                              >
+                                <FiMoreVertical />
+                              </button>
 
-                                <button
-                                  type="button"
-                                  className="event-delete-action"
-                                  onClick={() =>
-                                    handleDeleteEvent(event.id)
-                                  }
-                                >
-                                  <FiTrash2 />
-                                  Delete
-                                </button>
-                              </div>
-                            )}
+                              {openActionId ===
+                                event.id && (
+                                <div className="event-action-menu">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openEditModal(
+                                        event
+                                      )
+                                    }
+                                  >
+                                    <FiEdit2 />
+                                    Edit
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="event-delete-action"
+                                    onClick={() =>
+                                      handleDeleteEvent(
+                                        event.id
+                                      )
+                                    }
+                                  >
+                                    <FiTrash2 />
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                      </tr>
+                    )
+                  )
                 ) : (
                   <tr>
                     <td
                       colSpan="9"
                       className="events-empty-state"
                     >
-                      No events match your search or
-                      selected filters.
+                      No events match your search or selected filters.
                     </td>
                   </tr>
                 )}
@@ -567,40 +857,47 @@ function Events() {
             </table>
           </div>
 
-          <div className="events-pagination">
-            <p>
-              Showing {filteredEvents.length} of{" "}
-              {events.length} events
-            </p>
+         <div className="events-pagination">
+  <p>
+    Showing {filteredEvents.length} of{" "}
+    {events.length} events
+  </p>
 
-            <div>
-              <button
-                type="button"
-                aria-label="Previous page"
-              >
-                ‹
-              </button>
+  {events.length > 0 && (
+    <div>
+      <button type="button">
+        ‹
+      </button>
 
-              <button
-                type="button"
-                className="active"
-              >
-                1
-              </button>
+      <button
+        type="button"
+        className="active"
+      >
+        1
+      </button>
 
-              <button type="button">2</button>
-              <button type="button">3</button>
-              <button type="button">...</button>
-              <button type="button">22</button>
+      <button type="button">
+        2
+      </button>
 
-              <button
-                type="button"
-                aria-label="Next page"
-              >
-                ›
-              </button>
-            </div>
-          </div>
+      <button type="button">
+        3
+      </button>
+
+      <button type="button">
+        ...
+      </button>
+
+      <button type="button">
+        22
+      </button>
+
+      <button type="button">
+        ›
+      </button>
+    </div>
+  )}
+</div>
         </section>
       </main>
 
@@ -619,7 +916,12 @@ function Events() {
           >
             <div className="event-modal-header">
               <div>
-                <h2>{editingEventId ? "Edit Event" : "Add New Event"}</h2>
+                <h2>
+                  {editingEventId
+                    ? "Edit Event"
+                    : "Add New Event"}
+                </h2>
+
                 <p>
                   {editingEventId
                     ? "Update the event details."
@@ -631,7 +933,8 @@ function Events() {
                 type="button"
                 className="event-modal-close"
                 onClick={closeModal}
-                aria-label="Close add event form"
+                aria-label="Close event form"
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -645,8 +948,11 @@ function Events() {
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={handleFormChange}
+                  onChange={
+                    handleFormChange
+                  }
                   placeholder="Family Wedding"
+                  disabled={saving}
                 />
               </label>
 
@@ -656,9 +962,14 @@ function Events() {
                 <input
                   type="text"
                   name="client"
-                  value={formData.client}
-                  onChange={handleFormChange}
+                  value={
+                    formData.client
+                  }
+                  onChange={
+                    handleFormChange
+                  }
                   placeholder="Client name"
+                  disabled={saving}
                 />
               </label>
 
@@ -666,11 +977,13 @@ function Events() {
                 Date
 
                 <input
-                  type="text"
+                  type="date"
                   name="date"
-                  placeholder="17 July 2024"
                   value={formData.date}
-                  onChange={handleFormChange}
+                  onChange={
+                    handleFormChange
+                  }
+                  disabled={saving}
                 />
               </label>
 
@@ -679,13 +992,15 @@ function Events() {
                   Departure Time
 
                   <input
-                    type="text"
+                    type="time"
                     name="departureTime"
-                    placeholder="09:00 PM"
                     value={
                       formData.departureTime
                     }
-                    onChange={handleFormChange}
+                    onChange={
+                      handleFormChange
+                    }
+                    disabled={saving}
                   />
                 </label>
 
@@ -693,11 +1008,15 @@ function Events() {
                   Event Start Time
 
                   <input
-                    type="text"
+                    type="time"
                     name="startTime"
-                    placeholder="11:00 PM"
-                    value={formData.startTime}
-                    onChange={handleFormChange}
+                    value={
+                      formData.startTime
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                    disabled={saving}
                   />
                 </label>
 
@@ -705,11 +1024,15 @@ function Events() {
                   Event End Time
 
                   <input
-                    type="text"
+                    type="time"
                     name="endTime"
-                    placeholder="03:00 AM"
-                    value={formData.endTime}
-                    onChange={handleFormChange}
+                    value={
+                      formData.endTime
+                    }
+                    onChange={
+                      handleFormChange
+                    }
+                    disabled={saving}
                   />
                 </label>
               </div>
@@ -720,9 +1043,14 @@ function Events() {
                 <input
                   type="text"
                   name="location"
-                  value={formData.location}
-                  onChange={handleFormChange}
+                  value={
+                    formData.location
+                  }
+                  onChange={
+                    handleFormChange
+                  }
                   placeholder="Villa 45"
+                  disabled={saving}
                 />
               </label>
 
@@ -733,8 +1061,11 @@ function Events() {
                   type="text"
                   name="area"
                   value={formData.area}
-                  onChange={handleFormChange}
+                  onChange={
+                    handleFormChange
+                  }
                   placeholder="New Cairo"
+                  disabled={saving}
                 />
               </label>
 
@@ -743,8 +1074,13 @@ function Events() {
 
                 <select
                   name="branch"
-                  value={formData.branch}
-                  onChange={handleFormChange}
+                  value={
+                    formData.branch
+                  }
+                  onChange={
+                    handleFormChange
+                  }
+                  disabled={saving}
                 >
                   <option value="Cairo">
                     Cairo
@@ -759,13 +1095,35 @@ function Events() {
               <label>
                 Driver
 
-                <input
-                  type="text"
-                  name="driver"
-                  value={formData.driver}
-                  onChange={handleFormChange}
-                  placeholder="Driver name"
-                />
+                <select
+                  name="driverId"
+                  value={
+                    formData.driverId
+                  }
+                  onChange={
+                    handleFormChange
+                  }
+                  disabled={saving}
+                >
+                  <option value="">
+                    Select driver
+                  </option>
+
+                  {drivers.map(
+                    (driver) => (
+                      <option
+                        key={driver.id}
+                        value={driver.id}
+                      >
+                        {driver.full_name}
+
+                        {driver.staff_code
+                          ? ` (${driver.staff_code})`
+                          : ""}
+                      </option>
+                    )
+                  )}
+                </select>
               </label>
 
               <label className="event-modal-full-field">
@@ -773,8 +1131,13 @@ function Events() {
 
                 <select
                   name="status"
-                  value={formData.status}
-                  onChange={handleFormChange}
+                  value={
+                    formData.status
+                  }
+                  onChange={
+                    handleFormChange
+                  }
+                  disabled={saving}
                 >
                   <option value="Upcoming">
                     Upcoming
@@ -804,6 +1167,7 @@ function Events() {
                 type="button"
                 className="cancel-button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -811,10 +1175,13 @@ function Events() {
               <button
                 type="submit"
                 className="save-button"
+                disabled={saving}
               >
-                {editingEventId
-                  ? "Save Changes"
-                  : "Save Event"}
+                {saving
+                  ? "Saving..."
+                  : editingEventId
+                    ? "Save Changes"
+                    : "Save Event"}
               </button>
             </div>
           </form>
@@ -840,6 +1207,7 @@ function StatCard({
 
         <div className="events-stat-details">
           <h4>{title}</h4>
+
           <h2>{number}</h2>
 
           <p className={descriptionClass}>

@@ -18,26 +18,6 @@ import {
   FiBarChart2,
 } from "react-icons/fi";
 
-const eventConditionData = [
-  {
-    name: "Data Return",
-    value: 18,
-    color: "#4b250f",
-  },
-
-  {
-    name: "Damage",
-    value: 4,
-    color: "#ef741b",
-  },
-
-  {
-    name: "Missing",
-    value: 3,
-    color: "#9d938d",
-  },
-];
-
 const statusColors = {
   Confirmed: "#4b250f",
   "In Progress": "#ef741b",
@@ -52,6 +32,7 @@ const branchColors = [
   "#d99a55",
   "#f0c89f",
 ];
+
 function ChartLegend({
   data,
   total,
@@ -136,15 +117,7 @@ function DonutCard({
                 ))}
               </Pie>
 
-              <Tooltip
-                formatter={(
-                  value,
-                  name
-                ) => [
-                  value,
-                  name,
-                ]}
-              />
+              <Tooltip />
             </PieChart>
           </ResponsiveContainer>
 
@@ -164,23 +137,46 @@ function DonutCard({
 
 export default function DashboardCharts({
   events = [],
+  returnTotals = {
+    returned: 0,
+    damaged: 0,
+    missing: 0,
+  },
 }) {
+  const eventConditionData = [
+    {
+      name: "Data Return",
+      value: Number(
+        returnTotals.returned || 0
+      ),
+      color: "#4b250f",
+    },
+    {
+      name: "Damage",
+      value: Number(
+        returnTotals.damaged || 0
+      ),
+      color: "#ef741b",
+    },
+    {
+      name: "Missing",
+      value: Number(
+        returnTotals.missing || 0
+      ),
+      color: "#9d938d",
+    },
+  ];
+
   const eventStatusData =
     Object.keys(statusColors).map(
-      (status) => {
-        const count =
-          events.filter(
-            (event) =>
-              event.status === status
-          ).length;
-
-        return {
-          name: status,
-          value: count,
-          color:
-            statusColors[status],
-        };
-      }
+      (status) => ({
+        name: status,
+        value: events.filter(
+          (event) =>
+            event.status === status
+        ).length,
+        color: statusColors[status],
+      })
     );
 
   const branchCounts = events.reduce(

@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, {
+  useState,
+} from "react";
+
 import {
   Link,
   useNavigate,
@@ -13,17 +16,45 @@ import {
   FiArrowRight,
 } from "react-icons/fi";
 
+import {
+  supabase,
+} from "../lib/supabase";
+
 import Background from "../assets/images/register-background.png";
 import "../styles/register.css";
 
 const Register = () => {
   const navigate = useNavigate();
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [
+    showConfirmPassword,
+    setShowConfirmPassword,
+  ] = useState(false);
+
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
+
+  const [
+    formError,
+    setFormError,
+  ] = useState("");
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState("");
+
+  const [
+    formData,
+    setFormData,
+  ] = useState({
     fullName: "",
     email: "",
     password: "",
@@ -31,49 +62,158 @@ const Register = () => {
   });
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
+    const {
+      name,
+      value,
+    } = event.target;
 
     setFormData((previousData) => ({
       ...previousData,
       [name]: value,
     }));
+
+    setFormError("");
+    setSuccessMessage("");
   };
 
-  const getPasswordStrength = (password) => {
-    if (password.length === 0) return 0;
-    if (password.length < 6) return 1;
-    if (password.length < 10) return 2;
+  const getPasswordStrength = (
+    password
+  ) => {
+    if (password.length === 0) {
+      return 0;
+    }
+
+    if (password.length < 6) {
+      return 1;
+    }
+
+    if (password.length < 10) {
+      return 2;
+    }
 
     return 3;
   };
 
-  const strength = getPasswordStrength(formData.password);
+  const strength =
+    getPasswordStrength(
+      formData.password
+    );
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (
+    event
+  ) => {
     event.preventDefault();
+
+    setFormError("");
+    setSuccessMessage("");
+
+    const fullName =
+      formData.fullName.trim();
+
+    const email =
+      formData.email
+        .trim()
+        .toLowerCase();
+
+    if (!fullName) {
+      setFormError(
+        "Please enter your full name."
+      );
+
+      return;
+    }
+
+    if (
+      formData.password.length < 6
+    ) {
+      setFormError(
+        "Password must contain at least 6 characters."
+      );
+
+      return;
+    }
 
     if (
       formData.password !==
       formData.confirmPassword
     ) {
-      alert("Passwords do not match");
+      setFormError(
+        "Passwords do not match."
+      );
+
       return;
     }
 
-    const userData = {
-      fullName: formData.fullName.trim(),
-      email: formData.email.trim().toLowerCase(),
-      password: formData.password,
-    };
+    setIsSubmitting(true);
 
-    localStorage.setItem(
-      "registeredUser",
-      JSON.stringify(userData)
-    );
+    try {
+      const {
+        data,
+        error,
+      } = await supabase.auth.signUp({
+        email,
+        password:
+          formData.password,
 
-    alert("Account created successfully");
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
 
-    navigate("/login");
+      if (error) {
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error(
+          "The account could not be created."
+        );
+      }
+
+      setSuccessMessage(
+        data.session
+          ? "Account created successfully."
+          : "Account created. Please check your email to confirm your account."
+      );
+
+      setFormData({
+        fullName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+
+      /*
+        لو Email Confirmation مفعّلة:
+        المستخدم هيفتح رسالة التأكيد الأول.
+
+        لو غير مفعّلة:
+        Supabase ممكن تعمل Session تلقائيًا،
+        لذلك بنعمل Sign Out علشان يرجع يسجل
+        من شاشة Login.
+      */
+      if (data.session) {
+        await supabase.auth.signOut();
+      }
+
+      window.setTimeout(() => {
+        navigate("/login");
+      }, 1800);
+    } catch (error) {
+      console.error(
+        "Registration error:",
+        error
+      );
+
+      setFormError(
+        error.message ||
+          "Something went wrong while creating the account."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -89,7 +229,8 @@ const Register = () => {
           <h2>Create Your Account</h2>
 
           <p className="subtitle">
-            Fill in your details to get started
+            Fill in your details to get
+            started
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -106,9 +247,12 @@ const Register = () => {
                   type="text"
                   name="fullName"
                   placeholder="Enter your full name"
-                  value={formData.fullName}
+                  value={
+                    formData.fullName
+                  }
                   onChange={handleChange}
                   autoComplete="name"
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -130,6 +274,7 @@ const Register = () => {
                   value={formData.email}
                   onChange={handleChange}
                   autoComplete="email"
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -152,9 +297,13 @@ const Register = () => {
                   }
                   name="password"
                   placeholder="Enter your password"
-                  value={formData.password}
+                  value={
+                    formData.password
+                  }
                   onChange={handleChange}
                   autoComplete="new-password"
+                  minLength={6}
+                  disabled={isSubmitting}
                   required
                 />
 
@@ -163,7 +312,8 @@ const Register = () => {
                   className="toggle-icon"
                   onClick={() =>
                     setShowPassword(
-                      (previous) => !previous
+                      (previous) =>
+                        !previous
                     )
                   }
                   aria-label={
@@ -171,6 +321,7 @@ const Register = () => {
                       ? "Hide password"
                       : "Show password"
                   }
+                  disabled={isSubmitting}
                 >
                   {showPassword ? (
                     <FiEyeOff />
@@ -184,24 +335,32 @@ const Register = () => {
                 <div className="strength-bar">
                   <span
                     className={
-                      strength >= 1 ? "active" : ""
+                      strength >= 1
+                        ? "active"
+                        : ""
                     }
-                  ></span>
+                  />
 
                   <span
                     className={
-                      strength >= 2 ? "active" : ""
+                      strength >= 2
+                        ? "active"
+                        : ""
                     }
-                  ></span>
+                  />
 
                   <span
                     className={
-                      strength >= 3 ? "active" : ""
+                      strength >= 3
+                        ? "active"
+                        : ""
                     }
-                  ></span>
+                  />
                 </div>
 
-                <small>Password strength</small>
+                <small>
+                  Password strength
+                </small>
               </div>
             </div>
 
@@ -222,9 +381,14 @@ const Register = () => {
                   }
                   name="confirmPassword"
                   placeholder="Confirm your password"
-                  value={formData.confirmPassword}
+                  value={
+                    formData
+                      .confirmPassword
+                  }
                   onChange={handleChange}
                   autoComplete="new-password"
+                  minLength={6}
+                  disabled={isSubmitting}
                   required
                 />
 
@@ -233,7 +397,8 @@ const Register = () => {
                   className="toggle-icon"
                   onClick={() =>
                     setShowConfirmPassword(
-                      (previous) => !previous
+                      (previous) =>
+                        !previous
                     )
                   }
                   aria-label={
@@ -241,6 +406,7 @@ const Register = () => {
                       ? "Hide confirm password"
                       : "Show confirm password"
                   }
+                  disabled={isSubmitting}
                 >
                   {showConfirmPassword ? (
                     <FiEyeOff />
@@ -251,12 +417,36 @@ const Register = () => {
               </div>
             </div>
 
+            {formError && (
+              <p
+                className="register-message register-error"
+                role="alert"
+              >
+                {formError}
+              </p>
+            )}
+
+            {successMessage && (
+              <p
+                className="register-message register-success"
+                role="status"
+              >
+                {successMessage}
+              </p>
+            )}
+
             <button
               type="submit"
               className="create-btn"
+              disabled={isSubmitting}
             >
-              Create Account
-              <FiArrowRight />
+              {isSubmitting
+                ? "Creating Account..."
+                : "Create Account"}
+
+              {!isSubmitting && (
+                <FiArrowRight />
+              )}
             </button>
 
             <div className="divider">
@@ -265,6 +455,7 @@ const Register = () => {
 
             <p className="signin-text">
               Already have an account?
+
               <Link to="/login">
                 Sign In →
               </Link>
@@ -273,9 +464,19 @@ const Register = () => {
         </div>
 
         <p className="terms">
-          By creating an account, you agree to our{" "}
-          <a href="#">Terms of Service</a> and{" "}
-          <a href="#">Privacy Policy</a>.
+          By creating an account, you
+          agree to our{" "}
+
+          <a href="#">
+            Terms of Service
+          </a>
+
+          {" "}and{" "}
+
+          <a href="#">
+            Privacy Policy
+          </a>
+          .
         </p>
       </div>
     </div>

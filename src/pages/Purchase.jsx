@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -8,8 +9,13 @@ import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
-  usePurchases,
-} from "../context/PurchasesContext";
+  createPurchase,
+  getPurchasePageData,
+  receivePurchase,
+  removePurchase,
+  updatePurchase,
+  updatePurchaseStatus,
+} from "../services/purchaseService";
 
 import "../styles/dashboard.css";
 import "../styles/Purchase.css";
@@ -30,29 +36,37 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 
-const emptyForm = {
-  supplier: "",
-  orderDate: "",
-  expectedDate: "",
-  warehouse: "Cairo",
-  itemName: "",
-  quantity: "",
-  unitCost: "",
-};
-
 const getTodayDate = () =>
   new Date().toISOString().split("T")[0];
 
+const createEmptyForm = () => ({
+  supplierId: "",
+  orderDate: getTodayDate(),
+  expectedDate: "",
+  warehouseId: "",
+  itemId: "",
+  quantity: "",
+  unitCost: "",
+});
+
 export default function Purchase() {
-  const {
-    purchases,
-    addPurchase,
-    updatePurchase,
-    approvePurchase,
-    receivePurchase,
-    cancelPurchase,
-    deletePurchase,
-  } = usePurchases();
+  const [purchases, setPurchases] =
+    useState([]);
+
+  const [suppliers, setSuppliers] =
+    useState([]);
+
+  const [warehouses, setWarehouses] =
+    useState([]);
+
+  const [items, setItems] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -78,21 +92,52 @@ export default function Purchase() {
   ] = useState(false);
 
   const [formData, setFormData] =
-    useState(emptyForm);
+    useState(createEmptyForm());
 
-  const [editingPurchaseId, setEditingPurchaseId] =
-    useState(null);
+  const [
+    editingPurchaseId,
+    setEditingPurchaseId,
+  ] = useState(null);
 
-  const [receivingPurchase, setReceivingPurchase] =
-    useState(null);
-
-  const [receivedDate, setReceivedDate] =
-    useState(getTodayDate());
+  const [
+    receivingPurchase,
+    setReceivingPurchase,
+  ] = useState(null);
 
   const [
     openActionId,
     setOpenActionId,
   ] = useState(null);
+
+  useEffect(() => {
+    loadPurchaseData();
+  }, []);
+
+  const loadPurchaseData = async () => {
+    try {
+      setLoading(true);
+
+      const data =
+        await getPurchasePageData();
+
+      setPurchases(data.purchases);
+      setSuppliers(data.suppliers);
+      setWarehouses(data.warehouses);
+      setItems(data.items);
+    } catch (error) {
+      console.error(
+        "Error loading purchases:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not load purchase orders."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredPurchases = useMemo(() => {
     const normalizedSearch =
@@ -102,15 +147,16 @@ export default function Purchase() {
       const matchesSearch =
         normalizedSearch === "" ||
         [
-          purchase.id,
+          purchase.poNumber,
           purchase.supplier,
           purchase.itemName,
           purchase.orderDate,
           purchase.expectedDate,
           purchase.warehouse,
+          purchase.warehouseBranch,
           purchase.status,
         ].some((value) =>
-          String(value)
+          String(value || "")
             .toLowerCase()
             .includes(normalizedSearch)
         );
@@ -118,11 +164,12 @@ export default function Purchase() {
       const matchesWarehouse =
         selectedWarehouse ===
           "All Warehouses" ||
-        purchase.warehouse ===
-          selectedWarehouse;
+        String(purchase.warehouseId) ===
+          String(selectedWarehouse);
 
       const matchesStatus =
-        selectedStatus === "All Statuses" ||
+        selectedStatus ===
+          "All Statuses" ||
         purchase.status === selectedStatus;
 
       return (
@@ -138,24 +185,30 @@ export default function Purchase() {
     selectedStatus,
   ]);
 
-  const totalSpent = useMemo(() => {
-    return purchases
-      .filter(
-        (purchase) =>
-          purchase.status === "Received"
-      )
-      .reduce(
-        (total, purchase) =>
-          total +
-          Number(purchase.totalAmount),
-        0
-      );
-  }, [purchases]);
+  const totalSpent = useMemo(
+    () =>
+      purchases
+        .filter(
+          (purchase) =>
+            purchase.status ===
+            "Received"
+        )
+        .reduce(
+          (total, purchase) =>
+            total +
+            Number(
+              purchase.totalAmount
+            ),
+          0
+        ),
+    [purchases]
+  );
 
-  const pendingOrders = purchases.filter(
-    (purchase) =>
-      purchase.status === "Pending"
-  ).length;
+  const pendingOrders =
+    purchases.filter(
+      (purchase) =>
+        purchase.status === "Pending"
+    ).length;
 
   const receivedItems = purchases
     .filter(
@@ -164,7 +217,8 @@ export default function Purchase() {
     )
     .reduce(
       (total, purchase) =>
-        total + Number(purchase.quantity),
+        total +
+        Number(purchase.quantity),
       0
     );
 
@@ -174,6 +228,24 @@ export default function Purchase() {
       value,
     } = event.target;
 
+    if (name === "itemId") {
+      const selectedItem = items.find(
+        (item) =>
+          String(item.id) ===
+          String(value)
+      );
+
+      setFormData((currentData) => ({
+        ...currentData,
+        itemId: value,
+        unitCost:
+          selectedItem?.purchase_cost ??
+          currentData.unitCost,
+      }));
+
+      return;
+    }
+
     setFormData((currentData) => ({
       ...currentData,
       [name]: value,
@@ -182,10 +254,7 @@ export default function Purchase() {
 
   const openNewPurchaseModal = () => {
     setEditingPurchaseId(null);
-    setFormData({
-      ...emptyForm,
-      orderDate: getTodayDate(),
-    });
+    setFormData(createEmptyForm());
     setOpenActionId(null);
     setShowPurchaseModal(true);
   };
@@ -194,34 +263,45 @@ export default function Purchase() {
     purchase
   ) => {
     setEditingPurchaseId(purchase.id);
+
     setFormData({
-      supplier: purchase.supplier,
+      supplierId: String(
+        purchase.supplierId
+      ),
       orderDate: purchase.orderDate,
-      expectedDate: purchase.expectedDate,
-      warehouse: purchase.warehouse,
-      itemName: purchase.itemName,
+      expectedDate:
+        purchase.expectedDate,
+      warehouseId: String(
+        purchase.warehouseId
+      ),
+      itemId: String(
+        purchase.itemId
+      ),
       quantity: purchase.quantity,
       unitCost: purchase.unitCost,
     });
+
     setOpenActionId(null);
     setShowPurchaseModal(true);
   };
 
   const closePurchaseModal = () => {
+    if (saving) {
+      return;
+    }
+
     setShowPurchaseModal(false);
     setEditingPurchaseId(null);
-    setFormData(emptyForm);
+    setFormData(createEmptyForm());
   };
 
-  const handleSavePurchase = (event) => {
-    event.preventDefault();
-
+  const validatePurchaseForm = () => {
     const requiredFields = [
-      "supplier",
+      "supplierId",
       "orderDate",
       "expectedDate",
-      "warehouse",
-      "itemName",
+      "warehouseId",
+      "itemId",
       "quantity",
       "unitCost",
     ];
@@ -230,7 +310,7 @@ export default function Purchase() {
       requiredFields.some(
         (field) =>
           String(
-            formData[field]
+            formData[field] || ""
           ).trim() === ""
       );
 
@@ -238,7 +318,8 @@ export default function Purchase() {
       alert(
         "Please complete all purchase fields."
       );
-      return;
+
+      return false;
     }
 
     if (
@@ -248,7 +329,8 @@ export default function Purchase() {
       alert(
         "Quantity must be greater than zero and unit cost cannot be negative."
       );
-      return;
+
+      return false;
     }
 
     if (
@@ -258,57 +340,159 @@ export default function Purchase() {
       alert(
         "Expected date cannot be before the order date."
       );
+
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSavePurchase = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (!validatePurchaseForm()) {
       return;
     }
 
-    if (editingPurchaseId) {
-      updatePurchase(
-        editingPurchaseId,
-        formData
-      );
-    } else {
-      addPurchase(formData);
-    }
+    try {
+      setSaving(true);
 
-    closePurchaseModal();
+      if (editingPurchaseId) {
+        const updatedPurchase =
+          await updatePurchase(
+            editingPurchaseId,
+            formData
+          );
+
+        setPurchases(
+          (currentPurchases) =>
+            currentPurchases.map(
+              (purchase) =>
+                purchase.id ===
+                editingPurchaseId
+                  ? updatedPurchase
+                  : purchase
+            )
+        );
+      } else {
+        const newPurchase =
+          await createPurchase(formData);
+
+        setPurchases(
+          (currentPurchases) => [
+            newPurchase,
+            ...currentPurchases,
+          ]
+        );
+      }
+
+      setShowPurchaseModal(false);
+      setEditingPurchaseId(null);
+      setFormData(createEmptyForm());
+    } catch (error) {
+      console.error(
+        "Error saving purchase:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not save purchase order."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleApprovePurchase = (
+  const handleApprovePurchase = async (
     purchaseId
   ) => {
-    approvePurchase(purchaseId);
-    setOpenActionId(null);
+    try {
+      const updatedPurchase =
+        await updatePurchaseStatus(
+          purchaseId,
+          "Approved"
+        );
+
+      setPurchases(
+        (currentPurchases) =>
+          currentPurchases.map(
+            (purchase) =>
+              purchase.id === purchaseId
+                ? updatedPurchase
+                : purchase
+          )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      alert(
+        error.message ||
+          "Could not approve purchase order."
+      );
+    }
   };
 
   const openReceiveModal = (purchase) => {
     setReceivingPurchase(purchase);
-    setReceivedDate(getTodayDate());
     setOpenActionId(null);
     setShowReceiveModal(true);
   };
 
   const closeReceiveModal = () => {
+    if (saving) {
+      return;
+    }
+
     setShowReceiveModal(false);
     setReceivingPurchase(null);
-    setReceivedDate(getTodayDate());
   };
 
-  const handleReceivePurchase = (
+  const handleReceivePurchase = async (
     event
   ) => {
     event.preventDefault();
 
-    if (!receivedDate) {
-      alert("Please select the receive date.");
+    if (!receivingPurchase) {
       return;
     }
 
-    receivePurchase(
-      receivingPurchase.id,
-      receivedDate
-    );
+    try {
+      setSaving(true);
 
-    closeReceiveModal();
+      const updatedPurchase =
+        await receivePurchase(
+          receivingPurchase
+        );
+
+      setPurchases(
+        (currentPurchases) =>
+          currentPurchases.map(
+            (purchase) =>
+              purchase.id ===
+              receivingPurchase.id
+                ? updatedPurchase
+                : purchase
+          )
+      );
+
+      setShowReceiveModal(false);
+      setReceivingPurchase(null);
+    } catch (error) {
+      console.error(
+        "Error receiving purchase:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not receive purchase items."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancelPurchase = (
@@ -322,11 +506,33 @@ export default function Purchase() {
       return;
     }
 
-    cancelPurchase(purchaseId);
-    setOpenActionId(null);
+    updatePurchaseStatus(
+      purchaseId,
+      "Cancelled"
+    )
+      .then((updatedPurchase) => {
+        setPurchases(
+          (currentPurchases) =>
+            currentPurchases.map(
+              (purchase) =>
+                purchase.id ===
+                purchaseId
+                  ? updatedPurchase
+                  : purchase
+            )
+        );
+
+        setOpenActionId(null);
+      })
+      .catch((error) => {
+        alert(
+          error.message ||
+            "Could not cancel purchase order."
+        );
+      });
   };
 
-  const handleDeletePurchase = (
+  const handleDeletePurchase = async (
     purchaseId
   ) => {
     const confirmed = window.confirm(
@@ -337,8 +543,24 @@ export default function Purchase() {
       return;
     }
 
-    deletePurchase(purchaseId);
-    setOpenActionId(null);
+    try {
+      await removePurchase(purchaseId);
+
+      setPurchases(
+        (currentPurchases) =>
+          currentPurchases.filter(
+            (purchase) =>
+              purchase.id !== purchaseId
+          )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      alert(
+        error.message ||
+          "Could not delete purchase order."
+      );
+    }
   };
 
   const toggleActionMenu = (
@@ -351,11 +573,10 @@ export default function Purchase() {
     );
   };
 
-  const getStatusClass = (status) => {
-    return status
+  const getStatusClass = (status) =>
+    status
       .toLowerCase()
       .replace(/\s+/g, "-");
-  };
 
   const formatDate = (dateValue) => {
     if (!dateValue) {
@@ -384,6 +605,7 @@ export default function Purchase() {
         <section className="purchase-title-section">
           <div>
             <h1>Purchase</h1>
+
             <p>
               Manage purchase requests, approvals
               and received inventory
@@ -396,7 +618,9 @@ export default function Purchase() {
             onClick={openNewPurchaseModal}
           >
             <FiPlus />
-            <span>New Purchase Request</span>
+            <span>
+              New Purchase Request
+            </span>
           </button>
         </section>
 
@@ -433,6 +657,7 @@ export default function Purchase() {
         <section className="purchase-filters">
           <div className="purchase-search-box">
             <FiSearch />
+
             <input
               type="text"
               placeholder="Search purchase orders..."
@@ -453,15 +678,20 @@ export default function Purchase() {
               )
             }
           >
-            <option>
+            <option value="All Warehouses">
               All Warehouses
             </option>
-            <option value="Cairo">
-              Cairo
-            </option>
-            <option value="Alex">
-              Alex
-            </option>
+
+            {warehouses.map(
+              (warehouse) => (
+                <option
+                  key={warehouse.id}
+                  value={warehouse.id}
+                >
+                  {warehouse.name}
+                </option>
+              )
+            )}
           </select>
 
           <select
@@ -472,18 +702,22 @@ export default function Purchase() {
               )
             }
           >
-            <option>
+            <option value="All Statuses">
               All Statuses
             </option>
+
             <option value="Pending">
               Pending
             </option>
+
             <option value="Approved">
               Approved
             </option>
+
             <option value="Received">
               Received
             </option>
+
             <option value="Cancelled">
               Cancelled
             </option>
@@ -501,6 +735,7 @@ export default function Purchase() {
                       aria-label="Select all purchases"
                     />
                   </th>
+
                   <th>PO Number</th>
                   <th>Supplier</th>
                   <th>Order Date</th>
@@ -515,24 +750,39 @@ export default function Purchase() {
               </thead>
 
               <tbody>
-                {filteredPurchases.length >
-                0 ? (
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan="11"
+                      className="purchase-empty-state"
+                    >
+                      Loading purchase orders...
+                    </td>
+                  </tr>
+                ) : filteredPurchases.length >
+                  0 ? (
                   filteredPurchases.map(
                     (purchase) => (
                       <tr key={purchase.id}>
                         <td>
                           <input
                             type="checkbox"
-                            aria-label={`Select ${purchase.id}`}
+                            aria-label={`Select ${purchase.poNumber}`}
                           />
                         </td>
 
-                        <td>{purchase.id}</td>
-                        <td>{purchase.supplier}</td>
+                        <td>
+                          {purchase.poNumber}
+                        </td>
+
+                        <td>
+                          {purchase.supplier}
+                        </td>
 
                         <td>
                           <div className="purchase-date-cell">
                             <FiCalendar />
+
                             <span>
                               {formatDate(
                                 purchase.orderDate
@@ -582,7 +832,7 @@ export default function Purchase() {
                           <div className="purchase-actions">
                             <button
                               type="button"
-                              aria-label={`Edit ${purchase.id}`}
+                              aria-label={`Edit ${purchase.poNumber}`}
                               disabled={
                                 purchase.status ===
                                   "Received" ||
@@ -602,7 +852,7 @@ export default function Purchase() {
                               <button
                                 type="button"
                                 className="purchase-more-button"
-                                aria-label={`More actions for ${purchase.id}`}
+                                aria-label={`More actions for ${purchase.poNumber}`}
                                 onClick={() =>
                                   toggleActionMenu(
                                     purchase.id
@@ -728,7 +978,9 @@ export default function Purchase() {
       {showPurchaseModal && (
         <div
           className="purchase-modal-overlay"
-          onMouseDown={closePurchaseModal}
+          onMouseDown={
+            closePurchaseModal
+          }
         >
           <form
             className="purchase-modal"
@@ -744,6 +996,7 @@ export default function Purchase() {
                     ? "Edit Purchase Order"
                     : "New Purchase Request"}
                 </h2>
+
                 <p>
                   Enter the requested item and
                   supplier information.
@@ -752,8 +1005,11 @@ export default function Purchase() {
 
               <button
                 type="button"
-                onClick={closePurchaseModal}
+                onClick={
+                  closePurchaseModal
+                }
                 aria-label="Close form"
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -762,64 +1018,113 @@ export default function Purchase() {
             <div className="purchase-modal-grid">
               <label>
                 Supplier
-                <input
-                  type="text"
-                  name="supplier"
-                  value={formData.supplier}
+
+                <select
+                  name="supplierId"
+                  value={
+                    formData.supplierId
+                  }
                   onChange={handleFormChange}
-                  placeholder="Supplier name"
-                />
+                  disabled={saving}
+                >
+                  <option value="">
+                    Select supplier
+                  </option>
+
+                  {suppliers.map(
+                    (supplier) => (
+                      <option
+                        key={supplier.id}
+                        value={supplier.id}
+                      >
+                        {supplier.name}
+                      </option>
+                    )
+                  )}
+                </select>
               </label>
 
               <label>
                 Item
-                <input
-                  type="text"
-                  name="itemName"
-                  value={formData.itemName}
+
+                <select
+                  name="itemId"
+                  value={formData.itemId}
                   onChange={handleFormChange}
-                  placeholder="Dinner Plate"
-                />
+                  disabled={saving}
+                >
+                  <option value="">
+                    Select item
+                  </option>
+
+                  {items.map((item) => (
+                    <option
+                      key={item.id}
+                      value={item.id}
+                    >
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label>
                 Order Date
+
                 <input
                   type="date"
                   name="orderDate"
                   value={formData.orderDate}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
               <label>
                 Expected Date
+
                 <input
                   type="date"
                   name="expectedDate"
-                  value={formData.expectedDate}
+                  value={
+                    formData.expectedDate
+                  }
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
               <label>
                 Warehouse
+
                 <select
-                  name="warehouse"
-                  value={formData.warehouse}
+                  name="warehouseId"
+                  value={
+                    formData.warehouseId
+                  }
                   onChange={handleFormChange}
+                  disabled={saving}
                 >
-                  <option value="Cairo">
-                    Cairo
+                  <option value="">
+                    Select warehouse
                   </option>
-                  <option value="Alex">
-                    Alex
-                  </option>
+
+                  {warehouses.map(
+                    (warehouse) => (
+                      <option
+                        key={warehouse.id}
+                        value={warehouse.id}
+                      >
+                        {warehouse.name}
+                      </option>
+                    )
+                  )}
                 </select>
               </label>
 
               <label>
                 Quantity
+
                 <input
                   type="number"
                   min="1"
@@ -827,11 +1132,13 @@ export default function Purchase() {
                   value={formData.quantity}
                   onChange={handleFormChange}
                   placeholder="500"
+                  disabled={saving}
                 />
               </label>
 
               <label className="purchase-full-field">
                 Unit Cost
+
                 <input
                   type="number"
                   min="0"
@@ -840,16 +1147,22 @@ export default function Purchase() {
                   value={formData.unitCost}
                   onChange={handleFormChange}
                   placeholder="0.00"
+                  disabled={saving}
                 />
               </label>
             </div>
 
             <div className="purchase-total-preview">
               Estimated Total:
+
               <strong>
                 {(
-                  Number(formData.quantity || 0) *
-                  Number(formData.unitCost || 0)
+                  Number(
+                    formData.quantity || 0
+                  ) *
+                  Number(
+                    formData.unitCost || 0
+                  )
                 ).toLocaleString()}{" "}
                 EGP
               </strong>
@@ -859,7 +1172,10 @@ export default function Purchase() {
               <button
                 type="button"
                 className="purchase-cancel-button"
-                onClick={closePurchaseModal}
+                onClick={
+                  closePurchaseModal
+                }
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -867,10 +1183,13 @@ export default function Purchase() {
               <button
                 type="submit"
                 className="purchase-save-button"
+                disabled={saving}
               >
-                {editingPurchaseId
-                  ? "Update Order"
-                  : "Create Request"}
+                {saving
+                  ? "Saving..."
+                  : editingPurchaseId
+                    ? "Update Order"
+                    : "Create Request"}
               </button>
             </div>
           </form>
@@ -881,11 +1200,15 @@ export default function Purchase() {
         receivingPurchase && (
         <div
           className="purchase-modal-overlay"
-          onMouseDown={closeReceiveModal}
+          onMouseDown={
+            closeReceiveModal
+          }
         >
           <form
             className="purchase-modal receive-modal"
-            onSubmit={handleReceivePurchase}
+            onSubmit={
+              handleReceivePurchase
+            }
             onMouseDown={(event) =>
               event.stopPropagation()
             }
@@ -893,6 +1216,7 @@ export default function Purchase() {
             <div className="purchase-modal-header">
               <div>
                 <h2>Receive Items</h2>
+
                 <p>
                   Confirm received items to update
                   inventory.
@@ -901,7 +1225,10 @@ export default function Purchase() {
 
               <button
                 type="button"
-                onClick={closeReceiveModal}
+                onClick={
+                  closeReceiveModal
+                }
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -910,20 +1237,27 @@ export default function Purchase() {
             <div className="receive-summary">
               <div>
                 <span>PO Number</span>
+
                 <strong>
-                  {receivingPurchase.id}
+                  {
+                    receivingPurchase.poNumber
+                  }
                 </strong>
               </div>
 
               <div>
                 <span>Item</span>
+
                 <strong>
-                  {receivingPurchase.itemName}
+                  {
+                    receivingPurchase.itemName
+                  }
                 </strong>
               </div>
 
               <div>
                 <span>Quantity</span>
+
                 <strong>
                   {Number(
                     receivingPurchase.quantity
@@ -933,27 +1267,18 @@ export default function Purchase() {
 
               <div>
                 <span>Warehouse</span>
+
                 <strong>
-                  {receivingPurchase.warehouse}
+                  {
+                    receivingPurchase.warehouse
+                  }
                 </strong>
               </div>
             </div>
 
-            <label className="receive-date-field">
-              Receive Date
-              <input
-                type="date"
-                value={receivedDate}
-                onChange={(event) =>
-                  setReceivedDate(
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
             <div className="inventory-update-note">
               <FiCheckCircle />
+
               Inventory will be updated after
               confirming receipt.
             </div>
@@ -962,7 +1287,10 @@ export default function Purchase() {
               <button
                 type="button"
                 className="purchase-cancel-button"
-                onClick={closeReceiveModal}
+                onClick={
+                  closeReceiveModal
+                }
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -970,8 +1298,11 @@ export default function Purchase() {
               <button
                 type="submit"
                 className="purchase-save-button"
+                disabled={saving}
               >
-                Receive Items
+                {saving
+                  ? "Receiving..."
+                  : "Receive Items"}
               </button>
             </div>
           </form>

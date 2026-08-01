@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -7,18 +8,11 @@ import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import "../styles/mobile-sidebar-offcanvas.css";
 
-
 import {
-  useReturns,
-} from "../context/ReturnsContext";
-
-import {
-  useDispatches,
-} from "../context/DispatchesContext";
-
-import {
-  useItems,
-} from "../context/ItemsContext";
+  createReturn,
+  getReturnsPageData,
+  removeReturn,
+} from "../services/returnsService";
 
 import "../styles/dashboard.css";
 import "../styles/Returns.css";
@@ -42,31 +36,32 @@ const tabs = [
 const getTodayDate = () =>
   new Date().toISOString().split("T")[0];
 
-const emptyForm = {
+const createEmptyForm = () => ({
   dispatchId: "",
+  dispatchCode: "",
   eventReference: "",
+  warehouseId: "",
   warehouse: "",
   returnDate: getTodayDate(),
   returnedBy: "",
   notes: "",
   items: [],
-};
+});
 
 export default function Returns() {
-  const {
-    returns,
-    addReturn,
-    deleteReturn,
-  } = useReturns();
+  const [returns, setReturns] =
+    useState([]);
 
-  const {
-    dispatches,
-    setDispatches,
-  } = useDispatches();
+  const [
+    availableDispatches,
+    setAvailableDispatches,
+  ] = useState([]);
 
-  const {
-    setItems,
-  } = useItems();
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -85,21 +80,37 @@ export default function Returns() {
   ] = useState(null);
 
   const [formData, setFormData] =
-    useState(emptyForm);
+    useState(createEmptyForm());
 
-  const availableDispatches = useMemo(
-    () =>
-      dispatches.filter(
-        (dispatch) =>
-          dispatch.status === "Delivered" &&
-          !returns.some(
-            (returnRecord) =>
-              returnRecord.dispatchId ===
-              dispatch.id
-          )
-      ),
-    [dispatches, returns]
-  );
+  useEffect(() => {
+    loadReturnsData();
+  }, []);
+
+  const loadReturnsData = async () => {
+    try {
+      setLoading(true);
+
+      const data =
+        await getReturnsPageData();
+
+      setReturns(data.returns);
+      setAvailableDispatches(
+        data.availableDispatches
+      );
+    } catch (error) {
+      console.error(
+        "Error loading returns:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not load returns."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredReturns = useMemo(() => {
     const search =
@@ -107,33 +118,21 @@ export default function Returns() {
 
     return returns.filter(
       (returnRecord) => {
-        const totalDamaged =
-          returnRecord.items.reduce(
-            (total, item) =>
-              total +
-              Number(item.damaged),
-            0
-          );
-
-        const totalMissing =
-          returnRecord.items.reduce(
-            (total, item) =>
-              total +
-              Number(item.missing),
-            0
-          );
+        const totals = getTotals(
+          returnRecord.items
+        );
 
         const matchesSearch =
           search === "" ||
           [
-            returnRecord.id,
-            returnRecord.dispatchId,
+            returnRecord.returnCode,
+            returnRecord.dispatchCode,
             returnRecord.eventReference,
             returnRecord.warehouse,
             returnRecord.returnDate,
             returnRecord.returnedBy,
           ].some((value) =>
-            String(value)
+            String(value || "")
               .toLowerCase()
               .includes(search)
           );
@@ -141,9 +140,9 @@ export default function Returns() {
         const matchesTab =
           activeTab === "All Returns" ||
           (activeTab === "Has Damage" &&
-            totalDamaged > 0) ||
+            totals.damaged > 0) ||
           (activeTab === "Has Missing" &&
-            totalMissing > 0);
+            totals.missing > 0);
 
         return matchesSearch && matchesTab;
       }
@@ -155,22 +154,18 @@ export default function Returns() {
   ]);
 
   const openAddModal = () => {
-    setFormData({
-      ...emptyForm,
-      returnDate: getTodayDate(),
-    });
-
+    setFormData(createEmptyForm());
     setOpenActionId(null);
     setShowReturnModal(true);
   };
 
   const closeModal = () => {
-    setShowReturnModal(false);
+    if (saving) {
+      return;
+    }
 
-    setFormData({
-      ...emptyForm,
-      returnDate: getTodayDate(),
-    });
+    setShowReturnModal(false);
+    setFormData(createEmptyForm());
   };
 
   const handleDispatchChange = (
@@ -180,41 +175,37 @@ export default function Returns() {
       event.target.value;
 
     const selectedDispatch =
-      dispatches.find(
+      availableDispatches.find(
         (dispatch) =>
-          dispatch.id === dispatchId
+          String(dispatch.id) ===
+          String(dispatchId)
       );
 
     if (!selectedDispatch) {
-      setFormData({
-        ...emptyForm,
-        returnDate: getTodayDate(),
-      });
-
+      setFormData(createEmptyForm());
       return;
     }
 
     setFormData({
       dispatchId:
         selectedDispatch.id,
+      dispatchCode:
+        selectedDispatch.dispatchCode,
       eventReference:
         selectedDispatch.eventReference,
+      warehouseId:
+        selectedDispatch.warehouseId,
       warehouse:
-        selectedDispatch.fromWarehouse,
+        selectedDispatch.warehouse,
       returnDate: getTodayDate(),
       returnedBy: "",
       notes: "",
-      items: selectedDispatch.items.map(
-        (item) => ({
-          name: item.name,
-          dispatchedQuantity: Number(
-            item.quantity
-          ),
-          goodReturned: "",
-          damaged: "",
-          missing: "",
-        })
-      ),
+      items:
+        selectedDispatch.items.map(
+          (item) => ({
+            ...item,
+          })
+        ),
     });
   };
 
@@ -249,8 +240,8 @@ export default function Returns() {
     }));
   };
 
-  const getTotals = (items) => {
-    return items.reduce(
+  const getTotals = (items) =>
+    items.reduce(
       (totals, item) => {
         totals.dispatched += Number(
           item.dispatchedQuantity || 0
@@ -277,65 +268,8 @@ export default function Returns() {
         missing: 0,
       }
     );
-  };
 
-  const updateInventory = (
-    returnedItems
-  ) => {
-    setItems((currentItems) =>
-      currentItems.map((inventoryItem) => {
-        const returnedItem =
-          returnedItems.find(
-            (item) =>
-              item.name.toLowerCase() ===
-              inventoryItem.name.toLowerCase()
-          );
-
-        if (!returnedItem) {
-          return inventoryItem;
-        }
-
-        return {
-          ...inventoryItem,
-
-          available:
-            Number(
-              inventoryItem.available || 0
-            ) +
-            Number(
-              returnedItem.goodReturned
-            ),
-
-          outOfEvent: Math.max(
-            0,
-            Number(
-              inventoryItem.outOfEvent || 0
-            ) -
-              Number(
-                returnedItem
-                  .dispatchedQuantity
-              )
-          ),
-
-          damaged:
-            Number(
-              inventoryItem.damaged || 0
-            ) +
-            Number(returnedItem.damaged),
-
-          missing:
-            Number(
-              inventoryItem.missing || 0
-            ) +
-            Number(returnedItem.missing),
-        };
-      })
-    );
-  };
-
-  const handleSaveReturn = (event) => {
-    event.preventDefault();
-
+  const validateReturnForm = () => {
     if (
       !formData.dispatchId ||
       !formData.returnDate ||
@@ -344,23 +278,47 @@ export default function Returns() {
       alert(
         "Please complete the return information."
       );
-      return;
+
+      return false;
+    }
+
+    if (formData.items.length === 0) {
+      alert(
+        "The selected dispatch has no items."
+      );
+
+      return false;
     }
 
     const hasInvalidItem =
       formData.items.some((item) => {
-        const distributedQuantity =
-          Number(
-            item.goodReturned || 0
-          ) +
-          Number(item.damaged || 0) +
-          Number(item.missing || 0);
+        const goodReturned = Number(
+          item.goodReturned || 0
+        );
+        const damaged = Number(
+          item.damaged || 0
+        );
+        const missing = Number(
+          item.missing || 0
+        );
+        const sent = Number(
+          item.dispatchedQuantity || 0
+        );
+
+        const valuesAreInvalid =
+          !Number.isFinite(goodReturned) ||
+          !Number.isFinite(damaged) ||
+          !Number.isFinite(missing) ||
+          goodReturned < 0 ||
+          damaged < 0 ||
+          missing < 0;
 
         return (
-          distributedQuantity !==
-          Number(
-            item.dispatchedQuantity
-          )
+          valuesAreInvalid ||
+          goodReturned +
+            damaged +
+            missing !==
+            sent
         );
       });
 
@@ -368,43 +326,108 @@ export default function Returns() {
       alert(
         "For every item: Returned + Damaged + Missing must equal Sent Quantity."
       );
+
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSaveReturn = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (!validateReturnForm()) {
       return;
     }
 
-    addReturn(formData);
+    try {
+      setSaving(true);
 
-    updateInventory(formData.items);
+      const newReturn =
+        await createReturn(formData);
 
-    setDispatches(
-      (currentDispatches) =>
-        currentDispatches.map(
-          (dispatch) =>
-            dispatch.id ===
-            formData.dispatchId
-              ? {
-                  ...dispatch,
-                  status: "Returned",
-                }
-              : dispatch
-        )
-    );
+      setReturns(
+        (currentReturns) => [
+          newReturn,
+          ...currentReturns,
+        ]
+      );
 
-    closeModal();
+      setAvailableDispatches(
+        (currentDispatches) =>
+          currentDispatches.filter(
+            (dispatch) =>
+              String(dispatch.id) !==
+              String(formData.dispatchId)
+          )
+      );
+
+      setShowReturnModal(false);
+      setFormData(createEmptyForm());
+    } catch (error) {
+      console.error(
+        "Error creating return:",
+        error
+      );
+
+      if (error.code === "23505") {
+        alert(
+          "A return already exists for this dispatch."
+        );
+      } else {
+        alert(
+          error.message ||
+            "Could not complete the return."
+        );
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDeleteReturn = (
+  const handleDeleteReturn = async (
     returnId
   ) => {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this return record?"
+      "Are you sure you want to delete this return record? Inventory quantities will be reversed."
     );
 
     if (!confirmed) {
       return;
     }
 
-    deleteReturn(returnId);
-    setOpenActionId(null);
+    try {
+      await removeReturn(returnId);
+
+      setReturns(
+        (currentReturns) =>
+          currentReturns.filter(
+            (returnRecord) =>
+              returnRecord.id !== returnId
+          )
+      );
+
+      setOpenActionId(null);
+
+      const data =
+        await getReturnsPageData();
+
+      setAvailableDispatches(
+        data.availableDispatches
+      );
+    } catch (error) {
+      console.error(
+        "Error deleting return:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not delete the return record."
+      );
+    }
   };
 
   const formatDate = (dateValue) => {
@@ -512,8 +535,17 @@ export default function Returns() {
               </thead>
 
               <tbody>
-                {filteredReturns.length >
-                0 ? (
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan="11"
+                      className="returns-empty-state"
+                    >
+                      Loading returns...
+                    </td>
+                  </tr>
+                ) : filteredReturns.length >
+                  0 ? (
                   filteredReturns.map(
                     (returnRecord) => {
                       const totals =
@@ -542,13 +574,13 @@ export default function Returns() {
                               <div>
                                 <strong>
                                   {
-                                    returnRecord.id
+                                    returnRecord.returnCode
                                   }
                                 </strong>
 
                                 <span>
                                   {
-                                    returnRecord.dispatchId
+                                    returnRecord.dispatchCode
                                   }
                                 </span>
                               </div>
@@ -599,7 +631,7 @@ export default function Returns() {
                             <div className="return-actions">
                               <button
                                 type="button"
-                                aria-label={`View ${returnRecord.id}`}
+                                aria-label={`View ${returnRecord.returnCode}`}
                               >
                                 <FiCheckCircle />
                               </button>
@@ -697,6 +729,7 @@ export default function Returns() {
               <button
                 type="button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -709,6 +742,7 @@ export default function Returns() {
                 <select
                   value={formData.dispatchId}
                   onChange={handleDispatchChange}
+                  disabled={saving}
                 >
                   <option value="">
                     Select delivered dispatch
@@ -720,8 +754,13 @@ export default function Returns() {
                         key={dispatch.id}
                         value={dispatch.id}
                       >
-                        {dispatch.id} —{" "}
-                        {dispatch.eventReference}
+                        {
+                          dispatch.dispatchCode
+                        }{" "}
+                        —{" "}
+                        {
+                          dispatch.eventReference
+                        }
                       </option>
                     )
                   )}
@@ -744,6 +783,7 @@ export default function Returns() {
                   name="returnDate"
                   value={formData.returnDate}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
             </div>
@@ -765,9 +805,11 @@ export default function Returns() {
                 </div>
 
                 <div>
-                  <span>Dispatch Reference</span>
+                  <span>
+                    Dispatch Reference
+                  </span>
                   <strong>
-                    {formData.dispatchId}
+                    {formData.dispatchCode}
                   </strong>
                 </div>
               </div>
@@ -783,6 +825,7 @@ export default function Returns() {
                   placeholder="Employee name"
                   value={formData.returnedBy}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
 
@@ -794,6 +837,7 @@ export default function Returns() {
                   placeholder="Optional notes"
                   value={formData.notes}
                   onChange={handleFormChange}
+                  disabled={saving}
                 />
               </label>
             </div>
@@ -823,7 +867,9 @@ export default function Returns() {
                     (item, itemIndex) => (
                       <div
                         className="returned-items-row"
-                        key={item.name}
+                        key={
+                          item.dispatchItemId
+                        }
                       >
                         <strong>
                           {item.name}
@@ -848,6 +894,7 @@ export default function Returns() {
                               event.target.value
                             )
                           }
+                          disabled={saving}
                         />
 
                         <input
@@ -861,6 +908,7 @@ export default function Returns() {
                               event.target.value
                             )
                           }
+                          disabled={saving}
                         />
 
                         <input
@@ -874,6 +922,7 @@ export default function Returns() {
                               event.target.value
                             )
                           }
+                          disabled={saving}
                         />
                       </div>
                     )
@@ -942,6 +991,7 @@ export default function Returns() {
                 type="button"
                 className="returns-cancel-button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -949,8 +999,14 @@ export default function Returns() {
               <button
                 type="submit"
                 className="returns-save-button"
+                disabled={
+                  saving ||
+                  !formData.dispatchId
+                }
               >
-                Complete Return
+                {saving
+                  ? "Saving..."
+                  : "Complete Return"}
               </button>
             </div>
           </form>
