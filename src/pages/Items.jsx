@@ -54,6 +54,10 @@ export default function Items() {
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [removedImages, setRemovedImages] = useState([]);
 
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [categoryName, setCategoryName] = useState("");
+  const [savingCategory, setSavingCategory] = useState(false);
+
   useEffect(() => {
     loadPageData();
   }, []);
@@ -277,6 +281,79 @@ export default function Items() {
       ...current,
       [name]: value,
     }));
+  };
+
+  const openCategoryModal = () => {
+    setCategoryName("");
+    setShowAddCategory(true);
+  };
+
+  const closeCategoryModal = () => {
+    if (savingCategory) return;
+
+    setShowAddCategory(false);
+    setCategoryName("");
+  };
+
+  const handleCreateCategory = async (event) => {
+    event.preventDefault();
+
+    const normalizedName = categoryName.trim();
+
+    if (!normalizedName) {
+      alert("Please enter a category name.");
+      return;
+    }
+
+    const duplicateCategory = categories.some(
+      (category) =>
+        category.name.trim().toLowerCase() ===
+        normalizedName.toLowerCase()
+    );
+
+    if (duplicateCategory) {
+      alert("This category already exists.");
+      return;
+    }
+
+    try {
+      setSavingCategory(true);
+
+      const { data, error } = await supabase
+        .from("item_categories")
+        .insert({
+          name: normalizedName,
+        })
+        .select("id, name")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setCategories((currentCategories) =>
+        [...currentCategories, data].sort((first, second) =>
+          first.name.localeCompare(second.name)
+        )
+      );
+
+      setFormData((current) => ({
+        ...current,
+        categoryId: String(data.id),
+      }));
+
+      setShowAddCategory(false);
+      setCategoryName("");
+    } catch (error) {
+      console.error("Create category error:", error);
+
+      alert(
+        error.message ||
+          "Unable to create the category."
+      );
+    } finally {
+      setSavingCategory(false);
+    }
   };
 
   const handleImagesChange = (event) => {
@@ -922,20 +999,36 @@ export default function Items() {
 
                 <label>
                   Category
-                  <select
-                    name="categoryId"
-                    value={formData.categoryId}
-                    onChange={handleFormChange}
-                    disabled={saving}
-                  >
-                    <option value="">Select category</option>
 
-                    {categories.map((category) => (
-                      <option key={category.id} value={String(category.id)}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="item-category-field">
+                    <select
+                      name="categoryId"
+                      value={formData.categoryId}
+                      onChange={handleFormChange}
+                      disabled={saving}
+                    >
+                      <option value="">Select category</option>
+
+                      {categories.map((category) => (
+                        <option
+                          key={category.id}
+                          value={String(category.id)}
+                        >
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      className="item-add-category-button"
+                      onClick={openCategoryModal}
+                      disabled={saving}
+                    >
+                      <FiPlus />
+                      Add Category
+                    </button>
+                  </div>
                 </label>
 
                 <label>
@@ -1107,6 +1200,72 @@ export default function Items() {
                   : editingItemId
                   ? "Update Item"
                   : "Save Item"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {showAddCategory && (
+        <div
+          className="item-category-modal-overlay"
+          onMouseDown={closeCategoryModal}
+        >
+          <form
+            className="item-category-modal"
+            onSubmit={handleCreateCategory}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="item-category-modal-header">
+              <div>
+                <h2>Add New Category</h2>
+                <p>
+                  Create a category and select it automatically.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCategoryModal}
+                disabled={savingCategory}
+                aria-label="Close category form"
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <label className="item-category-name-field">
+              Category Name
+
+              <input
+                type="text"
+                value={categoryName}
+                onChange={(event) =>
+                  setCategoryName(event.target.value)
+                }
+                placeholder="Example: Plates"
+                autoFocus
+                disabled={savingCategory}
+              />
+            </label>
+
+            <div className="item-category-modal-actions">
+              <button
+                type="button"
+                className="item-category-cancel-button"
+                onClick={closeCategoryModal}
+                disabled={savingCategory}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="item-category-save-button"
+                disabled={savingCategory}
+              >
+                {savingCategory
+                  ? "Saving..."
+                  : "Save Category"}
               </button>
             </div>
           </form>

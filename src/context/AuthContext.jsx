@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }) => {
         id,
         full_name,
         email,
+        avatar_url,
         is_active,
         role_id,
         roles (
@@ -188,6 +189,61 @@ export const AuthProvider = ({ children }) => {
     return getProfile(user.id);
   };
 
+  const updateProfileAvatar = async (
+    avatarUrl
+  ) => {
+    if (!user?.id) {
+      return {
+        success: false,
+        error: new Error(
+          "No authenticated user."
+        ),
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        avatar_url: avatarUrl,
+      })
+      .eq("id", user.id)
+      .select(`
+        id,
+        full_name,
+        email,
+        avatar_url,
+        is_active,
+        role_id,
+        roles (
+          id,
+          name,
+          description,
+          is_system_admin
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error(
+        "Avatar update error:",
+        error
+      );
+
+      return {
+        success: false,
+        error,
+      };
+    }
+
+    setProfile(data);
+
+    return {
+      success: true,
+      error: null,
+      profile: data,
+    };
+  };
+
   const value = {
     user,
     session,
@@ -200,6 +256,7 @@ export const AuthProvider = ({ children }) => {
     ),
     signOut,
     refreshProfile,
+    updateProfileAvatar,
   };
 
   return (

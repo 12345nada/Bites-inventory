@@ -17,7 +17,7 @@ export async function getReportsData() {
         item_id,
         item_code,
         item_name,
-        category_name,
+        category,
         warehouse_id,
         warehouse_name,
         available_quantity,
@@ -184,7 +184,7 @@ export async function getReportsData() {
       itemCode: row.item_code || "",
       itemName: row.item_name || "",
       category:
-        row.category_name || "-",
+        row.category || "-",
       warehouseId: row.warehouse_id,
       warehouse:
         row.warehouse_name || "",

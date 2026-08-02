@@ -48,6 +48,36 @@ const createEmptyForm = () => ({
   items: [],
 });
 
+function getTotals(items = []) {
+  return items.reduce(
+    (totals, item) => {
+      totals.dispatched += Number(
+        item.dispatchedQuantity || 0
+      );
+
+      totals.goodReturned += Number(
+        item.goodReturned || 0
+      );
+
+      totals.damaged += Number(
+        item.damaged || 0
+      );
+
+      totals.missing += Number(
+        item.missing || 0
+      );
+
+      return totals;
+    },
+    {
+      dispatched: 0,
+      goodReturned: 0,
+      damaged: 0,
+      missing: 0,
+    }
+  );
+}
+
 export default function Returns() {
   const [returns, setReturns] =
     useState([]);
@@ -239,35 +269,6 @@ export default function Returns() {
       ),
     }));
   };
-
-  const getTotals = (items) =>
-    items.reduce(
-      (totals, item) => {
-        totals.dispatched += Number(
-          item.dispatchedQuantity || 0
-        );
-
-        totals.goodReturned += Number(
-          item.goodReturned || 0
-        );
-
-        totals.damaged += Number(
-          item.damaged || 0
-        );
-
-        totals.missing += Number(
-          item.missing || 0
-        );
-
-        return totals;
-      },
-      {
-        dispatched: 0,
-        goodReturned: 0,
-        damaged: 0,
-        missing: 0,
-      }
-    );
 
   const validateReturnForm = () => {
     if (

@@ -1612,3 +1612,151 @@ body {
     width: 100%;
   }
 }
+
+/* =========================
+   Topbar Profile Avatar
+========================= */
+
+.dashboard-avatar-input {
+  display: none;
+}
+
+.dashboard-profile-button {
+  position: relative;
+
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  padding: 0;
+
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 2px solid transparent;
+  border-radius: 50%;
+
+  background: #713006;
+  color: #ffffff;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 4px 12px
+    rgba(113, 48, 6, 0.18);
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dashboard-profile-button:hover {
+  transform: scale(1.05);
+  border-color: #e3b28e;
+
+  box-shadow:
+    0 6px 16px
+    rgba(113, 48, 6, 0.24);
+}
+
+.dashboard-profile-button:focus-visible {
+  outline: 3px solid
+    rgba(184, 117, 73, 0.25);
+  outline-offset: 3px;
+}
+
+.dashboard-profile-button:disabled {
+  cursor: wait;
+}
+
+.dashboard-profile-button > img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+  object-position: center;
+}
+
+.dashboard-profile-fallback {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    linear-gradient(
+      135deg,
+      #93430d,
+      #713006
+    );
+
+  color: #ffffff;
+
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.dashboard-profile-camera {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    rgba(24, 10, 2, 0.58);
+  color: #ffffff;
+
+  font-size: 16px;
+
+  opacity: 0;
+
+  transition:
+    opacity 0.2s ease;
+}
+
+.dashboard-profile-button:hover
+.dashboard-profile-camera {
+  opacity: 1;
+}
+
+.dashboard-profile-loading {
+  position: absolute;
+  inset: 4px;
+
+  border: 2px solid
+    rgba(255, 255, 255, 0.42);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+
+  animation:
+    dashboard-avatar-spin
+    0.75s linear infinite;
+}
+
+.dashboard-profile-button.uploading
+.dashboard-profile-camera {
+  opacity: 0;
+}
+
+@keyframes dashboard-avatar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-profile-button {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+}
