@@ -100,6 +100,7 @@ const mapEmployee = (profile) => ({
     profile.full_name ||
     profile.name ||
     "",
+  username: profile.username || "",
   email: profile.email || "",
   roleId: profile.role_id || "",
   branch: profile.branch || "",
@@ -202,6 +203,7 @@ export async function getSettingsData() {
       .select(`
         id,
         full_name,
+        username,
         email,
         role_id,
         branch,
@@ -382,8 +384,8 @@ export async function createSystemUser(
       body: {
         fullName:
           userData.fullName.trim(),
-        email:
-          userData.email
+        username:
+          userData.username
             .trim()
             .toLowerCase(),
         password:
@@ -422,6 +424,8 @@ export async function createSystemUser(
   return {
     id: data.user.id,
     name: data.user.name || "",
+    username:
+      data.user.username || "",
     email: data.user.email || "",
     roleId: data.user.roleId || "",
     branch: data.user.branch || "",
@@ -484,6 +488,7 @@ export async function assignEmployeeRole(
     .select(`
       id,
       full_name,
+      username,
       email,
       role_id,
       branch,

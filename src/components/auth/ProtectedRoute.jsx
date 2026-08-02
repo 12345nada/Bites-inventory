@@ -8,14 +8,73 @@ import {
   useAuth,
 } from "../../context/AuthContext";
 
-const ProtectedRoute = () => {
+const MODULE_ROUTES = [
+  {
+    moduleName: "Dashboard",
+    path: "/dashboard",
+  },
+  {
+    moduleName: "Events",
+    path: "/events",
+  },
+  {
+    moduleName: "Items",
+    path: "/items",
+  },
+  {
+    moduleName: "Purchase",
+    path: "/purchase",
+  },
+  {
+    moduleName: "Suppliers",
+    path: "/suppliers",
+  },
+  {
+    moduleName: "Warehouse",
+    path: "/warehouse",
+  },
+  {
+    moduleName: "Staff",
+    path: "/staff",
+  },
+  {
+    moduleName: "Dispatch",
+    path: "/dispatch",
+  },
+  {
+    moduleName: "Returns",
+    path: "/returns",
+  },
+  {
+    moduleName: "Reports",
+    path: "/reports",
+  },
+  {
+    moduleName: "Settings",
+    path: "/settings",
+  },
+  {
+    moduleName: "Users / Role",
+    path: "/settings",
+  },
+];
+
+const ProtectedRoute = ({
+  moduleName,
+  anyOfModules = [],
+  action = "view",
+}) => {
   const {
     user,
     profile,
     loading,
+    isAdmin,
+    hasPermission,
+    hasAnyPermission,
   } = useAuth();
 
-  const location = useLocation();
+  const location =
+    useLocation();
 
   if (loading) {
     return (
@@ -35,7 +94,8 @@ const ProtectedRoute = () => {
         to="/login"
         replace
         state={{
-          from: location.pathname,
+          from:
+            location.pathname,
         }}
       />
     );
@@ -86,6 +146,59 @@ const ProtectedRoute = () => {
         <p>
           No role has been assigned to
           your account.
+        </p>
+      </div>
+    );
+  }
+
+  const hasAccess =
+    anyOfModules.length > 0
+      ? hasAnyPermission(
+          anyOfModules,
+          action
+        )
+      : moduleName
+        ? hasPermission(
+            moduleName,
+            action
+          )
+        : true;
+
+  if (!hasAccess) {
+    const firstAllowedPath =
+      isAdmin
+        ? "/dashboard"
+        : MODULE_ROUTES.find(
+            (route) =>
+              hasPermission(
+                route.moduleName,
+                "view"
+              )
+          )?.path;
+
+    if (
+      firstAllowedPath &&
+      firstAllowedPath !==
+        location.pathname
+    ) {
+      return (
+        <Navigate
+          to={firstAllowedPath}
+          replace
+        />
+      );
+    }
+
+    return (
+      <div className="auth-access-page">
+        <h2>
+          Access Denied
+        </h2>
+
+        <p>
+          Your role does not have
+          access to any page. Please
+          contact the administrator.
         </p>
       </div>
     );

@@ -1116,3 +1116,73 @@
     width: 100%;
   }
 }
+
+.settings-actions {
+  margin-top: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.general-settings-panel
+  .settings-actions
+  .settings-save-button {
+  margin: 0;
+}
+
+.settings-logout-button {
+  height: 38px;
+  padding: 0 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border: 1px solid #c93f36;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #c93f36;
+
+  font-size: 9px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.settings-logout-button:hover {
+  background: #c93f36;
+  color: #ffffff;
+
+  transform: translateY(-1px);
+}
+
+.settings-logout-button:active {
+  transform: translateY(0);
+}
+
+.settings-logout-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+@media (max-width: 768px) {
+  .settings-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-actions
+    .settings-save-button,
+  .settings-logout-button {
+    width: 100%;
+  }
+}

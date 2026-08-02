@@ -198,8 +198,31 @@ body {
   width: 39px;
   height: 39px;
   min-width: 39px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
   border-radius: 50%;
+
   background: linear-gradient(135deg, #e5a14d, #c46d2b);
+  color: #ffffff;
+
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+}
+
+.dashboard-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+
+  object-fit: cover;
+  object-position: center;
 }
 
 .dashboard-user-info {

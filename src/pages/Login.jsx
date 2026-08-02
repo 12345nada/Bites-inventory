@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 
 import {
-  FiMail,
+  FiUser,
   FiLock,
   FiEye,
   FiEyeOff,
@@ -23,6 +23,94 @@ import Background from "../assets/images/Background2.png";
 import MobileBackground from "../assets/images/registerMobile.png";
 
 import "../styles/register.css";
+
+const MODULE_ROUTES = [
+  {
+    moduleName: "Dashboard",
+    path: "/dashboard",
+  },
+  {
+    moduleName: "Events",
+    path: "/events",
+  },
+  {
+    moduleName: "Items",
+    path: "/items",
+  },
+  {
+    moduleName: "Purchase",
+    path: "/purchase",
+  },
+  {
+    moduleName: "Suppliers",
+    path: "/suppliers",
+  },
+  {
+    moduleName: "Warehouse",
+    path: "/warehouse",
+  },
+  {
+    moduleName: "Staff",
+    path: "/staff",
+  },
+  {
+    moduleName: "Dispatch",
+    path: "/dispatch",
+  },
+  {
+    moduleName: "Returns",
+    path: "/returns",
+  },
+  {
+    moduleName: "Reports",
+    path: "/reports",
+  },
+  {
+    moduleName: "Settings",
+    path: "/settings",
+  },
+  {
+    moduleName: "Users / Role",
+    path: "/settings",
+  },
+];
+
+const getFirstAllowedRoute = (
+  profile
+) => {
+  if (
+    profile?.roles
+      ?.is_system_admin
+  ) {
+    return "/dashboard";
+  }
+
+  const permissions =
+    profile?.roles
+      ?.role_permissions || [];
+
+  const allowedModules =
+    new Set(
+      permissions
+        .filter(
+          (permission) =>
+            permission.can_view
+        )
+        .map(
+          (permission) =>
+            permission.module_name
+        )
+    );
+
+  return (
+    MODULE_ROUTES.find(
+      (route) =>
+        allowedModules.has(
+          route.moduleName
+        )
+    )?.path || null
+  );
+};
 
 const Login = () => {
   const navigate = useNavigate();
@@ -46,20 +134,24 @@ const Login = () => {
     formData,
     setFormData,
   ] = useState({
-    email: "",
+    username: "",
     password: "",
   });
 
-  const handleChange = (event) => {
+  const handleChange = (
+    event
+  ) => {
     const {
       name,
       value,
     } = event.target;
 
-    setFormData((previousData) => ({
-      ...previousData,
-      [name]: value,
-    }));
+    setFormData(
+      (previousData) => ({
+        ...previousData,
+        [name]: value,
+      })
+    );
 
     setErrorMessage("");
   };
@@ -72,10 +164,15 @@ const Login = () => {
     setErrorMessage("");
     setIsSubmitting(true);
 
-    const email =
-      formData.email
+    const loginValue =
+      formData.username
         .trim()
         .toLowerCase();
+
+    const email =
+      loginValue.includes("@")
+        ? loginValue
+        : `${loginValue}@bites-inventory.app`;
 
     try {
       const {
@@ -107,14 +204,24 @@ const Login = () => {
         .select(`
           id,
           full_name,
+          username,
           email,
+          avatar_url,
           is_active,
           role_id,
           roles (
             id,
             name,
             description,
-            is_system_admin
+            is_system_admin,
+            role_permissions (
+              id,
+              module_name,
+              can_view,
+              can_add,
+              can_edit,
+              can_delete
+            )
           )
         `)
         .eq(
@@ -124,9 +231,10 @@ const Login = () => {
         .single();
 
       if (profileError) {
-        await supabase.auth.signOut({
-          scope: "local",
-        });
+        await supabase.auth
+          .signOut({
+            scope: "local",
+          });
 
         throw new Error(
           "Your employee profile was not found. Please contact the administrator."
@@ -134,9 +242,10 @@ const Login = () => {
       }
 
       if (!profile.is_active) {
-        await supabase.auth.signOut({
-          scope: "local",
-        });
+        await supabase.auth
+          .signOut({
+            scope: "local",
+          });
 
         throw new Error(
           "Your account is inactive. Please contact the administrator."
@@ -147,12 +256,29 @@ const Login = () => {
         !profile.role_id ||
         !profile.roles
       ) {
-        await supabase.auth.signOut({
-          scope: "local",
-        });
+        await supabase.auth
+          .signOut({
+            scope: "local",
+          });
 
         throw new Error(
           "No role has been assigned to your account."
+        );
+      }
+
+      const firstAllowedRoute =
+        getFirstAllowedRoute(
+          profile
+        );
+
+      if (!firstAllowedRoute) {
+        await supabase.auth
+          .signOut({
+            scope: "local",
+          });
+
+        throw new Error(
+          "Your role does not have access to any page. Please contact the administrator."
         );
       }
 
@@ -162,6 +288,8 @@ const Login = () => {
           id: profile.id,
           fullName:
             profile.full_name,
+          username:
+            profile.username,
           email: profile.email,
           role:
             profile.roles.name,
@@ -172,7 +300,7 @@ const Login = () => {
       );
 
       navigate(
-        "/dashboard",
+        firstAllowedRoute,
         {
           replace: true,
         }
@@ -185,7 +313,7 @@ const Login = () => {
 
       let message =
         error.message ||
-        "Incorrect email or password.";
+        "Incorrect username or password.";
 
       if (
         message
@@ -195,7 +323,7 @@ const Login = () => {
           )
       ) {
         message =
-          "Incorrect email or password.";
+          "Incorrect username or password.";
       }
 
       if (
@@ -241,21 +369,21 @@ const Login = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="input-group">
-              <label htmlFor="email">
-                Email Address
+              <label htmlFor="username">
+                Username
               </label>
 
               <div className="input-wrapper">
-                <FiMail className="input-icon" />
+                <FiUser className="input-icon" />
 
                 <input
-                  id="email"
-                  type="email"
-                  name="email"
-                  placeholder="Enter your email address"
-                  value={formData.email}
+                  id="username"
+                  type="text"
+                  name="username"
+                  placeholder="Enter your username"
+                  value={formData.username}
                   onChange={handleChange}
-                  autoComplete="email"
+                  autoComplete="username"
                   disabled={isSubmitting}
                   required
                 />

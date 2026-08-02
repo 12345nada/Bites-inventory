@@ -24,69 +24,87 @@ import {
   FiX,
 } from "react-icons/fi";
 
+import {
+  useAuth,
+} from "../../context/AuthContext";
+
 const menuItems = [
   {
     title: "Dashboard",
+    moduleName: "Dashboard",
     icon: FiGrid,
     path: "/dashboard",
     pageName: "dashboard",
   },
   {
     title: "Events",
+    moduleName: "Events",
     icon: FiCalendar,
     path: "/events",
     pageName: "events",
   },
   {
     title: "Items",
+    moduleName: "Items",
     icon: FiBox,
     path: "/items",
     pageName: "items",
   },
   {
     title: "Purchase",
+    moduleName: "Purchase",
     icon: FiShoppingCart,
     path: "/purchase",
     pageName: "purchase",
   },
   {
     title: "Suppliers",
+    moduleName: "Suppliers",
     icon: FiUsers,
     path: "/suppliers",
     pageName: "suppliers",
   },
   {
     title: "Warehouse",
+    moduleName: "Warehouse",
     icon: FiHome,
     path: "/warehouse",
     pageName: "warehouse",
   },
   {
     title: "Staff",
+    moduleName: "Staff",
     icon: FiUsers,
     path: "/staff",
     pageName: "staff",
   },
   {
     title: "Dispatch",
+    moduleName: "Dispatch",
     icon: FiTruck,
     path: "/dispatch",
     pageName: "dispatch",
   },
   {
     title: "Returns",
+    moduleName: "Returns",
     icon: FiCornerUpLeft,
     path: "/returns",
     pageName: "returns",
   },
   {
     title: "Reports",
+    moduleName: "Reports",
     icon: FiFileText,
     path: "/reports",
     pageName: "reports",
   },
   {
     title: "Settings",
+    anyOfModules: [
+      "Settings",
+      "Users / Role",
+    ],
     icon: FiSettings,
     path: "/settings",
     pageName: "settings",
@@ -96,19 +114,54 @@ const menuItems = [
 export default function Sidebar({
   activePage = "dashboard",
 }) {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
+
+  const {
+    profile,
+    isAdmin,
+    hasPermission,
+    hasAnyPermission,
+  } = useAuth();
 
   const [
     isSidebarOpen,
     setIsSidebarOpen,
   ] = useState(false);
 
+  const visibleMenuItems =
+    menuItems.filter(
+      (item) => {
+        if (isAdmin) {
+          return true;
+        }
+
+        if (
+          item.anyOfModules
+        ) {
+          return hasAnyPermission(
+            item.anyOfModules,
+            "view"
+          );
+        }
+
+        return hasPermission(
+          item.moduleName,
+          "view"
+        );
+      }
+    );
+
   const closeSidebar = () => {
     setIsSidebarOpen(false);
   };
 
-  const handleNavigation = (path) => {
+  const handleNavigation = (
+    path
+  ) => {
     navigate(path);
     closeSidebar();
   };
@@ -118,8 +171,12 @@ export default function Sidebar({
   }, [location.pathname]);
 
   useEffect(() => {
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
+    const handleEscape = (
+      event
+    ) => {
+      if (
+        event.key === "Escape"
+      ) {
         closeSidebar();
       }
     };
@@ -157,7 +214,8 @@ export default function Sidebar({
         className="dashboard-mobile-menu-button"
         onClick={() =>
           setIsSidebarOpen(
-            (current) => !current
+            (current) =>
+              !current
           )
         }
         aria-label={
@@ -165,7 +223,9 @@ export default function Sidebar({
             ? "Close sidebar"
             : "Open sidebar"
         }
-        aria-expanded={isSidebarOpen}
+        aria-expanded={
+          isSidebarOpen
+        }
       >
         {isSidebarOpen ? (
           <FiX />
@@ -177,9 +237,13 @@ export default function Sidebar({
       <button
         type="button"
         className={`dashboard-sidebar-overlay ${
-          isSidebarOpen ? "show" : ""
+          isSidebarOpen
+            ? "show"
+            : ""
         }`}
-        onClick={closeSidebar}
+        onClick={
+          closeSidebar
+        }
         aria-label="Close sidebar"
       />
 
@@ -194,11 +258,17 @@ export default function Sidebar({
           <button
             type="button"
             className="dashboard-logo"
-            onClick={() =>
-              handleNavigation(
-                "/dashboard"
-              )
-            }
+            onClick={() => {
+              const firstPath =
+                visibleMenuItems[0]
+                  ?.path;
+
+              if (firstPath) {
+                handleNavigation(
+                  firstPath
+                );
+              }
+            }}
           >
             bites
           </button>
@@ -208,62 +278,88 @@ export default function Sidebar({
             aria-label="Dashboard navigation"
           >
             <ul className="dashboard-menu">
-              {menuItems.map((item) => {
-                const Icon =
-                  item.icon;
+              {visibleMenuItems.map(
+                (item) => {
+                  const Icon =
+                    item.icon;
 
-                const isActive =
-                  activePage ===
-                  item.pageName;
+                  const isActive =
+                    activePage ===
+                    item.pageName;
 
-                return (
-                  <li
-                    key={item.pageName}
-                    className={
-                      isActive
-                        ? "active"
-                        : ""
-                    }
-                  >
-                    <button
-                      type="button"
-                      className="dashboard-menu-button"
-                      onClick={() =>
-                        handleNavigation(
-                          item.path
-                        )
+                  return (
+                    <li
+                      key={
+                        item.pageName
                       }
-                      aria-current={
+                      className={
                         isActive
-                          ? "page"
-                          : undefined
+                          ? "active"
+                          : ""
                       }
                     >
-                      <span className="dashboard-menu-icon">
-                        <Icon />
-                      </span>
+                      <button
+                        type="button"
+                        className="dashboard-menu-button"
+                        onClick={() =>
+                          handleNavigation(
+                            item.path
+                          )
+                        }
+                        aria-current={
+                          isActive
+                            ? "page"
+                            : undefined
+                        }
+                      >
+                        <span className="dashboard-menu-icon">
+                          <Icon />
+                        </span>
 
-                      <span className="dashboard-menu-text">
-                        {item.title}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
+                        <span className="dashboard-menu-text">
+                          {
+                            item.title
+                          }
+                        </span>
+                      </button>
+                    </li>
+                  );
+                }
+              )}
             </ul>
           </nav>
         </div>
 
         <div className="dashboard-user">
-          <div className="dashboard-avatar" />
+          <div className="dashboard-avatar">
+            {profile?.avatar_url ? (
+              <img
+                src={
+                  profile.avatar_url
+                }
+                alt={
+                  profile.full_name ||
+                  "Profile"
+                }
+              />
+            ) : (
+              profile?.full_name
+                ?.trim()
+                ?.charAt(0)
+                ?.toUpperCase() ||
+              "U"
+            )}
+          </div>
 
           <div className="dashboard-user-info">
             <strong>
-              Admin User
+              {profile?.full_name ||
+                "User"}
             </strong>
 
             <small>
-              Administrator
+              {profile?.roles?.name ||
+                "No Role"}
             </small>
           </div>
 

@@ -43,59 +43,144 @@ function App() {
 
           <Route
             element={
-              <ProtectedRoute />
+              <ProtectedRoute
+                moduleName="Dashboard"
+              />
             }
           >
             <Route
               path="/dashboard"
               element={<Dashboard />}
             />
+          </Route>
 
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Events"
+              />
+            }
+          >
             <Route
               path="/events"
               element={<Events />}
             />
+          </Route>
 
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Items"
+              />
+            }
+          >
             <Route
               path="/items"
               element={<Items />}
             />
+          </Route>
 
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Purchase"
+              />
+            }
+          >
             <Route
               path="/purchase"
               element={<Purchase />}
             />
+          </Route>
 
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Suppliers"
+              />
+            }
+          >
             <Route
               path="/suppliers"
               element={<Suppliers />}
             />
+          </Route>
 
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Warehouse"
+              />
+            }
+          >
             <Route
               path="/warehouse"
               element={<Warehouse />}
             />
+          </Route>
 
-            <Route
-              path="/dispatch"
-              element={<Dispatch />}
-            />
-
-            <Route
-              path="/returns"
-              element={<Returns />}
-            />
-
-            <Route
-              path="/reports"
-              element={<Reports />}
-            />
-
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Staff"
+              />
+            }
+          >
             <Route
               path="/staff"
               element={<Staff />}
             />
+          </Route>
 
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Dispatch"
+              />
+            }
+          >
+            <Route
+              path="/dispatch"
+              element={<Dispatch />}
+            />
+          </Route>
+
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Returns"
+              />
+            }
+          >
+            <Route
+              path="/returns"
+              element={<Returns />}
+            />
+          </Route>
+
+          <Route
+            element={
+              <ProtectedRoute
+                moduleName="Reports"
+              />
+            }
+          >
+            <Route
+              path="/reports"
+              element={<Reports />}
+            />
+          </Route>
+
+          <Route
+            element={
+              <ProtectedRoute
+                anyOfModules={[
+                  "Settings",
+                  "Users / Role",
+                ]}
+              />
+            }
+          >
             <Route
               path="/settings"
               element={<Settings />}

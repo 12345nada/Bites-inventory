@@ -29,11 +29,20 @@ import {
   FiShield,
   FiUser,
   FiX,
+  FiLogOut,
 } from "react-icons/fi";
+
+import {
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  useAuth,
+} from "../context/AuthContext";
 
 const emptyUserForm = {
   fullName: "",
-  email: "",
+  username: "",
   password: "",
   confirmPassword: "",
   roleId: "",
@@ -41,6 +50,13 @@ const emptyUserForm = {
 };
 
 export default function Settings() {
+  const navigate =
+    useNavigate();
+
+  const {
+    signOut,
+  } = useAuth();
+
   const [modules, setModules] =
     useState([]);
 
@@ -211,7 +227,7 @@ export default function Settings() {
         employee.name
           .toLowerCase()
           .includes(search) ||
-        employee.email
+        employee.username
           .toLowerCase()
           .includes(search)
     );
@@ -398,14 +414,14 @@ export default function Settings() {
     const fullName =
       userForm.fullName.trim();
 
-    const email =
-      userForm.email
+    const username =
+      userForm.username
         .trim()
         .toLowerCase();
 
     if (
       !fullName ||
-      !email ||
+      !username ||
       !userForm.password ||
       !userForm.confirmPassword ||
       !userForm.roleId ||
@@ -413,6 +429,18 @@ export default function Settings() {
     ) {
       alert(
         "Please complete all user fields."
+      );
+
+      return;
+    }
+
+    if (
+      !/^[a-z0-9._-]{3,30}$/.test(
+        username
+      )
+    ) {
+      alert(
+        "Username must be 3-30 characters and contain only lowercase letters, numbers, dots, underscores or hyphens."
       );
 
       return;
@@ -479,7 +507,7 @@ export default function Settings() {
       const newUser =
         await createSystemUser({
           fullName,
-          email,
+          username,
           password:
             userForm.password,
           roleId:
@@ -668,6 +696,48 @@ export default function Settings() {
         setSaving(false);
       }
     };
+
+  const handleLogout = async () => {
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to logout?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const result =
+        await signOut();
+
+      if (!result.success) {
+        throw (
+          result.error ||
+          new Error(
+            "Could not logout."
+          )
+        );
+      }
+
+      navigate(
+        "/login",
+        {
+          replace: true,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Logout error:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "Could not logout."
+      );
+    }
+  };
 
   return (
     <div className="dashboard-page">
@@ -862,20 +932,33 @@ export default function Settings() {
                 </label>
               </div>
 
-              <button
-                type="button"
-                className="settings-save-button"
-                onClick={
-                  handleSaveGeneralSettings
-                }
-                disabled={saving}
-              >
-                <FiSave />
+              <div className="settings-actions">
+                <button
+                  type="button"
+                  className="settings-save-button"
+                  onClick={
+                    handleSaveGeneralSettings
+                  }
+                  disabled={saving}
+                >
+                  <FiSave />
 
-                {saving
-                  ? "Saving..."
-                  : "Save Changes"}
-              </button>
+                  {saving
+                    ? "Saving..."
+                    : "Save Changes"}
+                </button>
+
+                <button
+                  type="button"
+                  className="settings-logout-button"
+                  onClick={handleLogout}
+                  disabled={saving}
+                >
+                  <FiLogOut />
+
+                  Logout
+                </button>
+              </div>
             </div>
           ) : (
             <div className="permissions-layout">
@@ -945,7 +1028,7 @@ export default function Settings() {
                         </strong>
 
                         <span>
-                          {employee.email}
+                          @{employee.username}
                         </span>
                       </button>
                     )
@@ -1351,18 +1434,19 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Email Address
+                  Username
 
                   <input
-                    type="email"
-                    name="email"
+                    type="text"
+                    name="username"
                     value={
-                      userForm.email
+                      userForm.username
                     }
-                    placeholder="ahmed@bites.com"
+                    placeholder="ahmed.samy"
                     onChange={
                       handleUserFormChange
                     }
+                    autoComplete="off"
                     disabled={saving}
                   />
                 </label>
