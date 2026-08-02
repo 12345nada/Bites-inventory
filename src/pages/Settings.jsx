@@ -55,7 +55,32 @@ export default function Settings() {
 
   const {
     signOut,
+    hasPermission,
   } = useAuth();
+
+  const canEditSettings =
+    hasPermission(
+      "Settings",
+      "edit"
+    );
+
+  const canAddUsersRoles =
+    hasPermission(
+      "Users / Role",
+      "add"
+    );
+
+  const canEditUsersRoles =
+    hasPermission(
+      "Users / Role",
+      "edit"
+    );
+
+  const canDeleteUsersRoles =
+    hasPermission(
+      "Users / Role",
+      "delete"
+    );
 
   const [modules, setModules] =
     useState([]);
@@ -253,6 +278,13 @@ export default function Settings() {
     moduleName,
     action
   ) => {
+    if (!canEditUsersRoles) {
+      alert(
+        "You do not have permission to edit permissions."
+      );
+      return;
+    }
+
     setPermissionDraft(
       (currentPermissions) => ({
         ...currentPermissions,
@@ -272,6 +304,13 @@ export default function Settings() {
   };
 
   const savePermissions = async () => {
+    if (!canEditUsersRoles) {
+      alert(
+        "You do not have permission to edit permissions."
+      );
+      return;
+    }
+
     if (!selectedRoleId) {
       alert("Please select a role.");
       return;
@@ -322,6 +361,13 @@ export default function Settings() {
   const handleCreateRole = async (
     event
   ) => {
+    if (!canAddUsersRoles) {
+      alert(
+        "You do not have permission to add roles."
+      );
+      return;
+    }
+
     event.preventDefault();
 
     if (!roleForm.name.trim()) {
@@ -364,6 +410,13 @@ export default function Settings() {
   };
 
   const openUserModal = () => {
+    if (!canAddUsersRoles) {
+      alert(
+        "You do not have permission to add users."
+      );
+      return;
+    }
+
     const defaultRole =
       roles.find(
         (role) =>
@@ -409,6 +462,13 @@ export default function Settings() {
   const handleCreateUser = async (
     event
   ) => {
+    if (!canAddUsersRoles) {
+      alert(
+        "You do not have permission to add users."
+      );
+      return;
+    }
+
     event.preventDefault();
 
     const fullName =
@@ -557,6 +617,13 @@ export default function Settings() {
   const removeRole = async (
     roleId
   ) => {
+    if (!canDeleteUsersRoles) {
+      alert(
+        "You do not have permission to delete roles."
+      );
+      return;
+    }
+
     const role = roles.find(
       (currentRole) =>
         String(currentRole.id) ===
@@ -616,6 +683,13 @@ export default function Settings() {
       employeeId,
       roleId
     ) => {
+    if (!canEditUsersRoles) {
+      alert(
+        "You do not have permission to assign roles."
+      );
+      return;
+    }
+
       try {
         const updatedEmployee =
           await assignEmployeeRole(
@@ -661,6 +735,13 @@ export default function Settings() {
 
   const handleSaveGeneralSettings =
     async () => {
+    if (!canEditSettings) {
+      alert(
+        "You do not have permission to edit settings."
+      );
+      return;
+    }
+
       if (
         !generalSettings.companyName.trim() ||
         !generalSettings.companyEmail.trim()
@@ -814,7 +895,7 @@ export default function Settings() {
                     onChange={
                       handleGeneralChange
                     }
-                    disabled={saving}
+                    disabled={saving || !canEditSettings}
                   />
                 </label>
 
@@ -830,7 +911,7 @@ export default function Settings() {
                     onChange={
                       handleGeneralChange
                     }
-                    disabled={saving}
+                    disabled={saving || !canEditSettings}
                   />
                 </label>
 
@@ -845,7 +926,7 @@ export default function Settings() {
                     onChange={
                       handleGeneralChange
                     }
-                    disabled={saving}
+                    disabled={saving || !canEditSettings}
                   />
                 </label>
 
@@ -860,7 +941,7 @@ export default function Settings() {
                     onChange={
                       handleGeneralChange
                     }
-                    disabled={saving}
+                    disabled={saving || !canEditSettings}
                   >
                     <option value="">
                       Select warehouse
@@ -896,7 +977,7 @@ export default function Settings() {
                     onChange={
                       handleGeneralChange
                     }
-                    disabled={saving}
+                    disabled={saving || !canEditSettings}
                   >
                     <option value="EGP">
                       EGP
@@ -919,7 +1000,7 @@ export default function Settings() {
                     onChange={
                       handleGeneralChange
                     }
-                    disabled={saving}
+                    disabled={saving || !canEditSettings}
                   >
                     <option value="DD/MM/YYYY">
                       DD/MM/YYYY
@@ -939,7 +1020,7 @@ export default function Settings() {
                   onClick={
                     handleSaveGeneralSettings
                   }
-                  disabled={saving}
+                  disabled={saving || !canEditSettings}
                 >
                   <FiSave />
 
@@ -952,7 +1033,7 @@ export default function Settings() {
                   type="button"
                   className="settings-logout-button"
                   onClick={handleLogout}
-                  disabled={saving}
+                  disabled={saving || !canEditSettings}
                 >
                   <FiLogOut />
 
@@ -979,6 +1060,9 @@ export default function Settings() {
                   type="button"
                   className="add-user-inline"
                   onClick={openUserModal}
+                  disabled={
+                    !canAddUsersRoles
+                  }
                 >
                   <FiPlus />
                   Add New User
@@ -1097,8 +1181,9 @@ export default function Settings() {
                           </span>
                         </button>
 
-                        {role.name !==
-                          "Administrator" && (
+                        {canDeleteUsersRoles &&
+                          role.name !==
+                            "Administrator" && (
                           <button
                             type="button"
                             className="delete-role-button"
@@ -1120,8 +1205,22 @@ export default function Settings() {
                 <button
                   type="button"
                   className="add-role-inline"
-                  onClick={() =>
-                    setShowRoleModal(true)
+                  onClick={() => {
+                    if (
+                      !canAddUsersRoles
+                    ) {
+                      alert(
+                        "You do not have permission to add roles."
+                      );
+                      return;
+                    }
+
+                    setShowRoleModal(
+                      true
+                    );
+                  }}
+                  disabled={
+                    !canAddUsersRoles
                   }
                 >
                   <FiPlus />
@@ -1158,6 +1257,10 @@ export default function Settings() {
                           selectedEmployee.id,
                           event.target.value
                         )
+                      }
+                      disabled={
+                        saving ||
+                        !canEditUsersRoles
                       }
                     >
                       <option value="">
@@ -1219,6 +1322,10 @@ export default function Settings() {
                                     action
                                   )
                                 }
+                                disabled={
+                                  saving ||
+                                  !canEditUsersRoles
+                                }
                               />
 
                               <span />
@@ -1248,7 +1355,8 @@ export default function Settings() {
                     }
                     disabled={
                       saving ||
-                      !selectedRoleId
+                      !selectedRoleId ||
+                      !canEditUsersRoles
                     }
                   >
                     <FiSave />

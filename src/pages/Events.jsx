@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+import { useAuth } from "../context/AuthContext";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
@@ -57,6 +59,28 @@ const emptyForm = {
 };
 
 function Events() {
+  const {
+    hasPermission,
+  } = useAuth();
+
+  const canAdd =
+    hasPermission(
+      "Events",
+      "add"
+    );
+
+  const canEdit =
+    hasPermission(
+      "Events",
+      "edit"
+    );
+
+  const canDelete =
+    hasPermission(
+      "Events",
+      "delete"
+    );
+
   const [events, setEvents] =
     useState([]);
 
@@ -274,6 +298,10 @@ function Events() {
   const handleDeleteEvent = async (
     eventId
   ) => {
+    if (!canDelete) {
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this event?"
     );
@@ -329,6 +357,10 @@ function Events() {
   };
 
   const openAddModal = () => {
+    if (!canAdd) {
+      return;
+    }
+
     setEditingEventId(null);
     setFormData(emptyForm);
     setOpenActionId(null);
@@ -336,6 +368,10 @@ function Events() {
   };
 
   const openEditModal = (event) => {
+    if (!canEdit) {
+      return;
+    }
+
     setEditingEventId(event.id);
 
     setFormData({
@@ -406,6 +442,14 @@ function Events() {
     event
   ) => {
     event.preventDefault();
+
+    if (
+      editingEventId
+        ? !canEdit
+        : !canAdd
+    ) {
+      return;
+    }
 
     if (!validateEventForm()) {
       return;
@@ -494,6 +538,12 @@ function Events() {
             type="button"
             className="add-event-button"
             onClick={openAddModal}
+            disabled={!canAdd}
+            title={
+              canAdd
+                ? "Add new event"
+                : "You do not have permission to add events"
+            }
           >
             <FiPlus />
 
@@ -784,6 +834,12 @@ function Events() {
                                 )
                               }
                               aria-label={`Edit ${event.name}`}
+                              disabled={!canEdit}
+                              title={
+                                canEdit
+                                  ? `Edit ${event.name}`
+                                  : "You do not have permission to edit events"
+                              }
                             >
                               <FiEdit2 />
                             </button>
@@ -818,6 +874,12 @@ function Events() {
                                         event
                                       )
                                     }
+                                    disabled={!canEdit}
+                                    title={
+                                      canEdit
+                                        ? "Edit event"
+                                        : "You do not have permission to edit events"
+                                    }
                                   >
                                     <FiEdit2 />
                                     Edit
@@ -830,6 +892,12 @@ function Events() {
                                       handleDeleteEvent(
                                         event.id
                                       )
+                                    }
+                                    disabled={!canDelete}
+                                    title={
+                                      canDelete
+                                        ? "Delete event"
+                                        : "You do not have permission to delete events"
                                     }
                                   >
                                     <FiTrash2 />
@@ -1175,7 +1243,12 @@ function Events() {
               <button
                 type="submit"
                 className="save-button"
-                disabled={saving}
+                disabled={
+                  saving ||
+                  (editingEventId
+                    ? !canEdit
+                    : !canAdd)
+                }
               >
                 {saving
                   ? "Saving..."

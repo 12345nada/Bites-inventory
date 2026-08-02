@@ -1,22 +1,16 @@
 import {
-  useEffect,
   useMemo,
   useState,
 } from "react";
 
-import Sidebar from "../components/dashboard/Sidebar";
-import "../styles/mobile-sidebar-offcanvas.css";
+import { useAuth } from "../context/AuthContext";
 
+import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
-  createDriver,
-  createWaiter,
-  deleteStaff,
-  getStaff,
-  updateDriver,
-  updateWaiter,
-} from "../services/staffService";
+  useStaff,
+} from "../context/StaffContext";
 
 import "../styles/dashboard.css";
 import "../styles/Staff.css";
@@ -85,17 +79,22 @@ const formatDate = (value) => {
 };
 
 export default function Staff() {
-  const [drivers, setDrivers] =
-    useState([]);
+  const { hasPermission } = useAuth();
 
-  const [waiters, setWaiters] =
-    useState([]);
+  const canAdd = hasPermission("Staff", "add");
+  const canEdit = hasPermission("Staff", "edit");
+  const canDelete = hasPermission("Staff", "delete");
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [saving, setSaving] =
-    useState(false);
+  const {
+    drivers,
+    waiters,
+    addDriver,
+    updateDriver,
+    deleteDriver,
+    addWaiter,
+    updateWaiter,
+    deleteWaiter,
+  } = useStaff();
 
   const [activeTab, setActiveTab] =
     useState("drivers");
@@ -137,33 +136,6 @@ export default function Staff() {
   const [waiterForm, setWaiterForm] =
     useState(waiterEmptyForm);
 
-  useEffect(() => {
-    loadStaff();
-  }, []);
-
-  const loadStaff = async () => {
-    try {
-      setLoading(true);
-
-      const data = await getStaff();
-
-      setDrivers(data.drivers);
-      setWaiters(data.waiters);
-    } catch (error) {
-      console.error(
-        "Error loading staff:",
-        error
-      );
-
-      alert(
-        error.message ||
-          "Could not load staff."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const filteredDrivers = useMemo(() => {
     const search =
       searchValue.trim().toLowerCase();
@@ -186,71 +158,7 @@ export default function Staff() {
             .includes(search)
         );
 
-      const handleDeleteDriver = async (
-    driverId
-  ) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this driver?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteStaff(driverId);
-
-      setDrivers((current) =>
-        current.filter(
-          (driver) =>
-            driver.id !== driverId
-        )
-      );
-
-      setOpenActionId(null);
-    } catch (error) {
-      alert(
-        error.code === "23503"
-          ? "This driver is connected to events or dispatches and cannot be deleted."
-          : error.message ||
-              "Could not delete driver."
-      );
-    }
-  };
-
-  const handleDeleteWaiter = async (
-    waiterId
-  ) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this waiter?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteStaff(waiterId);
-
-      setWaiters((current) =>
-        current.filter(
-          (waiter) =>
-            waiter.id !== waiterId
-        )
-      );
-
-      setOpenActionId(null);
-    } catch (error) {
-      alert(
-        error.code === "23503"
-          ? "This waiter is connected to an event and cannot be deleted."
-          : error.message ||
-              "Could not delete waiter."
-      );
-    }
-  };
-
-  return (
+      return (
         matchesSearch &&
         (
           statusFilter ===
@@ -302,12 +210,22 @@ export default function Staff() {
   ]);
 
   const openAddDriver = () => {
+    if (!canAdd) {
+      alert("You do not have permission to add staff.");
+      return;
+    }
+
     setEditingDriverId(null);
     setDriverForm(driverEmptyForm);
     setShowDriverModal(true);
   };
 
   const openEditDriver = (driver) => {
+    if (!canEdit) {
+      alert("You do not have permission to edit staff.");
+      return;
+    }
+
     setEditingDriverId(driver.id);
     setDriverForm({
       ...driver,
@@ -319,12 +237,22 @@ export default function Staff() {
   };
 
   const openAddWaiter = () => {
+    if (!canAdd) {
+      alert("You do not have permission to add staff.");
+      return;
+    }
+
     setEditingWaiterId(null);
     setWaiterForm(waiterEmptyForm);
     setShowWaiterModal(true);
   };
 
   const openEditWaiter = (waiter) => {
+    if (!canEdit) {
+      alert("You do not have permission to edit staff.");
+      return;
+    }
+
     setEditingWaiterId(waiter.id);
     setWaiterForm({
       ...waiter,
@@ -366,7 +294,7 @@ export default function Staff() {
     }));
   };
 
-  const saveDriver = async (event) => {
+  const saveDriver = (event) => {
     event.preventDefault();
 
     if (
@@ -374,7 +302,6 @@ export default function Staff() {
       !driverForm.phone.trim() ||
       !driverForm.nationalId.trim() ||
       !driverForm.licenseNumber.trim() ||
-      !driverForm.licenseExpiryDate ||
       !driverForm.carNumber.trim()
     ) {
       alert(
@@ -383,56 +310,19 @@ export default function Staff() {
       return;
     }
 
-    try {
-      setSaving(true);
-
-      if (editingDriverId) {
-        const updated =
-          await updateDriver(
-            editingDriverId,
-            driverForm
-          );
-
-        setDrivers((current) =>
-          current.map((driver) =>
-            driver.id === editingDriverId
-              ? updated
-              : driver
-          )
-        );
-      } else {
-        const created =
-          await createDriver(
-            driverForm
-          );
-
-        setDrivers((current) => [
-          created,
-          ...current,
-        ]);
-      }
-
-      setShowDriverModal(false);
-      setEditingDriverId(null);
-      setDriverForm(driverEmptyForm);
-    } catch (error) {
-      console.error(
-        "Error saving driver:",
-        error
+    if (editingDriverId) {
+      updateDriver(
+        editingDriverId,
+        driverForm
       );
-
-      alert(
-        error.code === "23505"
-          ? "National ID or license number already exists."
-          : error.message ||
-              "Could not save driver."
-      );
-    } finally {
-      setSaving(false);
+    } else {
+      addDriver(driverForm);
     }
+
+    setShowDriverModal(false);
   };
 
-  const saveWaiter = async (event) => {
+  const saveWaiter = (event) => {
     event.preventDefault();
 
     if (
@@ -446,53 +336,16 @@ export default function Staff() {
       return;
     }
 
-    try {
-      setSaving(true);
-
-      if (editingWaiterId) {
-        const updated =
-          await updateWaiter(
-            editingWaiterId,
-            waiterForm
-          );
-
-        setWaiters((current) =>
-          current.map((waiter) =>
-            waiter.id === editingWaiterId
-              ? updated
-              : waiter
-          )
-        );
-      } else {
-        const created =
-          await createWaiter(
-            waiterForm
-          );
-
-        setWaiters((current) => [
-          created,
-          ...current,
-        ]);
-      }
-
-      setShowWaiterModal(false);
-      setEditingWaiterId(null);
-      setWaiterForm(waiterEmptyForm);
-    } catch (error) {
-      console.error(
-        "Error saving waiter:",
-        error
+    if (editingWaiterId) {
+      updateWaiter(
+        editingWaiterId,
+        waiterForm
       );
-
-      alert(
-        error.code === "23505"
-          ? "National ID already exists."
-          : error.message ||
-              "Could not save waiter."
-      );
-    } finally {
-      setSaving(false);
+    } else {
+      addWaiter(waiterForm);
     }
+
+    setShowWaiterModal(false);
   };
 
   const setDriverDocument = (
@@ -504,10 +357,7 @@ export default function Staff() {
       documents: {
         ...current.documents,
         [field]: file
-          ? {
-              name: file.name,
-              file,
-            }
+          ? { name: file.name }
           : null,
       },
     }));
@@ -530,10 +380,7 @@ export default function Staff() {
               ...current.documents
                 .healthCertificate,
               file: file
-                ? {
-                    name: file.name,
-                    file,
-                  }
+                ? { name: file.name }
                 : null,
             },
           },
@@ -549,10 +396,7 @@ export default function Staff() {
               ...current.documents
                 .contract,
               file: file
-                ? {
-                    name: file.name,
-                    file,
-                  }
+                ? { name: file.name }
                 : null,
             },
           },
@@ -693,7 +537,9 @@ export default function Staff() {
                 <option value="Inactive">
                   Inactive
                 </option>
-
+                <option value="Suspended">
+                  Suspended
+                </option>
               </select>
             </div>
           </div>
@@ -716,16 +562,7 @@ export default function Staff() {
                 </thead>
 
                 <tbody>
-                  {loading ? (
-                    <tr>
-                      <td
-                        colSpan="9"
-                        className="staff-empty-state"
-                      >
-                        Loading drivers...
-                      </td>
-                    </tr>
-                  ) : filteredDrivers.map(
+                  {filteredDrivers.map(
                     (driver) => (
                       <tr key={driver.id}>
                         <td>
@@ -811,8 +648,11 @@ export default function Staff() {
                                     type="button"
                                     className="staff-delete-action"
                                     onClick={() => {
-                                      handleDeleteDriver(
+                                      deleteDriver(
                                         driver.id
+                                      );
+                                      setOpenActionId(
+                                        null
                                       );
                                     }}
                                   >
@@ -847,16 +687,7 @@ export default function Staff() {
                 </thead>
 
                 <tbody>
-                  {loading ? (
-                    <tr>
-                      <td
-                        colSpan="8"
-                        className="staff-empty-state"
-                      >
-                        Loading waiters...
-                      </td>
-                    </tr>
-                  ) : filteredWaiters.map(
+                  {filteredWaiters.map(
                     (waiter) => {
                       const count = [
                         waiter.documents
@@ -953,8 +784,11 @@ export default function Staff() {
                                       type="button"
                                       className="staff-delete-action"
                                       onClick={() => {
-                                        handleDeleteWaiter(
+                                        deleteWaiter(
                                           waiter.id
+                                        );
+                                        setOpenActionId(
+                                          null
                                         );
                                       }}
                                     >
@@ -1078,8 +912,8 @@ export default function Staff() {
                   <option value="Pickup">
                     Pickup
                   </option>
-                  <option value="Car">
-                    Car
+                  <option value="Refrigerated Truck">
+                    Refrigerated Truck
                   </option>
                   <option value="Other">
                     Other
@@ -1172,13 +1006,10 @@ export default function Staff() {
               <button
                 type="submit"
                 className="staff-save-button"
-                disabled={saving}
               >
-                {saving
-                  ? "Saving..."
-                  : editingDriverId
-                    ? "Save Changes"
-                    : "Save Driver"}
+                {editingDriverId
+                  ? "Save Changes"
+                  : "Save Driver"}
               </button>
             </div>
           </form>
@@ -1411,13 +1242,10 @@ export default function Staff() {
               <button
                 type="submit"
                 className="staff-save-button"
-                disabled={saving}
               >
-                {saving
-                  ? "Saving..."
-                  : editingWaiterId
-                    ? "Save Changes"
-                    : "Save Waiter"}
+                {editingWaiterId
+                  ? "Save Changes"
+                  : "Save Waiter"}
               </button>
             </div>
           </form>

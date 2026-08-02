@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { useAuth } from "../context/AuthContext";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import { supabase } from "../lib/supabase";
@@ -36,6 +38,12 @@ const emptyForm = {
 };
 
 export default function Items() {
+  const { hasPermission } = useAuth();
+
+  const canAdd = hasPermission("Items", "add");
+  const canEdit = hasPermission("Items", "edit");
+  const canDelete = hasPermission("Items", "delete");
+
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -415,6 +423,11 @@ export default function Items() {
   };
 
   const openAddModal = () => {
+    if (!canAdd) {
+      alert("You do not have permission to add items.");
+      return;
+    }
+
     setEditingItemId(null);
     setEditingInventoryId(null);
     setOpenActionMenuId(null);
@@ -429,6 +442,11 @@ export default function Items() {
   };
 
   const openEditModal = (item) => {
+    if (!canEdit) {
+      alert("You do not have permission to edit items.");
+      return;
+    }
+
     setEditingItemId(item.id);
     setEditingInventoryId(item.inventoryId);
     setOpenActionMenuId(null);

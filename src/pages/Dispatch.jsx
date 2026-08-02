@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+import { useAuth } from "../context/AuthContext";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import "../styles/mobile-sidebar-offcanvas.css";
@@ -60,6 +62,12 @@ const createEmptyForm = () => ({
 });
 
 export default function Dispatch() {
+  const { hasPermission } = useAuth();
+
+  const canAdd = hasPermission("Dispatch", "add");
+  const canEdit = hasPermission("Dispatch", "edit");
+  const canDelete = hasPermission("Dispatch", "delete");
+
   const [dispatches, setDispatches] =
     useState([]);
 
@@ -306,6 +314,11 @@ export default function Dispatch() {
   };
 
   const openAddModal = () => {
+    if (!canAdd) {
+      alert("You do not have permission to add dispatches.");
+      return;
+    }
+
     setEditingDispatchId(null);
     setOpenActionId(null);
     setItemOptions([]);
@@ -316,6 +329,11 @@ export default function Dispatch() {
   const openEditModal = async (
     dispatch
   ) => {
+    if (!canEdit) {
+      alert("You do not have permission to edit dispatches.");
+      return;
+    }
+
     setEditingDispatchId(dispatch.id);
 
     setFormData({
@@ -563,6 +581,11 @@ export default function Dispatch() {
   const handleDeleteDispatch = async (
     dispatchId
   ) => {
+    if (!canDelete) {
+      alert("You do not have permission to delete dispatches.");
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this dispatch?"
     );
@@ -993,47 +1016,27 @@ export default function Dispatch() {
           </div>
 
           <div className="dispatch-pagination">
-  <p>
-    Showing{" "}
-    {filteredDispatches.length} of{" "}
-    {dispatches.length} dispatches
-  </p>
+            <p>
+              Showing{" "}
+              {filteredDispatches.length} of{" "}
+              {dispatches.length} dispatches
+            </p>
 
-  {dispatches.length > 0 && (
-    <div>
-      <button type="button">
-        ‹
-      </button>
-
-      <button
-        type="button"
-        className="active"
-      >
-        1
-      </button>
-
-      <button type="button">
-        2
-      </button>
-
-      <button type="button">
-        3
-      </button>
-
-      <button type="button">
-        ...
-      </button>
-
-      <button type="button">
-        26
-      </button>
-
-      <button type="button">
-        ›
-      </button>
-    </div>
-  )}
-</div>
+            <div>
+              <button type="button">‹</button>
+              <button
+                type="button"
+                className="active"
+              >
+                1
+              </button>
+              <button type="button">2</button>
+              <button type="button">3</button>
+              <button type="button">...</button>
+              <button type="button">26</button>
+              <button type="button">›</button>
+            </div>
+          </div>
         </section>
       </main>
 

@@ -6,6 +6,8 @@ import {
 
 import "../styles/mobile-sidebar-offcanvas.css";
 
+import { useAuth } from "../context/AuthContext";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
@@ -37,6 +39,12 @@ const emptyForm = {
 };
 
 export default function Warehouse() {
+  const { hasPermission } = useAuth();
+
+  const canAdd = hasPermission("Warehouse", "add");
+  const canEdit = hasPermission("Warehouse", "edit");
+  const canDelete = hasPermission("Warehouse", "delete");
+
   const [warehouses, setWarehouses] =
     useState([]);
 
@@ -142,6 +150,11 @@ export default function Warehouse() {
   };
 
   const openAddModal = () => {
+    if (!canAdd) {
+      alert("You do not have permission to add warehouses.");
+      return;
+    }
+
     setEditingWarehouseId(null);
     setOpenActionId(null);
     setFormData(emptyForm);
@@ -149,6 +162,11 @@ export default function Warehouse() {
   };
 
   const openEditModal = (warehouse) => {
+    if (!canEdit) {
+      alert("You do not have permission to edit warehouses.");
+      return;
+    }
+
     setEditingWarehouseId(warehouse.id);
 
     setFormData({
@@ -305,6 +323,11 @@ export default function Warehouse() {
   const handleDeleteWarehouse = async (
     warehouseId
   ) => {
+    if (!canDelete) {
+      alert("You do not have permission to delete warehouses.");
+      return;
+    }
+
     const warehouse = warehouses.find(
       (currentWarehouse) =>
         currentWarehouse.id === warehouseId

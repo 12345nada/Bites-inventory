@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+import { useAuth } from "../context/AuthContext";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import "../styles/mobile-sidebar-offcanvas.css";
@@ -79,6 +81,22 @@ function getTotals(items = []) {
 }
 
 export default function Returns() {
+  const {
+    hasPermission,
+  } = useAuth();
+
+  const canAdd =
+    hasPermission(
+      "Returns",
+      "add"
+    );
+
+  const canDelete =
+    hasPermission(
+      "Returns",
+      "delete"
+    );
+
   const [returns, setReturns] =
     useState([]);
 
@@ -184,6 +202,14 @@ export default function Returns() {
   ]);
 
   const openAddModal = () => {
+    if (!canAdd) {
+      alert(
+        "You do not have permission to receive returns."
+      );
+
+      return;
+    }
+
     setFormData(createEmptyForm());
     setOpenActionId(null);
     setShowReturnModal(true);
@@ -339,6 +365,14 @@ export default function Returns() {
   ) => {
     event.preventDefault();
 
+    if (!canAdd) {
+      alert(
+        "You do not have permission to receive returns."
+      );
+
+      return;
+    }
+
     if (!validateReturnForm()) {
       return;
     }
@@ -391,6 +425,14 @@ export default function Returns() {
   const handleDeleteReturn = async (
     returnId
   ) => {
+    if (!canDelete) {
+      alert(
+        "You do not have permission to delete returns."
+      );
+
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this return record? Inventory quantities will be reversed."
     );
@@ -465,14 +507,16 @@ export default function Returns() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="add-return-button"
-            onClick={openAddModal}
-          >
-            <FiPlus />
-            Receive Return
-          </button>
+          {canAdd && (
+            <button
+              type="button"
+              className="add-return-button"
+              onClick={openAddModal}
+            >
+              <FiPlus />
+              Receive Return
+            </button>
+          )}
         </section>
 
         <section className="returns-table-card">
@@ -637,43 +681,45 @@ export default function Returns() {
                                 <FiCheckCircle />
                               </button>
 
-                              <div className="return-more-wrapper">
-                                <button
-                                  type="button"
-                                  className="return-more-button"
-                                  onClick={() =>
-                                    setOpenActionId(
-                                      (
-                                        currentId
-                                      ) =>
-                                        currentId ===
-                                        returnRecord.id
-                                          ? null
-                                          : returnRecord.id
-                                    )
-                                  }
-                                >
-                                  <FiMoreVertical />
-                                </button>
-
-                                {openActionId ===
-                                  returnRecord.id && (
-                                  <div className="return-action-menu">
-                                    <button
-                                      type="button"
-                                      className="return-delete-action"
-                                      onClick={() =>
-                                        handleDeleteReturn(
+                              {canDelete && (
+                                <div className="return-more-wrapper">
+                                  <button
+                                    type="button"
+                                    className="return-more-button"
+                                    onClick={() =>
+                                      setOpenActionId(
+                                        (
+                                          currentId
+                                        ) =>
+                                          currentId ===
                                           returnRecord.id
-                                        )
-                                      }
-                                    >
-                                      <FiTrash2 />
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                                            ? null
+                                            : returnRecord.id
+                                      )
+                                    }
+                                  >
+                                    <FiMoreVertical />
+                                  </button>
+
+                                  {openActionId ===
+                                    returnRecord.id && (
+                                    <div className="return-action-menu">
+                                      <button
+                                        type="button"
+                                        className="return-delete-action"
+                                        onClick={() =>
+                                          handleDeleteReturn(
+                                            returnRecord.id
+                                          )
+                                        }
+                                      >
+                                        <FiTrash2 />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1002,7 +1048,8 @@ export default function Returns() {
                 className="returns-save-button"
                 disabled={
                   saving ||
-                  !formData.dispatchId
+                  !formData.dispatchId ||
+                  !canAdd
                 }
               >
                 {saving

@@ -5,6 +5,8 @@ import {
 } from "react";
 
 import "../styles/mobile-sidebar-offcanvas.css";
+import { useAuth } from "../context/AuthContext";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
@@ -50,6 +52,12 @@ const createEmptyForm = () => ({
 });
 
 export default function Purchase() {
+  const { hasPermission } = useAuth();
+
+  const canAdd = hasPermission("Purchase", "add");
+  const canEdit = hasPermission("Purchase", "edit");
+  const canDelete = hasPermission("Purchase", "delete");
+
   const [purchases, setPurchases] =
     useState([]);
 
@@ -262,6 +270,11 @@ export default function Purchase() {
   const openEditPurchaseModal = (
     purchase
   ) => {
+    if (!canEdit) {
+      alert("You do not have permission to edit purchases.");
+      return;
+    }
+
     setEditingPurchaseId(purchase.id);
 
     setFormData({
@@ -453,6 +466,11 @@ export default function Purchase() {
   const handleReceivePurchase = async (
     event
   ) => {
+    if (!canEdit) {
+      alert("You do not have permission to receive purchases.");
+      return;
+    }
+
     event.preventDefault();
 
     if (!receivingPurchase) {
@@ -535,6 +553,11 @@ export default function Purchase() {
   const handleDeletePurchase = async (
     purchaseId
   ) => {
+    if (!canDelete) {
+      alert("You do not have permission to delete purchases.");
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this purchase order?"
     );

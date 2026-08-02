@@ -218,14 +218,14 @@ body {
 
 .purchase-table-wrapper {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: visible;
   border-radius: 14px 14px 0 0;
 }
 
 .purchase-table-wrapper table {
   width: 100%;
-  min-width: 1050px;
+  min-width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -716,12 +716,12 @@ body {
 
   .purchase-table-wrapper{
     width:100%;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
+    overflow-x:hidden;
   }
 
   .purchase-table-wrapper table{
-    min-width:1050px;
+    width:100%;
+    min-width:100%;
   }
 
   .purchase-pagination{

@@ -440,15 +440,6 @@ const Login = () => {
                 </button>
               </div>
             </div>
-
-            <div className="remember-forgot">
-              <span />
-
-              <Link to="/forgot-password">
-                Forgot Password?
-              </Link>
-            </div>
-
             {errorMessage && (
               <p
                 className="login-error-message"

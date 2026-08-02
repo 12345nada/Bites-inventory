@@ -7,6 +7,8 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+import { useAuth } from "../context/AuthContext";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import "../styles/mobile-sidebar-offcanvas.css";
 import Topbar from "../components/dashboard/Topbar";
@@ -60,6 +62,12 @@ const reportTitles = {
 };
 
 export default function Reports() {
+  const { hasPermission } = useAuth();
+
+  const canAdd = hasPermission("Reports", "add");
+  const canEdit = hasPermission("Reports", "edit");
+  const canDelete = hasPermission("Reports", "delete");
+
   const [inventory, setInventory] =
     useState([]);
 
