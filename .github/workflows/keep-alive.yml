@@ -15,9 +15,9 @@ jobs:
         run: |
           response=$(curl --silent --show-error --fail \
             --request POST \
-            "${{ secrets.SUPABASE_URL }}/functions/v1/keep-alive" \
-            --header "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            --header "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/keep-alive" \
+            --header "Authorization: Bearer ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}" \
+            --header "apikey: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}" \
             --header "Content-Type: application/json" \
             --data '{}')
 
