@@ -2,9 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import { supabase } from "../lib/supabase";
+import {
+  compressImage,
+} from "../utils/imageCompression";
 
 import "../styles/mobile-sidebar-offcanvas.css";
 import "../styles/dashboard.css";
@@ -38,6 +43,9 @@ const emptyForm = {
 };
 
 export default function Items() {
+  const { showAlert, showConfirm } = useDialog();
+
+
   const { hasPermission } = useAuth();
 
   const canAdd = hasPermission("Items", "add");
@@ -55,20 +63,59 @@ export default function Items() {
 
   const [searchValue, setSearchValue] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState("all");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [showAddItem, setShowAddItem] = useState(false);
   const [formData, setFormData] = useState(emptyForm);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingInventoryId, setEditingInventoryId] = useState(null);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
+  const [actionMenuPosition, setActionMenuPosition] = useState({
+    top: 0,
+    left: 0,
+  });
   const [removedImages, setRemovedImages] = useState([]);
 
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [savingCategory, setSavingCategory] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
 
   useEffect(() => {
     loadPageData();
   }, []);
+
+  useEffect(() => {
+    if (openActionMenuId === null) {
+      return undefined;
+    }
+
+    const closeActionMenu = (event) => {
+      if (
+        event?.target instanceof Element &&
+        event.target.closest(".item-more-wrapper")
+      ) {
+        return;
+      }
+
+      setOpenActionMenuId(null);
+    };
+
+    const closeOnPageMove = () => {
+      setOpenActionMenuId(null);
+    };
+
+    document.addEventListener("mousedown", closeActionMenu);
+    window.addEventListener("scroll", closeOnPageMove, true);
+    window.addEventListener("resize", closeOnPageMove);
+
+    return () => {
+      document.removeEventListener("mousedown", closeActionMenu);
+      window.removeEventListener("scroll", closeOnPageMove, true);
+      window.removeEventListener("resize", closeOnPageMove);
+    };
+  }, [openActionMenuId]);
 
   const loadPageData = async () => {
     setLoading(true);
@@ -255,6 +302,31 @@ export default function Items() {
     });
   }, [items, searchValue, selectedWarehouse]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredItems.length / itemsPerPage)
+  );
+
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+
+    return filteredItems.slice(
+      startIndex,
+      startIndex + itemsPerPage
+    );
+  }, [filteredItems, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setOpenActionMenuId(null);
+  }, [searchValue, selectedWarehouse]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const totalAvailableItems = useMemo(
     () =>
       items.reduce(
@@ -282,6 +354,48 @@ export default function Items() {
     [items]
   );
 
+  const toggleActionMenu = (event, itemId) => {
+    event.stopPropagation();
+
+    if (openActionMenuId === itemId) {
+      setOpenActionMenuId(null);
+      return;
+    }
+
+    const buttonRect =
+      event.currentTarget.getBoundingClientRect();
+
+    const menuWidth = 132;
+    const menuHeight = 92;
+    const gap = 10;
+
+    const availableSpaceBelow =
+      window.innerHeight - buttonRect.bottom;
+
+    const top =
+      availableSpaceBelow >= menuHeight + gap
+        ? buttonRect.bottom + gap
+        : buttonRect.top - menuHeight - gap;
+
+    const preferredLeft =
+      buttonRect.right - menuWidth;
+
+    const left = Math.max(
+      12,
+      Math.min(
+        preferredLeft,
+        window.innerWidth - menuWidth - 12
+      )
+    );
+
+    setActionMenuPosition({
+      top: Math.max(12, top),
+      left,
+    });
+
+    setOpenActionMenuId(itemId);
+  };
+
   const handleFormChange = (event) => {
     const { name, value } = event.target;
 
@@ -292,6 +406,7 @@ export default function Items() {
   };
 
   const openCategoryModal = () => {
+    setEditingCategoryId(null);
     setCategoryName("");
     setShowAddCategory(true);
   };
@@ -300,65 +415,183 @@ export default function Items() {
     if (savingCategory) return;
 
     setShowAddCategory(false);
+    setEditingCategoryId(null);
     setCategoryName("");
   };
 
-  const handleCreateCategory = async (event) => {
+  const startEditCategory = (category) => {
+    setEditingCategoryId(category.id);
+    setCategoryName(category.name);
+  };
+
+  const cancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setCategoryName("");
+  };
+
+  const handleSaveCategory = async (event) => {
     event.preventDefault();
 
     const normalizedName = categoryName.trim();
 
     if (!normalizedName) {
-      alert("Please enter a category name.");
+      showAlert({
+        message: "Please enter a category name.",
+      });
       return;
     }
 
     const duplicateCategory = categories.some(
       (category) =>
+        category.id !== editingCategoryId &&
         category.name.trim().toLowerCase() ===
-        normalizedName.toLowerCase()
+          normalizedName.toLowerCase()
     );
 
     if (duplicateCategory) {
-      alert("This category already exists.");
+      showAlert({
+        message: "This category already exists.",
+      });
       return;
     }
 
     try {
       setSavingCategory(true);
 
-      const { data, error } = await supabase
-        .from("item_categories")
-        .insert({
-          name: normalizedName,
-        })
-        .select("id, name")
-        .single();
+      if (editingCategoryId) {
+        const { data, error } = await supabase
+          .from("item_categories")
+          .update({
+            name: normalizedName,
+          })
+          .eq("id", editingCategoryId)
+          .select("id, name")
+          .single();
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        setCategories((currentCategories) =>
+          currentCategories
+            .map((category) =>
+              category.id === editingCategoryId
+                ? data
+                : category
+            )
+            .sort((first, second) =>
+              first.name.localeCompare(second.name)
+            )
+        );
+
+        setEditingCategoryId(null);
+        setCategoryName("");
+      } else {
+        const { data, error } = await supabase
+          .from("item_categories")
+          .insert({
+            name: normalizedName,
+          })
+          .select("id, name")
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setCategories((currentCategories) =>
+          [...currentCategories, data].sort((first, second) =>
+            first.name.localeCompare(second.name)
+          )
+        );
+
+        setFormData((current) => ({
+          ...current,
+          categoryId: String(data.id),
+        }));
+
+        setCategoryName("");
+      }
+    } catch (error) {
+      console.error("Save category error:", error);
+
+      showAlert({
+        message:
+          error.message ||
+          "Unable to save the category.",
+      });
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category) => {
+    const confirmed = await showConfirm({
+      message: `Are you sure you want to delete ${category.name}?`,
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setSavingCategory(true);
+
+      const { data, error: usageError } = await supabase
+        .from("items")
+        .select("id")
+        .eq("category_id", category.id)
+        .limit(1);
+
+      if (usageError) {
+        throw usageError;
+      }
+
+      if ((data || []).length > 0) {
+        await showAlert({
+          message:
+            "This category is used by one or more items and cannot be deleted.",
+        });
+        return;
+      }
+
+      const { error: deleteError } = await supabase
+        .from("item_categories")
+        .delete()
+        .eq("id", category.id);
+
+      if (deleteError) {
+        throw deleteError;
       }
 
       setCategories((currentCategories) =>
-        [...currentCategories, data].sort((first, second) =>
-          first.name.localeCompare(second.name)
+        currentCategories.filter(
+          (currentCategory) =>
+            currentCategory.id !== category.id
         )
       );
 
       setFormData((current) => ({
         ...current,
-        categoryId: String(data.id),
+        categoryId:
+          String(current.categoryId) ===
+          String(category.id)
+            ? ""
+            : current.categoryId,
       }));
 
-      setShowAddCategory(false);
-      setCategoryName("");
+      if (editingCategoryId === category.id) {
+        setEditingCategoryId(null);
+        setCategoryName("");
+      }
     } catch (error) {
-      console.error("Create category error:", error);
+      console.error("Delete category error:", error);
 
-      alert(
-        error.message ||
-          "Unable to create the category."
-      );
+      showAlert({
+        message:
+          error.message ||
+          "Unable to delete the category.",
+      });
     } finally {
       setSavingCategory(false);
     }
@@ -424,7 +657,9 @@ export default function Items() {
 
   const openAddModal = () => {
     if (!canAdd) {
-      alert("You do not have permission to add items.");
+      showAlert({
+        message: "You do not have permission to add items.",
+      });
       return;
     }
 
@@ -443,7 +678,9 @@ export default function Items() {
 
   const openEditModal = (item) => {
     if (!canEdit) {
-      alert("You do not have permission to edit items.");
+      showAlert({
+        message: "You do not have permission to edit items.",
+      });
       return;
     }
 
@@ -474,16 +711,29 @@ export default function Items() {
 
     for (let index = 0; index < newImages.length; index += 1) {
       const image = newImages[index];
-      const extension = image.file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const safeName = `${crypto.randomUUID()}.${extension}`;
+      const compressedFile =
+        await compressImage(image.file);
+        console.log(
+  "Original:",
+  (image.file.size / 1024).toFixed(2),
+  "KB"
+);
+
+console.log(
+  "Compressed:",
+  (compressedFile.size / 1024).toFixed(2),
+  "KB"
+);
+      const safeName =
+        `${crypto.randomUUID()}.webp`;
       const filePath = `${itemId}/${safeName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("item-images")
-        .upload(filePath, image.file, {
+        .upload(filePath, compressedFile, {
           cacheControl: "3600",
           upsert: false,
-          contentType: image.file.type,
+          contentType: compressedFile.type,
         });
 
       if (uploadError) {
@@ -560,7 +810,9 @@ export default function Items() {
     );
 
     if (hasEmptyField) {
-      alert("Please complete all item fields.");
+      showAlert({
+        message: "Please complete all item fields.",
+      });
       return;
     }
 
@@ -569,7 +821,9 @@ export default function Items() {
       Number(formData.minimumStock) < 0 ||
       Number(formData.quantity) < 0
     ) {
-      alert("Cost, stock and quantity values cannot be negative.");
+      showAlert({
+        message: "Cost, stock and quantity values cannot be negative.",
+      });
       return;
     }
 
@@ -582,7 +836,9 @@ export default function Items() {
     );
 
     if (duplicateCode) {
-      alert("This item code already exists.");
+      showAlert({
+        message: "This item code already exists.",
+      });
       return;
     }
 
@@ -688,16 +944,18 @@ export default function Items() {
         await supabase.from("items").delete().eq("id", createdItemId);
       }
 
-      alert(error.message || "Unable to save the item.");
+      showAlert({
+        message: error.message || "Unable to save the item.",
+      });
     } finally {
       setSaving(false);
     }
   };
 
   const deleteItem = async (item) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${item.name}?`
-    );
+    const confirmed = await showConfirm({
+      message: `Are you sure you want to delete ${item.name}?`,
+    });
 
     if (!confirmed) return;
 
@@ -725,10 +983,10 @@ export default function Items() {
       await loadPageData();
     } catch (error) {
       console.error("Delete item error:", error);
-      alert(
-        error.message ||
-          "Unable to delete this item. It may be used in another record."
-      );
+      showAlert({
+        message: error.message ||
+          "Unable to delete this item. It may be used in another record.",
+      });
     }
   };
 
@@ -829,9 +1087,6 @@ export default function Items() {
             <table>
               <thead>
                 <tr>
-                  <th>
-                    <input type="checkbox" />
-                  </th>
                   <th>Item</th>
                   <th>Category</th>
                   <th>Unit</th>
@@ -845,16 +1100,13 @@ export default function Items() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="items-empty-state">
+                    <td colSpan="7" className="items-empty-state">
                       Loading items...
                     </td>
                   </tr>
                 ) : filteredItems.length > 0 ? (
-                  filteredItems.map((item) => (
+                  paginatedItems.map((item) => (
                     <tr key={item.id}>
-                      <td>
-                        <input type="checkbox" />
-                      </td>
 
                       <td>
                         <div className="item-name-cell">
@@ -912,17 +1164,24 @@ export default function Items() {
                               type="button"
                               className="item-more-button"
                               aria-label={`More actions for ${item.name}`}
-                              onClick={() =>
-                                setOpenActionMenuId((currentId) =>
-                                  currentId === item.id ? null : item.id
-                                )
+                              onClick={(event) =>
+                                toggleActionMenu(event, item.id)
                               }
                             >
                               <FiMoreVertical />
                             </button>
 
                             {openActionMenuId === item.id && (
-                              <div className="item-action-menu">
+                              <div
+                                className="item-action-menu"
+                                style={{
+                                  top: `${actionMenuPosition.top}px`,
+                                  left: `${actionMenuPosition.left}px`,
+                                }}
+                                onMouseDown={(event) =>
+                                  event.stopPropagation()
+                                }
+                              >
                                 <button
                                   type="button"
                                   onClick={() => openEditModal(item)}
@@ -948,13 +1207,75 @@ export default function Items() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="items-empty-state">
+                    <td colSpan="7" className="items-empty-state">
                       No items match your search.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="items-pagination">
+            <p>
+              Showing {paginatedItems.length} of{" "}
+              {filteredItems.length} items
+            </p>
+
+            {filteredItems.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((current) =>
+                      Math.max(current - 1, 1)
+                    )
+                  }
+                  disabled={currentPage === 1}
+                  aria-label="Previous page"
+                >
+                  ‹
+                </button>
+
+                {Array.from(
+                  { length: totalPages },
+                  (_, index) => index + 1
+                ).map((pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    type="button"
+                    className={
+                      currentPage === pageNumber
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      setCurrentPage(pageNumber)
+                    }
+                    aria-current={
+                      currentPage === pageNumber
+                        ? "page"
+                        : undefined
+                    }
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((current) =>
+                      Math.min(current + 1, totalPages)
+                    )
+                  }
+                  disabled={currentPage === totalPages}
+                  aria-label="Next page"
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -1043,8 +1364,8 @@ export default function Items() {
                       onClick={openCategoryModal}
                       disabled={saving}
                     >
-                      <FiPlus />
-                      Add Category
+                      <FiEdit2 />
+                      Manage Categories
                     </button>
                   </div>
                 </label>
@@ -1228,16 +1549,15 @@ export default function Items() {
           className="item-category-modal-overlay"
           onMouseDown={closeCategoryModal}
         >
-          <form
+          <div
             className="item-category-modal"
-            onSubmit={handleCreateCategory}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="item-category-modal-header">
               <div>
-                <h2>Add New Category</h2>
+                <h2>Manage Categories</h2>
                 <p>
-                  Create a category and select it automatically.
+                  Add, edit or delete item categories.
                 </p>
               </div>
 
@@ -1245,26 +1565,101 @@ export default function Items() {
                 type="button"
                 onClick={closeCategoryModal}
                 disabled={savingCategory}
-                aria-label="Close category form"
+                aria-label="Close category manager"
               >
                 <FiX />
               </button>
             </div>
 
-            <label className="item-category-name-field">
-              Category Name
+            <form
+              className="item-category-form"
+              onSubmit={handleSaveCategory}
+            >
+              <label className="item-category-name-field">
+                {editingCategoryId
+                  ? "Edit Category"
+                  : "New Category"}
 
-              <input
-                type="text"
-                value={categoryName}
-                onChange={(event) =>
-                  setCategoryName(event.target.value)
-                }
-                placeholder="Example: Plates"
-                autoFocus
-                disabled={savingCategory}
-              />
-            </label>
+                <input
+                  type="text"
+                  value={categoryName}
+                  onChange={(event) =>
+                    setCategoryName(event.target.value)
+                  }
+                  placeholder="Example: Plates"
+                  autoFocus
+                  disabled={savingCategory}
+                />
+              </label>
+
+              <div className="item-category-form-actions">
+                {editingCategoryId && (
+                  <button
+                    type="button"
+                    className="item-category-cancel-edit-button"
+                    onClick={cancelEditCategory}
+                    disabled={savingCategory}
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+
+                <button
+                  type="submit"
+                  className="item-category-save-button"
+                  disabled={savingCategory}
+                >
+                  {savingCategory
+                    ? "Saving..."
+                    : editingCategoryId
+                    ? "Save Changes"
+                    : "Add Category"}
+                </button>
+              </div>
+            </form>
+
+            <div className="item-category-list">
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <div
+                    className="item-category-row"
+                    key={category.id}
+                  >
+                    <span>{category.name}</span>
+
+                    <div>
+                      <button
+                        type="button"
+                        className="item-category-edit-button"
+                        onClick={() =>
+                          startEditCategory(category)
+                        }
+                        disabled={savingCategory}
+                        aria-label={`Edit ${category.name}`}
+                      >
+                        <FiEdit2 />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="item-category-delete-button"
+                        onClick={() =>
+                          handleDeleteCategory(category)
+                        }
+                        disabled={savingCategory}
+                        aria-label={`Delete ${category.name}`}
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="item-category-empty">
+                  No categories found.
+                </p>
+              )}
+            </div>
 
             <div className="item-category-modal-actions">
               <button
@@ -1273,20 +1668,10 @@ export default function Items() {
                 onClick={closeCategoryModal}
                 disabled={savingCategory}
               >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="item-category-save-button"
-                disabled={savingCategory}
-              >
-                {savingCategory
-                  ? "Saving..."
-                  : "Save Category"}
+                Close
               </button>
             </div>
-          </form>
+          </div>
         </div>
       )}
     </div>

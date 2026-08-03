@@ -20,6 +20,10 @@ import {
 } from "../../lib/supabase";
 
 import {
+  compressImage,
+} from "../../utils/imageCompression";
+
+import {
   useAuth,
 } from "../../context/AuthContext";
 
@@ -353,14 +357,23 @@ export default function Topbar({
         return;
       }
 
-      const extension =
-        getAvatarExtension(file);
-
-      const filePath =
-        `${user.id}/avatar-${Date.now()}.${extension}`;
-
       try {
         setUploadingAvatar(true);
+
+        const compressedFile =
+          await compressImage(file, {
+            maxWidth: 1000,
+            maxHeight: 1000,
+            quality: 0.8,
+          });
+
+        const extension =
+          getAvatarExtension(
+            compressedFile
+          );
+
+        const filePath =
+          `${user.id}/avatar-${Date.now()}.${extension}`;
 
         const {
           error: uploadError,
@@ -368,12 +381,12 @@ export default function Topbar({
           .from("avatars")
           .upload(
             filePath,
-            file,
+            compressedFile,
             {
               cacheControl: "3600",
               upsert: true,
               contentType:
-                file.type,
+                compressedFile.type,
             }
           );
 

@@ -1,0 +1,208 @@
+.app-dialog-overlay,
+.app-dialog-overlay * {
+  box-sizing: border-box;
+  font-family:
+    "Segoe UI",
+    Tahoma,
+    Arial,
+    sans-serif;
+}
+
+.app-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+
+  padding: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(9, 9, 9, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.app-dialog {
+  position: relative;
+
+  width: min(430px, 100%);
+  padding: 30px 26px 24px;
+
+  text-align: center;
+
+  background: #ffffff;
+
+  border: 1px solid #f0ddcf;
+  border-radius: 20px;
+
+  box-shadow:
+    0 24px 70px
+    rgba(0, 0, 0, 0.25);
+
+  animation:
+    appDialogAppear
+    0.18s ease;
+}
+
+@keyframes appDialogAppear {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(10px)
+      scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+.app-dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #eadbd0;
+  border-radius: 9px;
+
+  background: #ffffff;
+  color: #5b1e05;
+
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.app-dialog-icon {
+  width: 58px;
+  height: 58px;
+
+  margin: 0 auto 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 16px;
+
+  font-size: 26px;
+}
+
+.app-dialog-icon.info {
+  color: #713006;
+  background: #fce9da;
+}
+
+.app-dialog-icon.success {
+  color: #58704d;
+  background: #e4eedf;
+}
+
+.app-dialog-icon.warning {
+  color: #9b5c1d;
+  background: #fff0dc;
+}
+
+.app-dialog-icon.danger,
+.app-dialog-icon.error {
+  color: #d62d20;
+  background: #ffe8e6;
+}
+
+.app-dialog h2 {
+  margin: 0;
+
+  color: #17130f;
+
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.app-dialog p {
+  margin: 10px 0 0;
+
+  color: #6f675f;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.app-dialog-actions {
+  margin-top: 24px;
+
+  display: flex;
+  gap: 12px;
+}
+
+.app-dialog-actions button {
+  flex: 1;
+  min-height: 42px;
+
+  border-radius: 10px;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.app-dialog-cancel {
+  border: 1px solid #eadbd0;
+
+  background: #ffffff;
+  color: #302a26;
+}
+
+.app-dialog-cancel:hover {
+  background: #fff9f4;
+}
+
+.app-dialog-confirm {
+  border: none;
+
+  background: #713006;
+  color: #ffffff;
+}
+
+.app-dialog-confirm:hover {
+  background: #5b1e05;
+}
+
+.app-dialog-confirm.success {
+  background: #58704d;
+}
+
+.app-dialog-confirm.warning {
+  background: #b66a13;
+}
+
+.app-dialog-confirm.danger,
+.app-dialog-confirm.error {
+  background: #c92a20;
+}
+
+@media (max-width: 500px) {
+  .app-dialog-overlay {
+    padding: 12px;
+  }
+
+  .app-dialog {
+    padding: 28px 18px 20px;
+  }
+
+  .app-dialog-actions {
+    flex-direction: column-reverse;
+  }
+}

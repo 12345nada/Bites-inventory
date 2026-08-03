@@ -139,13 +139,6 @@ export default function EventTable({
         <table>
           <thead>
             <tr>
-              <th className="checkbox-column">
-                <input
-                  type="checkbox"
-                  aria-label="Select all events"
-                />
-              </th>
-
               <th>Event Type</th>
               <th>Client</th>
               <th>Date</th>
@@ -161,7 +154,7 @@ export default function EventTable({
             {loading ? (
               <tr>
                 <td
-                  colSpan="9"
+                  colSpan="8"
                   className="dashboard-empty-table"
                 >
                   Loading events...
@@ -171,13 +164,6 @@ export default function EventTable({
               filteredRows.map(
                 (event) => (
                   <tr key={event.id}>
-                    <td className="checkbox-column">
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${event.eventType}`}
-                      />
-                    </td>
-
                     <td>
                       <div className="dashboard-event-type">
                         <div className="dashboard-event-icon">
@@ -251,7 +237,7 @@ export default function EventTable({
             ) : (
               <tr>
                 <td
-                  colSpan="9"
+                  colSpan="8"
                   className="dashboard-empty-table"
                 >
                   No events match your
@@ -264,46 +250,30 @@ export default function EventTable({
       </div>
 
       <div className="dashboard-table-pagination">
-  <p>
-    Showing {filteredRows.length} of{" "}
-    {events.length} events
-  </p>
+        <p>
+          Showing {filteredRows.length} of{" "}
+          {events.length} events
+        </p>
 
-  {events.length > 0 && (
-    <div>
-      <button type="button">
-        ‹
-      </button>
+        {events.length > 0 && (
+          <div>
+            <button type="button" disabled>
+              ‹
+            </button>
 
-      <button
-        type="button"
-        className="active"
-      >
-        1
-      </button>
+            <button
+              type="button"
+              className="active"
+            >
+              1
+            </button>
 
-      <button type="button">
-        2
-      </button>
-
-      <button type="button">
-        3
-      </button>
-
-      <button type="button">
-        ...
-      </button>
-
-      <button type="button">
-        22
-      </button>
-
-      <button type="button">
-        ›
-      </button>
-    </div>
-  )}
-</div>
+            <button type="button" disabled>
+              ›
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

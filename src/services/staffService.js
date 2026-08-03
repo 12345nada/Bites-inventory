@@ -1,4 +1,7 @@
 import { supabase } from "../lib/supabase";
+import {
+  compressImage,
+} from "../utils/imageCompression";
 
 const STAFF_FIELDS = `
   id,
@@ -201,15 +204,21 @@ async function uploadDocument(
   const documentType =
     DOCUMENT_TYPE_MAP[documentKey];
 
+  const uploadFile =
+    file.type.startsWith("image/")
+      ? await compressImage(file)
+      : file;
+
   const filePath = `${staffId}/${Date.now()}-${safeFileName(
-    file.name
+    uploadFile.name
   )}`;
 
   const { error: uploadError } =
     await supabase.storage
       .from("staff-documents")
-      .upload(filePath, file, {
+      .upload(filePath, uploadFile, {
         upsert: false,
+        contentType: uploadFile.type,
       });
 
   if (uploadError) {

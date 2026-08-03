@@ -164,37 +164,93 @@ const Login = () => {
     setErrorMessage("");
     setIsSubmitting(true);
 
-    const loginValue =
+    const username =
       formData.username
         .trim()
         .toLowerCase();
 
-    const email =
-      loginValue.includes("@")
-        ? loginValue
-        : `${loginValue}@bites-inventory.app`;
-
     try {
       const {
-        data: authData,
-        error: authError,
+        data: loginData,
+        error: loginError,
       } =
-        await supabase.auth
-          .signInWithPassword({
-            email,
-            password:
-              formData.password,
-          });
+        await supabase.functions
+          .invoke(
+            "login-with-username",
+            {
+              body: {
+                username,
+                password:
+                  formData.password,
+              },
+            }
+          );
 
-      if (authError) {
-        throw authError;
+      if (loginError) {
+        let message =
+          loginError.message ||
+          "Incorrect username or password.";
+
+        try {
+          const response =
+            await loginError
+              .context
+              ?.json?.();
+
+          if (response?.error) {
+            message =
+              response.error;
+          }
+        } catch {
+          // Keep original message.
+        }
+
+        throw new Error(message);
       }
 
-      if (!authData.user) {
+      if (
+        !loginData?.success ||
+        !loginData?.session
+          ?.access_token ||
+        !loginData?.session
+          ?.refresh_token
+      ) {
         throw new Error(
-          "Unable to sign in."
+          loginData?.error ||
+            "Unable to sign in."
         );
       }
+
+      const {
+        data: sessionData,
+        error: sessionError,
+      } =
+        await supabase.auth
+          .setSession({
+            access_token:
+              loginData.session
+                .access_token,
+            refresh_token:
+              loginData.session
+                .refresh_token,
+          });
+
+      if (
+        sessionError ||
+        !sessionData.user
+      ) {
+        throw (
+          sessionError ||
+          new Error(
+            "Unable to start your session."
+          )
+        );
+      }
+
+      const authData = {
+        user:
+          sessionData.user,
+      };
 
       const {
         data: profile,
@@ -440,6 +496,15 @@ const Login = () => {
                 </button>
               </div>
             </div>
+
+            <div className="remember-forgot">
+              <span />
+
+              <Link to="/forgot-password">
+                Forgot Password?
+              </Link>
+            </div>
+
             {errorMessage && (
               <p
                 className="login-error-message"

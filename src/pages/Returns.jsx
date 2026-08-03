@@ -6,6 +6,8 @@ import {
 
 import { useAuth } from "../context/AuthContext";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import "../styles/mobile-sidebar-offcanvas.css";
@@ -26,7 +28,7 @@ import {
   FiMoreVertical,
   FiX,
   FiTrash2,
-  FiCheckCircle,
+  FiEdit2,
 } from "react-icons/fi";
 
 const tabs = [
@@ -81,6 +83,9 @@ function getTotals(items = []) {
 }
 
 export default function Returns() {
+  const { showAlert, showConfirm } = useDialog();
+
+
   const {
     hasPermission,
   } = useAuth();
@@ -89,6 +94,12 @@ export default function Returns() {
     hasPermission(
       "Returns",
       "add"
+    );
+
+  const canEdit =
+    hasPermission(
+      "Returns",
+      "edit"
     );
 
   const canDelete =
@@ -127,12 +138,76 @@ export default function Returns() {
     setOpenActionId,
   ] = useState(null);
 
+  const [
+    actionMenuPosition,
+    setActionMenuPosition,
+  ] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const returnsPerPage = 5;
+
   const [formData, setFormData] =
     useState(createEmptyForm());
 
   useEffect(() => {
     loadReturnsData();
   }, []);
+
+  useEffect(() => {
+    if (openActionId === null) {
+      return undefined;
+    }
+
+    const closeActionMenu = (event) => {
+      if (
+        event?.target instanceof Element &&
+        event.target.closest(".return-more-wrapper")
+      ) {
+        return;
+      }
+
+      setOpenActionId(null);
+    };
+
+    const closeOnPageMove = () => {
+      setOpenActionId(null);
+    };
+
+    document.addEventListener(
+      "mousedown",
+      closeActionMenu
+    );
+    window.addEventListener(
+      "scroll",
+      closeOnPageMove,
+      true
+    );
+    window.addEventListener(
+      "resize",
+      closeOnPageMove
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        closeActionMenu
+      );
+      window.removeEventListener(
+        "scroll",
+        closeOnPageMove,
+        true
+      );
+      window.removeEventListener(
+        "resize",
+        closeOnPageMove
+      );
+    };
+  }, [openActionId]);
 
   const loadReturnsData = async () => {
     try {
@@ -151,10 +226,10 @@ export default function Returns() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not load returns."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not load returns.",
+      });
     } finally {
       setLoading(false);
     }
@@ -201,11 +276,104 @@ export default function Returns() {
     activeTab,
   ]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredReturns.length /
+        returnsPerPage
+    )
+  );
+
+  const paginatedReturns = useMemo(() => {
+    const startIndex =
+      (currentPage - 1) *
+      returnsPerPage;
+
+    return filteredReturns.slice(
+      startIndex,
+      startIndex + returnsPerPage
+    );
+  }, [
+    filteredReturns,
+    currentPage,
+  ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setOpenActionId(null);
+  }, [
+    searchValue,
+    activeTab,
+  ]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [
+    currentPage,
+    totalPages,
+  ]);
+
+  const toggleActionMenu = (
+    event,
+    returnId
+  ) => {
+    event.stopPropagation();
+
+    if (openActionId === returnId) {
+      setOpenActionId(null);
+      return;
+    }
+
+    const buttonRect =
+      event.currentTarget.getBoundingClientRect();
+
+    const menuWidth = 120;
+    const menuHeight = 48;
+    const gap = 10;
+
+    const availableSpaceBelow =
+      window.innerHeight -
+      buttonRect.bottom;
+
+    const top =
+      availableSpaceBelow >=
+      menuHeight + gap
+        ? buttonRect.bottom + gap
+        : buttonRect.top -
+          menuHeight -
+          gap;
+
+    const preferredLeft =
+      buttonRect.right - menuWidth;
+
+    const left = Math.max(
+      12,
+      Math.min(
+        preferredLeft,
+        window.innerWidth -
+          menuWidth -
+          12
+      )
+    );
+
+    setActionMenuPosition({
+      top: Math.max(12, top),
+      left,
+    });
+
+    setOpenActionId(returnId);
+  };
+
   const openAddModal = () => {
     if (!canAdd) {
-      alert(
-        "You do not have permission to receive returns."
-      );
+      showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to receive returns.",
+        type: "warning",
+      });
 
       return;
     }
@@ -302,17 +470,17 @@ export default function Returns() {
       !formData.returnDate ||
       !formData.returnedBy.trim()
     ) {
-      alert(
-        "Please complete the return information."
-      );
+      showAlert({
+        message: "Please complete the return information.",
+      });
 
       return false;
     }
 
     if (formData.items.length === 0) {
-      alert(
-        "The selected dispatch has no items."
-      );
+      showAlert({
+        message: "The selected dispatch has no items.",
+      });
 
       return false;
     }
@@ -350,9 +518,9 @@ export default function Returns() {
       });
 
     if (hasInvalidItem) {
-      alert(
-        "For every item: Returned + Damaged + Missing must equal Sent Quantity."
-      );
+      showAlert({
+        message: "For every item: Returned + Damaged + Missing must equal Sent Quantity.",
+      });
 
       return false;
     }
@@ -366,9 +534,12 @@ export default function Returns() {
     event.preventDefault();
 
     if (!canAdd) {
-      alert(
-        "You do not have permission to receive returns."
-      );
+      showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to receive returns.",
+        type: "warning",
+      });
 
       return;
     }
@@ -408,34 +579,54 @@ export default function Returns() {
       );
 
       if (error.code === "23505") {
-        alert(
-          "A return already exists for this dispatch."
-        );
+        showAlert({
+        message: "A return already exists for this dispatch.",
+      });
       } else {
-        alert(
-          error.message ||
-            "Could not complete the return."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not complete the return.",
+      });
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteReturn = async (
-    returnId
+  const handleEditReturn = async (
+    returnRecord
   ) => {
-    if (!canDelete) {
-      alert(
-        "You do not have permission to delete returns."
-      );
+    if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to edit returns.",
+        type: "warning",
+      });
 
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this return record? Inventory quantities will be reversed."
-    );
+    setOpenActionId(null);
+  };
+
+  const handleDeleteReturn = async (
+    returnId
+  ) => {
+    if (!canDelete) {
+      showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to delete returns.",
+        type: "warning",
+      });
+
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this return record? Inventory quantities will be reversed.",
+    });
 
     if (!confirmed) {
       return;
@@ -466,10 +657,10 @@ export default function Returns() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not delete the return record."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not delete the return record.",
+      });
     }
   };
 
@@ -507,16 +698,14 @@ export default function Returns() {
             </p>
           </div>
 
-          {canAdd && (
-            <button
-              type="button"
-              className="add-return-button"
-              onClick={openAddModal}
-            >
-              <FiPlus />
-              Receive Return
-            </button>
-          )}
+          <button
+            type="button"
+            className="add-return-button"
+            onClick={openAddModal}
+          >
+            <FiPlus />
+            Receive Return
+          </button>
         </section>
 
         <section className="returns-table-card">
@@ -560,11 +749,6 @@ export default function Returns() {
             <table>
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                    />
-                  </th>
 
                   <th>Return ID</th>
                   <th>Event Reference</th>
@@ -583,7 +767,7 @@ export default function Returns() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan="11"
+                      colSpan="10"
                       className="returns-empty-state"
                     >
                       Loading returns...
@@ -591,7 +775,7 @@ export default function Returns() {
                   </tr>
                 ) : filteredReturns.length >
                   0 ? (
-                  filteredReturns.map(
+                  paginatedReturns.map(
                     (returnRecord) => {
                       const totals =
                         getTotals(
@@ -604,11 +788,6 @@ export default function Returns() {
                             returnRecord.id
                           }
                         >
-                          <td>
-                            <input
-                              type="checkbox"
-                            />
-                          </td>
 
                           <td>
                             <div className="return-name-cell">
@@ -676,50 +855,55 @@ export default function Returns() {
                             <div className="return-actions">
                               <button
                                 type="button"
-                                aria-label={`View ${returnRecord.returnCode}`}
+                                onClick={() =>
+                                  handleEditReturn(
+                                    returnRecord
+                                  )
+                                }
+                                aria-label={`Edit ${returnRecord.returnCode}`}
                               >
-                                <FiCheckCircle />
+                                <FiEdit2 />
                               </button>
 
-                              {canDelete && (
-                                <div className="return-more-wrapper">
-                                  <button
-                                    type="button"
-                                    className="return-more-button"
-                                    onClick={() =>
-                                      setOpenActionId(
-                                        (
-                                          currentId
-                                        ) =>
-                                          currentId ===
-                                          returnRecord.id
-                                            ? null
-                                            : returnRecord.id
-                                      )
-                                    }
-                                  >
-                                    <FiMoreVertical />
-                                  </button>
+                              <div className="return-more-wrapper">
+                                <button
+                                  type="button"
+                                  className="return-more-button"
+                                  onClick={(event) =>
+                                    toggleActionMenu(
+                                      event,
+                                      returnRecord.id
+                                    )
+                                  }
+                                  aria-label={`More actions for ${returnRecord.returnCode}`}
+                                >
+                                  <FiMoreVertical />
+                                </button>
 
-                                  {openActionId ===
-                                    returnRecord.id && (
-                                    <div className="return-action-menu">
-                                      <button
-                                        type="button"
-                                        className="return-delete-action"
-                                        onClick={() =>
-                                          handleDeleteReturn(
-                                            returnRecord.id
-                                          )
-                                        }
-                                      >
-                                        <FiTrash2 />
-                                        Delete
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                                {openActionId ===
+                                  returnRecord.id && (
+                                  <div
+                                    className="return-action-menu"
+                                    style={{
+                                      top: `${actionMenuPosition.top}px`,
+                                      left: `${actionMenuPosition.left}px`,
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      className="return-delete-action"
+                                      onClick={() =>
+                                        handleDeleteReturn(
+                                          returnRecord.id
+                                        )
+                                      }
+                                    >
+                                      <FiTrash2 />
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -729,7 +913,7 @@ export default function Returns() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="11"
+                      colSpan="10"
                       className="returns-empty-state"
                     >
                       No returns match your
@@ -744,9 +928,82 @@ export default function Returns() {
           <div className="returns-pagination">
             <p>
               Showing{" "}
-              {filteredReturns.length} of{" "}
-              {returns.length} returns
+              {filteredReturns.length === 0
+                ? 0
+                : (currentPage - 1) *
+                    returnsPerPage +
+                  1}
+              {" - "}
+              {Math.min(
+                currentPage *
+                  returnsPerPage,
+                filteredReturns.length
+              )}{" "}
+              of{" "}
+              {filteredReturns.length} returns
             </p>
+
+            <div>
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() =>
+                  setCurrentPage(
+                    (current) =>
+                      Math.max(
+                        1,
+                        current - 1
+                      )
+                  )
+                }
+              >
+               ‹
+              </button>
+
+              {Array.from(
+                {
+                  length: totalPages,
+                },
+                (_, index) =>
+                  index + 1
+              ).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={
+                    currentPage ===
+                    pageNumber
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setCurrentPage(
+                      pageNumber
+                    )
+                  }
+                >
+                  {pageNumber}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                disabled={
+                  currentPage === totalPages
+                }
+                onClick={() =>
+                  setCurrentPage(
+                    (current) =>
+                      Math.min(
+                        totalPages,
+                        current + 1
+                      )
+                  )
+                }
+              >
+               ›
+              </button>
+            </div>
           </div>
         </section>
       </main>

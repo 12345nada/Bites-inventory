@@ -6,6 +6,8 @@ import {
 
 import { useAuth } from "../context/AuthContext";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import "../styles/mobile-sidebar-offcanvas.css";
@@ -62,6 +64,9 @@ const createEmptyForm = () => ({
 });
 
 export default function Dispatch() {
+  const { showAlert, showConfirm } = useDialog();
+
+
   const { hasPermission } = useAuth();
 
   const canAdd = hasPermission("Dispatch", "add");
@@ -97,6 +102,11 @@ export default function Dispatch() {
   const [searchValue, setSearchValue] =
     useState("");
 
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const itemsPerPage = 5;
+
   const [activeTab, setActiveTab] =
     useState("All Dispatches");
 
@@ -115,12 +125,77 @@ export default function Dispatch() {
     setOpenActionId,
   ] = useState(null);
 
+  const [
+    actionMenuPosition,
+    setActionMenuPosition,
+  ] = useState({
+    top: 0,
+    left: 0,
+  });
+
   const [formData, setFormData] =
     useState(createEmptyForm());
 
   useEffect(() => {
     loadDispatchData();
   }, []);
+
+  useEffect(() => {
+    if (openActionId === null) {
+      return undefined;
+    }
+
+    const closeActionMenu = (event) => {
+      if (
+        event?.target instanceof Element &&
+        event.target.closest(
+          ".dispatch-more-wrapper"
+        )
+      ) {
+        return;
+      }
+
+      setOpenActionId(null);
+    };
+
+    const closeOnPageMove = () => {
+      setOpenActionId(null);
+    };
+
+    document.addEventListener(
+      "mousedown",
+      closeActionMenu
+    );
+
+    window.addEventListener(
+      "scroll",
+      closeOnPageMove,
+      true
+    );
+
+    window.addEventListener(
+      "resize",
+      closeOnPageMove
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        closeActionMenu
+      );
+
+      window.removeEventListener(
+        "scroll",
+        closeOnPageMove,
+        true
+      );
+
+      window.removeEventListener(
+        "resize",
+        closeOnPageMove
+      );
+    };
+  }, [openActionId]);
 
   const loadDispatchData = async () => {
     try {
@@ -139,10 +214,10 @@ export default function Dispatch() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not load dispatches."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not load dispatches.",
+      });
     } finally {
       setLoading(false);
     }
@@ -171,10 +246,10 @@ export default function Dispatch() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not load warehouse items."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not load warehouse items.",
+      });
     } finally {
       setLoadingItems(false);
     }
@@ -221,6 +296,115 @@ export default function Dispatch() {
     searchValue,
     activeTab,
   ]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredDispatches.length /
+        itemsPerPage
+    )
+  );
+
+  const paginatedDispatches =
+    useMemo(() => {
+      const startIndex =
+        (currentPage - 1) *
+        itemsPerPage;
+
+      return filteredDispatches.slice(
+        startIndex,
+        startIndex +
+          itemsPerPage
+      );
+    }, [
+      filteredDispatches,
+      currentPage,
+    ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchValue,
+    activeTab,
+  ]);
+
+  useEffect(() => {
+    if (
+      currentPage >
+      totalPages
+    ) {
+      setCurrentPage(
+        totalPages
+      );
+    }
+  }, [
+    currentPage,
+    totalPages,
+  ]);
+
+  const firstVisibleDispatch =
+    filteredDispatches.length === 0
+      ? 0
+      : (currentPage - 1) *
+          itemsPerPage +
+        1;
+
+  const lastVisibleDispatch = Math.min(
+    currentPage * itemsPerPage,
+    filteredDispatches.length
+  );
+
+  const toggleActionMenu = (
+    clickEvent,
+    dispatchId
+  ) => {
+    clickEvent.stopPropagation();
+
+    if (openActionId === dispatchId) {
+      setOpenActionId(null);
+      return;
+    }
+
+    const buttonRect =
+      clickEvent.currentTarget
+        .getBoundingClientRect();
+
+    const menuWidth = 150;
+    const menuHeight = 180;
+    const gap = 10;
+
+    const availableSpaceBelow =
+      window.innerHeight -
+      buttonRect.bottom;
+
+    const top =
+      availableSpaceBelow >=
+      menuHeight + gap
+        ? buttonRect.bottom + gap
+        : buttonRect.top -
+          menuHeight -
+          gap;
+
+    const preferredLeft =
+      buttonRect.right - menuWidth;
+
+    const left = Math.max(
+      12,
+      Math.min(
+        preferredLeft,
+        window.innerWidth -
+          menuWidth -
+          12
+      )
+    );
+
+    setActionMenuPosition({
+      top: Math.max(12, top),
+      left,
+    });
+
+    setOpenActionId(dispatchId);
+  };
 
   const handleFormChange = async (
     event
@@ -315,7 +499,9 @@ export default function Dispatch() {
 
   const openAddModal = () => {
     if (!canAdd) {
-      alert("You do not have permission to add dispatches.");
+      showAlert({
+        message: "You do not have permission to add dispatches.",
+      });
       return;
     }
 
@@ -330,7 +516,9 @@ export default function Dispatch() {
     dispatch
   ) => {
     if (!canEdit) {
-      alert("You do not have permission to edit dispatches.");
+      showAlert({
+        message: "You do not have permission to edit dispatches.",
+      });
       return;
     }
 
@@ -394,9 +582,9 @@ export default function Dispatch() {
       );
 
     if (hasEmptyField) {
-      alert(
-        "Please complete all dispatch fields."
-      );
+      showAlert({
+        message: "Please complete all dispatch fields.",
+      });
       return null;
     }
 
@@ -409,9 +597,9 @@ export default function Dispatch() {
       );
 
     if (validItems.length === 0) {
-      alert(
-        "Please add at least one item with a valid quantity."
-      );
+      showAlert({
+        message: "Please add at least one item with a valid quantity.",
+      });
       return null;
     }
 
@@ -426,9 +614,9 @@ export default function Dispatch() {
       );
 
     if (hasDuplicateItems) {
-      alert(
-        "The same item cannot be added more than once."
-      );
+      showAlert({
+        message: "The same item cannot be added more than once.",
+      });
       return null;
     }
 
@@ -449,9 +637,9 @@ export default function Dispatch() {
       });
 
     if (hasInvalidQuantity) {
-      alert(
-        "One or more quantities exceed the available stock."
-      );
+      showAlert({
+        message: "One or more quantities exceed the available stock.",
+      });
       return null;
     }
 
@@ -517,10 +705,10 @@ export default function Dispatch() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not save dispatch."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not save dispatch.",
+      });
     } finally {
       setSaving(false);
     }
@@ -554,19 +742,19 @@ export default function Dispatch() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not update dispatch status."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not update dispatch status.",
+      });
     }
   };
 
-  const handleCancelDispatch = (
+  const handleCancelDispatch = async (
     dispatchId
   ) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this dispatch?"
-    );
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to cancel this dispatch?",
+    });
 
     if (!confirmed) {
       return;
@@ -582,13 +770,15 @@ export default function Dispatch() {
     dispatchId
   ) => {
     if (!canDelete) {
-      alert("You do not have permission to delete dispatches.");
+      showAlert({
+        message: "You do not have permission to delete dispatches.",
+      });
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this dispatch?"
-    );
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this dispatch?",
+    });
 
     if (!confirmed) {
       return;
@@ -613,14 +803,14 @@ export default function Dispatch() {
       );
 
       if (error.code === "23503") {
-        alert(
-          "This dispatch cannot be deleted because it is connected to a return."
-        );
+        showAlert({
+        message: "This dispatch cannot be deleted because it is connected to a return.",
+      });
       } else {
-        alert(
-          error.message ||
-            "Could not delete dispatch."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not delete dispatch.",
+      });
       }
     }
   };
@@ -743,9 +933,6 @@ export default function Dispatch() {
             <table>
               <thead>
                 <tr>
-                  <th>
-                    <input type="checkbox" />
-                  </th>
 
                   <th>Dispatch ID</th>
                   <th>Event Reference</th>
@@ -763,7 +950,7 @@ export default function Dispatch() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan="10"
+                      colSpan="9"
                       className="dispatch-empty-state"
                     >
                       Loading dispatches...
@@ -771,14 +958,9 @@ export default function Dispatch() {
                   </tr>
                 ) : filteredDispatches.length >
                   0 ? (
-                  filteredDispatches.map(
+                  paginatedDispatches.map(
                     (dispatch) => (
                       <tr key={dispatch.id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                          />
-                        </td>
 
                         <td>
                           <div className="dispatch-name-cell">
@@ -895,15 +1077,12 @@ export default function Dispatch() {
                               <button
                                 type="button"
                                 className="dispatch-more-button"
-                                onClick={() =>
-                                  setOpenActionId(
-                                    (
-                                      currentId
-                                    ) =>
-                                      currentId ===
-                                      dispatch.id
-                                        ? null
-                                        : dispatch.id
+                                onClick={(
+                                  clickEvent
+                                ) =>
+                                  toggleActionMenu(
+                                    clickEvent,
+                                    dispatch.id
                                   )
                                 }
                               >
@@ -912,7 +1091,15 @@ export default function Dispatch() {
 
                               {openActionId ===
                                 dispatch.id && (
-                                <div className="dispatch-action-menu">
+                                <div
+                                  className="dispatch-action-menu"
+                                  style={{
+                                    top:
+                                      actionMenuPosition.top,
+                                    left:
+                                      actionMenuPosition.left,
+                                  }}
+                                >
                                   {dispatch.status ===
                                     "Prepared" && (
                                     <button
@@ -1003,7 +1190,7 @@ export default function Dispatch() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="10"
+                      colSpan="9"
                       className="dispatch-empty-state"
                     >
                       No dispatches match your
@@ -1018,24 +1205,90 @@ export default function Dispatch() {
           <div className="dispatch-pagination">
             <p>
               Showing{" "}
-              {filteredDispatches.length} of{" "}
-              {dispatches.length} dispatches
+              {firstVisibleDispatch} to{" "}
+              {lastVisibleDispatch} of{" "}
+              {filteredDispatches.length} dispatches
             </p>
 
-            <div>
-              <button type="button">‹</button>
-              <button
-                type="button"
-                className="active"
-              >
-                1
-              </button>
-              <button type="button">2</button>
-              <button type="button">3</button>
-              <button type="button">...</button>
-              <button type="button">26</button>
-              <button type="button">›</button>
-            </div>
+            {filteredDispatches.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage(
+                      (current) =>
+                        Math.max(
+                          current - 1,
+                          1
+                        )
+                    )
+                  }
+                  disabled={
+                    currentPage === 1
+                  }
+                  aria-label="Previous page"
+                >
+                   ‹
+                </button>
+
+                {Array.from(
+                  {
+                    length:
+                      totalPages,
+                  },
+                  (_, index) =>
+                    index + 1
+                ).map(
+                  (pageNumber) => (
+                    <button
+                      key={
+                        pageNumber
+                      }
+                      type="button"
+                      className={
+                        currentPage ===
+                        pageNumber
+                          ? "active"
+                          : ""
+                      }
+                      onClick={() =>
+                        setCurrentPage(
+                          pageNumber
+                        )
+                      }
+                      aria-current={
+                        currentPage ===
+                        pageNumber
+                          ? "page"
+                          : undefined
+                      }
+                    >
+                      {pageNumber}
+                    </button>
+                  )
+                )}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage(
+                      (current) =>
+                        Math.min(
+                          current + 1,
+                          totalPages
+                        )
+                    )
+                  }
+                  disabled={
+                    currentPage ===
+                    totalPages
+                  }
+                  aria-label="Next page"
+                >
+                   ›
+                </button>
+              </div>
+            )}
           </div>
         </section>
       </main>

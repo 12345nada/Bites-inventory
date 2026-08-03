@@ -9,6 +9,8 @@ import autoTable from "jspdf-autotable";
 
 import { useAuth } from "../context/AuthContext";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import "../styles/mobile-sidebar-offcanvas.css";
 import Topbar from "../components/dashboard/Topbar";
@@ -62,6 +64,9 @@ const reportTitles = {
 };
 
 export default function Reports() {
+  const { showAlert } = useDialog();
+
+
   const { hasPermission } = useAuth();
 
   const canAdd = hasPermission("Reports", "add");
@@ -106,6 +111,11 @@ export default function Reports() {
   const [status, setStatus] =
     useState("All Statuses");
 
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const rowsPerPage = 5;
+
   useEffect(() => {
     loadReports();
   }, []);
@@ -128,10 +138,10 @@ export default function Reports() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not load report data."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not load report data.",
+      });
     } finally {
       setLoading(false);
     }
@@ -315,6 +325,58 @@ export default function Reports() {
     toDate,
   ]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredRows.length / rowsPerPage
+    )
+  );
+
+  const paginatedRows = useMemo(() => {
+    const startIndex =
+      (currentPage - 1) * rowsPerPage;
+
+    return filteredRows.slice(
+      startIndex,
+      startIndex + rowsPerPage
+    );
+  }, [
+    filteredRows,
+    currentPage,
+  ]);
+
+  const firstVisibleRecord =
+    filteredRows.length === 0
+      ? 0
+      : (currentPage - 1) *
+          rowsPerPage +
+        1;
+
+  const lastVisibleRecord = Math.min(
+    currentPage * rowsPerPage,
+    filteredRows.length
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    reportType,
+    searchValue,
+    selectedWarehouse,
+    status,
+    fromDate,
+    toDate,
+  ]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [
+    currentPage,
+    totalPages,
+  ]);
+
   const handleReportTypeChange = (
     event
   ) => {
@@ -361,9 +423,9 @@ export default function Reports() {
 
   const exportPdf = () => {
     if (filteredRows.length === 0) {
-      alert(
-        "There is no data to export."
-      );
+      showAlert({
+        message: "There is no data to export.",
+      });
       return;
     }
 
@@ -654,6 +716,8 @@ export default function Reports() {
 
               <p>
                 Showing{" "}
+                {firstVisibleRecord}–
+                {lastVisibleRecord} of{" "}
                 {filteredRows.length} records
               </p>
             </div>
@@ -703,7 +767,7 @@ export default function Reports() {
                     </td>
                   </tr>
                 ) : filteredRows.length > 0 ? (
-                  filteredRows.map(
+                  paginatedRows.map(
                     (row, rowIndex) => (
                       <tr key={rowIndex}>
                         {row.cells.map(
@@ -743,13 +807,64 @@ export default function Reports() {
           </div>
 
           <div className="report-result-footer">
-            <span>
-              {reportConfig.title}
-            </span>
-
-            <span>
+            <p>
+              Showing {firstVisibleRecord} to{" "}
+              {lastVisibleRecord} of{" "}
               {filteredRows.length} records
-            </span>
+            </p>
+
+            <div>
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage(
+                    (current) =>
+                      Math.max(1, current - 1)
+                  )
+                }
+                disabled={currentPage === 1}
+              >
+                ‹
+              </button>
+
+              {Array.from(
+                { length: totalPages },
+                (_, index) => index + 1
+              ).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={
+                    currentPage === pageNumber
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setCurrentPage(pageNumber)
+                  }
+                >
+                  {pageNumber}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage(
+                    (current) =>
+                      Math.min(
+                        totalPages,
+                        current + 1
+                      )
+                  )
+                }
+                disabled={
+                  currentPage === totalPages
+                }
+              >
+                 ›
+              </button>
+            </div>
           </div>
         </section>
       </main>

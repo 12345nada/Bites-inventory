@@ -1,17 +1,20 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
-import { useAuth } from "../context/AuthContext";
 
+import { useDialog } from "../context/DialogContext";
+import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
   createEvent,
   getActiveDrivers,
+  getActiveWaiters,
   getEvents,
   removeEvent,
   updateEvent,
@@ -30,8 +33,6 @@ import {
   FiXCircle,
   FiEdit2,
   FiMoreVertical,
-  FiChevronDown,
-  FiList,
   FiX,
   FiTrash2,
 } from "react-icons/fi";
@@ -55,37 +56,22 @@ const emptyForm = {
   area: "",
   branch: "Cairo",
   driverId: "",
+  waiterIds: [],
+  hasDrinks: false,
   status: "Upcoming",
 };
 
 function Events() {
-  const {
-    hasPermission,
-  } = useAuth();
+  const { showAlert, showConfirm } = useDialog();
+  const { hasPermission } = useAuth();
 
-  const canAdd =
-    hasPermission(
-      "Events",
-      "add"
-    );
+  const canAdd = hasPermission("Events", "add");
+  const canEdit = hasPermission("Events", "edit");
+  const canDelete = hasPermission("Events", "delete");
 
-  const canEdit =
-    hasPermission(
-      "Events",
-      "edit"
-    );
-
-  const canDelete =
-    hasPermission(
-      "Events",
-      "delete"
-    );
-
-  const [events, setEvents] =
-    useState([]);
-
-  const [drivers, setDrivers] =
-    useState([]);
+  const [events, setEvents] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [waiters, setWaiters] = useState([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -95,6 +81,11 @@ function Events() {
 
   const [searchValue, setSearchValue] =
     useState("");
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const itemsPerPage = 5;
 
   const [activeTab, setActiveTab] =
     useState("All Events");
@@ -110,6 +101,13 @@ function Events() {
   ] = useState(false);
 
   const [
+    showWaitersDropdown,
+    setShowWaitersDropdown,
+  ] = useState(false);
+
+  const waitersFieldRef = useRef(null);
+
+  const [
     editingEventId,
     setEditingEventId,
   ] = useState(null);
@@ -119,12 +117,106 @@ function Events() {
     setOpenActionId,
   ] = useState(null);
 
+  const [
+    actionMenuPosition,
+    setActionMenuPosition,
+  ] = useState({
+    top: 0,
+    left: 0,
+  });
+
   const [formData, setFormData] =
     useState(emptyForm);
 
   useEffect(() => {
     loadPageData();
   }, []);
+
+  useEffect(() => {
+    if (openActionId === null) {
+      return undefined;
+    }
+
+    const closeActionMenu = (event) => {
+      if (
+        event?.target instanceof Element &&
+        event.target.closest(
+          ".event-more-wrapper"
+        )
+      ) {
+        return;
+      }
+
+      setOpenActionId(null);
+    };
+
+    const closeOnPageMove = () => {
+      setOpenActionId(null);
+    };
+
+    document.addEventListener(
+      "mousedown",
+      closeActionMenu
+    );
+
+    window.addEventListener(
+      "scroll",
+      closeOnPageMove,
+      true
+    );
+
+    window.addEventListener(
+      "resize",
+      closeOnPageMove
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        closeActionMenu
+      );
+
+      window.removeEventListener(
+        "scroll",
+        closeOnPageMove,
+        true
+      );
+
+      window.removeEventListener(
+        "resize",
+        closeOnPageMove
+      );
+    };
+  }, [openActionId]);
+
+  useEffect(() => {
+    if (!showWaitersDropdown) {
+      return undefined;
+    }
+
+    const closeWaitersDropdown = (event) => {
+      if (
+        waitersFieldRef.current &&
+        !waitersFieldRef.current.contains(
+          event.target
+        )
+      ) {
+        setShowWaitersDropdown(false);
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      closeWaitersDropdown
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        closeWaitersDropdown
+      );
+    };
+  }, [showWaitersDropdown]);
 
   const loadPageData = async () => {
     try {
@@ -133,23 +225,26 @@ function Events() {
       const [
         eventsData,
         driversData,
+        waitersData,
       ] = await Promise.all([
         getEvents(),
         getActiveDrivers(),
+        getActiveWaiters(),
       ]);
 
       setEvents(eventsData);
       setDrivers(driversData);
+      setWaiters(waitersData);
     } catch (error) {
       console.error(
         "Error loading events:",
         error
       );
 
-      alert(
-        error.message ||
-          "Could not load events."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not load events.",
+      });
     } finally {
       setLoading(false);
     }
@@ -172,16 +267,17 @@ function Events() {
         event.area,
         event.branch,
         event.driver,
+        event.waiterNames?.join(" "),
+        event.waiters,
         event.status,
       ];
 
       const matchesSearch =
         normalizedSearch === "" ||
-        searchableValues.some(
-          (value) =>
-            String(value || "")
-              .toLowerCase()
-              .includes(normalizedSearch)
+        searchableValues.some((value) =>
+          String(value || "")
+            .toLowerCase()
+            .includes(normalizedSearch)
         );
 
       const matchesTab =
@@ -189,8 +285,7 @@ function Events() {
         event.status === activeTab;
 
       const matchesBranch =
-        selectedBranch ===
-          "All Branches" ||
+        selectedBranch === "All Branches" ||
         event.branch === selectedBranch;
 
       return (
@@ -204,6 +299,52 @@ function Events() {
     searchValue,
     activeTab,
     selectedBranch,
+  ]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredEvents.length /
+        itemsPerPage
+    )
+  );
+
+  const paginatedEvents =
+    useMemo(() => {
+      const startIndex =
+        (currentPage - 1) *
+        itemsPerPage;
+
+      return filteredEvents.slice(
+        startIndex,
+        startIndex +
+          itemsPerPage
+      );
+    }, [
+      filteredEvents,
+      currentPage,
+    ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchValue,
+    activeTab,
+    selectedBranch,
+  ]);
+
+  useEffect(() => {
+    if (
+      currentPage >
+      totalPages
+    ) {
+      setCurrentPage(
+        totalPages
+      );
+    }
+  }, [
+    currentPage,
+    totalPages,
   ]);
 
   const branches = useMemo(
@@ -221,21 +362,17 @@ function Events() {
     .toISOString()
     .slice(0, 10);
 
-  const nextSevenDaysDate =
-    new Date();
-
+  const nextSevenDaysDate = new Date();
   nextSevenDaysDate.setDate(
     nextSevenDaysDate.getDate() + 7
   );
 
-  const nextSevenDays =
-    nextSevenDaysDate
-      .toISOString()
-      .slice(0, 10);
+  const nextSevenDays = nextSevenDaysDate
+    .toISOString()
+    .slice(0, 10);
 
   const todayEvents = events.filter(
-    (event) =>
-      event.date === todayDate
+    (event) => event.date === todayDate
   ).length;
 
   const upcomingEvents = events.filter(
@@ -278,7 +415,6 @@ function Events() {
       timeValue.split(":");
 
     const date = new Date();
-
     date.setHours(
       Number(hours),
       Number(minutes),
@@ -295,16 +431,75 @@ function Events() {
     );
   };
 
+  const toggleActionMenu = (
+    clickEvent,
+    eventId
+  ) => {
+    clickEvent.stopPropagation();
+
+    if (openActionId === eventId) {
+      setOpenActionId(null);
+      return;
+    }
+
+    const buttonRect =
+      clickEvent.currentTarget
+        .getBoundingClientRect();
+
+    const menuWidth = 125;
+    const menuHeight = 76;
+    const gap = 10;
+
+    const availableSpaceBelow =
+      window.innerHeight -
+      buttonRect.bottom;
+
+    const top =
+      availableSpaceBelow >=
+      menuHeight + gap
+        ? buttonRect.bottom + gap
+        : buttonRect.top -
+          menuHeight -
+          gap;
+
+    const preferredLeft =
+      buttonRect.right - menuWidth;
+
+    const left = Math.max(
+      12,
+      Math.min(
+        preferredLeft,
+        window.innerWidth -
+          menuWidth -
+          12
+      )
+    );
+
+    setActionMenuPosition({
+      top: Math.max(12, top),
+      left,
+    });
+
+    setOpenActionId(eventId);
+  };
+
   const handleDeleteEvent = async (
     eventId
   ) => {
     if (!canDelete) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to delete events.",
+        type: "warning",
+      });
+
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this event?"
-    );
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this event?",
+    });
 
     if (!confirmed) {
       return;
@@ -315,8 +510,7 @@ function Events() {
 
       setEvents((currentEvents) =>
         currentEvents.filter(
-          (event) =>
-            event.id !== eventId
+          (event) => event.id !== eventId
         )
       );
 
@@ -328,47 +522,103 @@ function Events() {
       );
 
       if (error.code === "23503") {
-        alert(
-          "This event cannot be deleted because it is connected to a dispatch or another record."
-        );
+        showAlert({
+        message: "This event cannot be deleted because it is connected to a dispatch or another record.",
+      });
       } else {
-        alert(
-          error.message ||
-            "Could not delete event."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not delete event.",
+      });
       }
     }
   };
 
-  const handleFormChange = (
-    event
+  const toggleWaiter = (waiterId) => {
+    setFormData((currentData) => {
+      const normalizedId =
+        String(waiterId);
+
+      const isSelected =
+        currentData.waiterIds.some(
+          (id) =>
+            String(id) ===
+            normalizedId
+        );
+
+      return {
+        ...currentData,
+        waiterIds: isSelected
+          ? currentData.waiterIds.filter(
+              (id) =>
+                String(id) !==
+                normalizedId
+            )
+          : [
+              ...currentData.waiterIds,
+              waiterId,
+            ],
+      };
+    });
+  };
+
+  const removeWaiter = (
+    event,
+    waiterId
   ) => {
+    event.stopPropagation();
+
+    setFormData((currentData) => ({
+      ...currentData,
+      waiterIds:
+        currentData.waiterIds.filter(
+          (id) =>
+            String(id) !==
+            String(waiterId)
+        ),
+    }));
+  };
+
+  const handleFormChange = (event) => {
     const {
       name,
       value,
     } = event.target;
 
-    setFormData(
-      (currentData) => ({
-        ...currentData,
-        [name]: value,
-      })
-    );
+    setFormData((currentData) => ({
+      ...currentData,
+      [name]: value,
+    }));
   };
 
-  const openAddModal = () => {
+  const openAddModal = async () => {
     if (!canAdd) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to add events.",
+        type: "warning",
+      });
+
       return;
     }
 
     setEditingEventId(null);
     setFormData(emptyForm);
     setOpenActionId(null);
+    setShowWaitersDropdown(false);
     setShowEventModal(true);
   };
 
-  const openEditModal = (event) => {
+  const openEditModal = async (event) => {
     if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to edit events.",
+        type: "warning",
+      });
+
       return;
     }
 
@@ -385,12 +635,16 @@ function Events() {
       location: event.location,
       area: event.area,
       branch: event.branch,
-      driverId:
-        event.driverId || "",
+      driverId: event.driverId || "",
+      waiterIds: event.waiterIds || [],
+      hasDrinks: Boolean(
+        event.hasDrinks
+      ),
       status: event.status,
     });
 
     setOpenActionId(null);
+    setShowWaitersDropdown(false);
     setShowEventModal(true);
   };
 
@@ -400,6 +654,7 @@ function Events() {
     }
 
     setShowEventModal(false);
+    setShowWaitersDropdown(false);
     setEditingEventId(null);
     setFormData(emptyForm);
   };
@@ -428,9 +683,23 @@ function Events() {
       );
 
     if (hasEmptyField) {
-      alert(
-        "Please complete all event fields."
-      );
+      showAlert({
+        message: "Please complete all event fields.",
+      });
+
+      return false;
+    }
+
+    if (
+      !Array.isArray(
+        formData.waiterIds
+      ) ||
+      formData.waiterIds.length === 0
+    ) {
+      showAlert({
+        message:
+          "Please select at least one waiter.",
+      });
 
       return false;
     }
@@ -443,11 +712,18 @@ function Events() {
   ) => {
     event.preventDefault();
 
-    if (
-      editingEventId
-        ? !canEdit
-        : !canAdd
-    ) {
+    const requiredPermission =
+      editingEventId ? canEdit : canAdd;
+
+    if (!requiredPermission) {
+      await showAlert({
+        title: "Permission Denied",
+        message: editingEventId
+          ? "You do not have permission to edit events."
+          : "You do not have permission to add events.",
+        type: "warning",
+      });
+
       return;
     }
 
@@ -477,9 +753,7 @@ function Events() {
         );
       } else {
         const newEvent =
-          await createEvent(
-            formData
-          );
+          await createEvent(formData);
 
         setEvents(
           (currentEvents) => [
@@ -490,6 +764,7 @@ function Events() {
       }
 
       setShowEventModal(false);
+      setShowWaitersDropdown(false);
       setEditingEventId(null);
       setFormData(emptyForm);
     } catch (error) {
@@ -499,14 +774,14 @@ function Events() {
       );
 
       if (error.code === "23505") {
-        alert(
-          "An event with this code already exists."
-        );
+        showAlert({
+        message: "An event with this code already exists.",
+      });
       } else {
-        alert(
-          error.message ||
-            "Could not save event."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not save event.",
+      });
       }
     } finally {
       setSaving(false);
@@ -520,36 +795,22 @@ function Events() {
       <main className="events-main">
         <Topbar
           searchValue={searchValue}
-          onSearchChange={
-            setSearchValue
-          }
+          onSearchChange={setSearchValue}
         />
 
         <section className="events-title-section">
           <div>
             <h1>Events</h1>
-
-            <p>
-              Manage all your events
-            </p>
+            <p>Manage all your events</p>
           </div>
 
           <button
             type="button"
             className="add-event-button"
             onClick={openAddModal}
-            disabled={!canAdd}
-            title={
-              canAdd
-                ? "Add new event"
-                : "You do not have permission to add events"
-            }
           >
             <FiPlus />
-
-            <span>
-              Add New Event
-            </span>
+            <span>Add New Event</span>
           </button>
         </section>
 
@@ -670,28 +931,16 @@ function Events() {
                     All Branches
                   </option>
 
-                  {branches.map(
-                    (branch) => (
-                      <option
-                        key={branch}
-                        value={branch}
-                      >
-                        {branch}
-                      </option>
-                    )
-                  )}
+                  {branches.map((branch) => (
+                    <option
+                      key={branch}
+                      value={branch}
+                    >
+                      {branch}
+                    </option>
+                  ))}
                 </select>
-
-                <FiChevronDown className="branch-filter-icon" />
               </div>
-
-              <button
-                type="button"
-                className="view-button"
-                aria-label="Change table view"
-              >
-                <FiList />
-              </button>
             </div>
           </div>
 
@@ -699,18 +948,13 @@ function Events() {
             <table>
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      aria-label="Select all events"
-                    />
-                  </th>
 
                   <th>Event Type</th>
                   <th>Client</th>
                   <th>Date</th>
                   <th>Location</th>
                   <th>Branch</th>
+                  <th># of Waiters</th>
                   <th>Driver</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -729,15 +973,9 @@ function Events() {
                   </tr>
                 ) : filteredEvents.length >
                   0 ? (
-                  filteredEvents.map(
+                  paginatedEvents.map(
                     (event) => (
                       <tr key={event.id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${event.name}`}
-                          />
-                        </td>
 
                         <td>
                           <div className="event-name-cell">
@@ -810,6 +1048,10 @@ function Events() {
                         </td>
 
                         <td>
+                          {event.waiters}
+                        </td>
+
+                        <td>
                           {event.driver ||
                             "-"}
                         </td>
@@ -834,12 +1076,6 @@ function Events() {
                                 )
                               }
                               aria-label={`Edit ${event.name}`}
-                              disabled={!canEdit}
-                              title={
-                                canEdit
-                                  ? `Edit ${event.name}`
-                                  : "You do not have permission to edit events"
-                              }
                             >
                               <FiEdit2 />
                             </button>
@@ -848,15 +1084,12 @@ function Events() {
                               <button
                                 type="button"
                                 className="more-action-button"
-                                onClick={() =>
-                                  setOpenActionId(
-                                    (
-                                      currentId
-                                    ) =>
-                                      currentId ===
-                                      event.id
-                                        ? null
-                                        : event.id
+                                onClick={(
+                                  clickEvent
+                                ) =>
+                                  toggleActionMenu(
+                                    clickEvent,
+                                    event.id
                                   )
                                 }
                                 aria-label={`More actions for ${event.name}`}
@@ -866,19 +1099,21 @@ function Events() {
 
                               {openActionId ===
                                 event.id && (
-                                <div className="event-action-menu">
+                                <div
+                                  className="event-action-menu"
+                                  style={{
+                                    top:
+                                      actionMenuPosition.top,
+                                    left:
+                                      actionMenuPosition.left,
+                                  }}
+                                >
                                   <button
                                     type="button"
                                     onClick={() =>
                                       openEditModal(
                                         event
                                       )
-                                    }
-                                    disabled={!canEdit}
-                                    title={
-                                      canEdit
-                                        ? "Edit event"
-                                        : "You do not have permission to edit events"
                                     }
                                   >
                                     <FiEdit2 />
@@ -892,12 +1127,6 @@ function Events() {
                                       handleDeleteEvent(
                                         event.id
                                       )
-                                    }
-                                    disabled={!canDelete}
-                                    title={
-                                      canDelete
-                                        ? "Delete event"
-                                        : "You do not have permission to delete events"
                                     }
                                   >
                                     <FiTrash2 />
@@ -917,7 +1146,8 @@ function Events() {
                       colSpan="9"
                       className="events-empty-state"
                     >
-                      No events match your search or selected filters.
+                      No events match your search or
+                      selected filters.
                     </td>
                   </tr>
                 )}
@@ -925,47 +1155,93 @@ function Events() {
             </table>
           </div>
 
-         <div className="events-pagination">
-  <p>
-    Showing {filteredEvents.length} of{" "}
-    {events.length} events
-  </p>
+          <div className="events-pagination">
+            <p>
+              Showing{" "}
+              {paginatedEvents.length} of{" "}
+              {filteredEvents.length} events
+            </p>
 
-  {events.length > 0 && (
-    <div>
-      <button type="button">
-        ‹
-      </button>
+            {filteredEvents.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage(
+                      (current) =>
+                        Math.max(
+                          current - 1,
+                          1
+                        )
+                    )
+                  }
+                  disabled={
+                    currentPage === 1
+                  }
+                  aria-label="Previous page"
+                >
+                  ‹
+                </button>
 
-      <button
-        type="button"
-        className="active"
-      >
-        1
-      </button>
+                {Array.from(
+                  {
+                    length:
+                      totalPages,
+                  },
+                  (_, index) =>
+                    index + 1
+                ).map(
+                  (pageNumber) => (
+                    <button
+                      key={
+                        pageNumber
+                      }
+                      type="button"
+                      className={
+                        currentPage ===
+                        pageNumber
+                          ? "active"
+                          : ""
+                      }
+                      onClick={() =>
+                        setCurrentPage(
+                          pageNumber
+                        )
+                      }
+                      aria-current={
+                        currentPage ===
+                        pageNumber
+                          ? "page"
+                          : undefined
+                      }
+                    >
+                      {pageNumber}
+                    </button>
+                  )
+                )}
 
-      <button type="button">
-        2
-      </button>
-
-      <button type="button">
-        3
-      </button>
-
-      <button type="button">
-        ...
-      </button>
-
-      <button type="button">
-        22
-      </button>
-
-      <button type="button">
-        ›
-      </button>
-    </div>
-  )}
-</div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage(
+                      (current) =>
+                        Math.min(
+                          current + 1,
+                          totalPages
+                        )
+                    )
+                  }
+                  disabled={
+                    currentPage ===
+                    totalPages
+                  }
+                  aria-label="Next page"
+                >
+                  ›
+                </button>
+              </div>
+            )}
+          </div>
         </section>
       </main>
 
@@ -1016,9 +1292,7 @@ function Events() {
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={
-                    handleFormChange
-                  }
+                  onChange={handleFormChange}
                   placeholder="Family Wedding"
                   disabled={saving}
                 />
@@ -1030,12 +1304,8 @@ function Events() {
                 <input
                   type="text"
                   name="client"
-                  value={
-                    formData.client
-                  }
-                  onChange={
-                    handleFormChange
-                  }
+                  value={formData.client}
+                  onChange={handleFormChange}
                   placeholder="Client name"
                   disabled={saving}
                 />
@@ -1048,9 +1318,7 @@ function Events() {
                   type="date"
                   name="date"
                   value={formData.date}
-                  onChange={
-                    handleFormChange
-                  }
+                  onChange={handleFormChange}
                   disabled={saving}
                 />
               </label>
@@ -1065,9 +1333,7 @@ function Events() {
                     value={
                       formData.departureTime
                     }
-                    onChange={
-                      handleFormChange
-                    }
+                    onChange={handleFormChange}
                     disabled={saving}
                   />
                 </label>
@@ -1078,12 +1344,8 @@ function Events() {
                   <input
                     type="time"
                     name="startTime"
-                    value={
-                      formData.startTime
-                    }
-                    onChange={
-                      handleFormChange
-                    }
+                    value={formData.startTime}
+                    onChange={handleFormChange}
                     disabled={saving}
                   />
                 </label>
@@ -1094,12 +1356,8 @@ function Events() {
                   <input
                     type="time"
                     name="endTime"
-                    value={
-                      formData.endTime
-                    }
-                    onChange={
-                      handleFormChange
-                    }
+                    value={formData.endTime}
+                    onChange={handleFormChange}
                     disabled={saving}
                   />
                 </label>
@@ -1111,12 +1369,8 @@ function Events() {
                 <input
                   type="text"
                   name="location"
-                  value={
-                    formData.location
-                  }
-                  onChange={
-                    handleFormChange
-                  }
+                  value={formData.location}
+                  onChange={handleFormChange}
                   placeholder="Villa 45"
                   disabled={saving}
                 />
@@ -1129,9 +1383,7 @@ function Events() {
                   type="text"
                   name="area"
                   value={formData.area}
-                  onChange={
-                    handleFormChange
-                  }
+                  onChange={handleFormChange}
                   placeholder="New Cairo"
                   disabled={saving}
                 />
@@ -1142,12 +1394,8 @@ function Events() {
 
                 <select
                   name="branch"
-                  value={
-                    formData.branch
-                  }
-                  onChange={
-                    handleFormChange
-                  }
+                  value={formData.branch}
+                  onChange={handleFormChange}
                   disabled={saving}
                 >
                   <option value="Cairo">
@@ -1165,33 +1413,210 @@ function Events() {
 
                 <select
                   name="driverId"
-                  value={
-                    formData.driverId
-                  }
-                  onChange={
-                    handleFormChange
-                  }
+                  value={formData.driverId}
+                  onChange={handleFormChange}
                   disabled={saving}
                 >
                   <option value="">
                     Select driver
                   </option>
 
-                  {drivers.map(
-                    (driver) => (
-                      <option
-                        key={driver.id}
-                        value={driver.id}
-                      >
-                        {driver.full_name}
-
-                        {driver.staff_code
-                          ? ` (${driver.staff_code})`
-                          : ""}
-                      </option>
-                    )
-                  )}
+                  {drivers.map((driver) => (
+                    <option
+                      key={driver.id}
+                      value={driver.id}
+                    >
+                      {driver.full_name}
+                      {driver.staff_code
+                        ? ` (${driver.staff_code})`
+                        : ""}
+                    </option>
+                  ))}
                 </select>
+              </label>
+
+              <div
+                className="event-waiters-field event-modal-full-field"
+                ref={waitersFieldRef}
+              >
+                <span className="event-field-label">
+                  Waiters
+                </span>
+
+                <button
+                  type="button"
+                  className={`event-waiters-trigger ${
+                    showWaitersDropdown
+                      ? "open"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setShowWaitersDropdown(
+                      (current) => !current
+                    )
+                  }
+                  disabled={saving}
+                >
+                  <span className="event-waiters-selected">
+                    {formData.waiterIds.length >
+                    0 ? (
+                      formData.waiterIds.map(
+                        (waiterId) => {
+                          const waiter =
+                            waiters.find(
+                              (currentWaiter) =>
+                                String(
+                                  currentWaiter.id
+                                ) ===
+                                String(
+                                  waiterId
+                                )
+                            );
+
+                          return (
+                            <span
+                              key={waiterId}
+                              className="event-waiter-chip"
+                            >
+                              {waiter?.full_name ||
+                                "Waiter"}
+
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                className="event-waiter-chip-remove"
+                                onClick={(event) =>
+                                  removeWaiter(
+                                    event,
+                                    waiterId
+                                  )
+                                }
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key ===
+                                      "Enter" ||
+                                    event.key === " "
+                                  ) {
+                                    removeWaiter(
+                                      event,
+                                      waiterId
+                                    );
+                                  }
+                                }}
+                                aria-label={`Remove ${
+                                  waiter?.full_name ||
+                                  "waiter"
+                                }`}
+                              >
+                                ×
+                              </span>
+                            </span>
+                          );
+                        }
+                      )
+                    ) : (
+                      <span className="event-waiters-placeholder">
+                        Select waiters
+                      </span>
+                    )}
+                  </span>
+
+                  <span className="event-waiters-arrow">
+                    ▾
+                  </span>
+                </button>
+
+                {showWaitersDropdown && (
+                  <div className="event-waiters-dropdown">
+                    {waiters.length > 0 ? (
+                      waiters.map((waiter) => {
+                        const isSelected =
+                          formData.waiterIds.some(
+                            (id) =>
+                              String(id) ===
+                              String(waiter.id)
+                          );
+
+                        return (
+                          <label
+                            key={waiter.id}
+                            className="event-waiter-option"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() =>
+                                toggleWaiter(
+                                  waiter.id
+                                )
+                              }
+                            />
+
+                            <span>
+                              <strong>
+                                {waiter.full_name}
+                              </strong>
+
+                              {waiter.staff_code && (
+                                <small>
+                                  {waiter.staff_code}
+                                </small>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="event-no-waiters">
+                        No active waiters found.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <small className="event-waiters-count">
+                  {formData.waiterIds.length} waiter
+                  {formData.waiterIds.length === 1
+                    ? ""
+                    : "s"}{" "}
+                  selected
+                </small>
+              </div>
+
+              <label className="event-drinks-field event-modal-full-field">
+                <span className="event-drinks-copy">
+                  <strong>
+                    Drinks Included
+                  </strong>
+
+                  <small>
+                    Enable this when the event includes drinks.
+                  </small>
+                </span>
+
+                <span className="event-drinks-switch">
+                  <input
+                    type="checkbox"
+                    name="hasDrinks"
+                    checked={
+                      formData.hasDrinks
+                    }
+                    onChange={(event) =>
+                      setFormData(
+                        (currentData) => ({
+                          ...currentData,
+                          hasDrinks:
+                            event.target
+                              .checked,
+                        })
+                      )
+                    }
+                    disabled={saving}
+                    aria-label="Drinks included"
+                  />
+
+                  <span className="event-drinks-slider" />
+                </span>
               </label>
 
               <label className="event-modal-full-field">
@@ -1199,12 +1624,8 @@ function Events() {
 
                 <select
                   name="status"
-                  value={
-                    formData.status
-                  }
-                  onChange={
-                    handleFormChange
-                  }
+                  value={formData.status}
+                  onChange={handleFormChange}
                   disabled={saving}
                 >
                   <option value="Upcoming">
@@ -1243,12 +1664,7 @@ function Events() {
               <button
                 type="submit"
                 className="save-button"
-                disabled={
-                  saving ||
-                  (editingEventId
-                    ? !canEdit
-                    : !canAdd)
-                }
+                disabled={saving}
               >
                 {saving
                   ? "Saving..."
@@ -1280,7 +1696,6 @@ function StatCard({
 
         <div className="events-stat-details">
           <h4>{title}</h4>
-
           <h2>{number}</h2>
 
           <p className={descriptionClass}>
@@ -1291,5 +1706,4 @@ function StatCard({
     </article>
   );
 }
-
 export default Events;

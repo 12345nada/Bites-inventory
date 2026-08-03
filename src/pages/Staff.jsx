@@ -1,16 +1,24 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
 
 import { useAuth } from "../context/AuthContext";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
-  useStaff,
-} from "../context/StaffContext";
+  createDriver,
+  createWaiter,
+  deleteStaff,
+  getStaff,
+  updateDriver,
+  updateWaiter,
+} from "../services/staffService";
 
 import "../styles/dashboard.css";
 import "../styles/Staff.css";
@@ -79,22 +87,26 @@ const formatDate = (value) => {
 };
 
 export default function Staff() {
+  const { showAlert, showConfirm } = useDialog();
+
+
   const { hasPermission } = useAuth();
 
   const canAdd = hasPermission("Staff", "add");
   const canEdit = hasPermission("Staff", "edit");
   const canDelete = hasPermission("Staff", "delete");
 
-  const {
-    drivers,
-    waiters,
-    addDriver,
-    updateDriver,
-    deleteDriver,
-    addWaiter,
-    updateWaiter,
-    deleteWaiter,
-  } = useStaff();
+  const [drivers, setDrivers] =
+    useState([]);
+
+  const [waiters, setWaiters] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
 
   const [activeTab, setActiveTab] =
     useState("drivers");
@@ -130,11 +142,108 @@ export default function Staff() {
     setOpenActionId,
   ] = useState(null);
 
+  const [
+    actionMenuPosition,
+    setActionMenuPosition,
+  ] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const staffPerPage = 5;
+
   const [driverForm, setDriverForm] =
     useState(driverEmptyForm);
 
   const [waiterForm, setWaiterForm] =
     useState(waiterEmptyForm);
+
+  useEffect(() => {
+    loadStaff();
+  }, []);
+
+  useEffect(() => {
+    if (openActionId === null) {
+      return undefined;
+    }
+
+    const closeActionMenu = (event) => {
+      if (
+        event?.target instanceof Element &&
+        event.target.closest(
+          ".staff-more-wrapper"
+        )
+      ) {
+        return;
+      }
+
+      setOpenActionId(null);
+    };
+
+    const closeOnPageMove = () => {
+      setOpenActionId(null);
+    };
+
+    document.addEventListener(
+      "mousedown",
+      closeActionMenu
+    );
+
+    window.addEventListener(
+      "scroll",
+      closeOnPageMove,
+      true
+    );
+
+    window.addEventListener(
+      "resize",
+      closeOnPageMove
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        closeActionMenu
+      );
+
+      window.removeEventListener(
+        "scroll",
+        closeOnPageMove,
+        true
+      );
+
+      window.removeEventListener(
+        "resize",
+        closeOnPageMove
+      );
+    };
+  }, [openActionId]);
+
+  const loadStaff = async () => {
+    try {
+      setLoading(true);
+
+      const data = await getStaff();
+
+      setDrivers(data.drivers || []);
+      setWaiters(data.waiters || []);
+    } catch (error) {
+      console.error(
+        "Error loading staff:",
+        error
+      );
+
+      showAlert({
+        message: error.message ||
+          "Could not load staff.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredDrivers = useMemo(() => {
     const search =
@@ -209,9 +318,126 @@ export default function Staff() {
     statusFilter,
   ]);
 
+  const activeStaff =
+    activeTab === "drivers"
+      ? filteredDrivers
+      : filteredWaiters;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      activeStaff.length /
+        staffPerPage
+    )
+  );
+
+  const paginatedDrivers = useMemo(() => {
+    const startIndex =
+      (currentPage - 1) *
+      staffPerPage;
+
+    return filteredDrivers.slice(
+      startIndex,
+      startIndex + staffPerPage
+    );
+  }, [
+    filteredDrivers,
+    currentPage,
+  ]);
+
+  const paginatedWaiters = useMemo(() => {
+    const startIndex =
+      (currentPage - 1) *
+      staffPerPage;
+
+    return filteredWaiters.slice(
+      startIndex,
+      startIndex + staffPerPage
+    );
+  }, [
+    filteredWaiters,
+    currentPage,
+  ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setOpenActionId(null);
+  }, [
+    activeTab,
+    searchValue,
+    statusFilter,
+  ]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [
+    currentPage,
+    totalPages,
+  ]);
+
+  const toggleActionMenu = (
+    event,
+    staffId
+  ) => {
+    event.stopPropagation();
+
+    if (openActionId === staffId) {
+      setOpenActionId(null);
+      return;
+    }
+
+    const buttonRect =
+      event.currentTarget.getBoundingClientRect();
+
+    const menuWidth = 125;
+    const menuHeight = 54;
+    const gap = 10;
+
+    const availableSpaceBelow =
+      window.innerHeight -
+      buttonRect.bottom;
+
+    const top =
+      availableSpaceBelow >=
+      menuHeight + gap
+        ? buttonRect.bottom + gap
+        : buttonRect.top -
+          menuHeight -
+          gap;
+
+    const preferredLeft =
+      buttonRect.right -
+      menuWidth;
+
+    const left = Math.max(
+      12,
+      Math.min(
+        preferredLeft,
+        window.innerWidth -
+          menuWidth -
+          12
+      )
+    );
+
+    setActionMenuPosition({
+      top: Math.max(12, top),
+      left,
+    });
+
+    setOpenActionId(staffId);
+  };
+
   const openAddDriver = () => {
     if (!canAdd) {
-      alert("You do not have permission to add staff.");
+      showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to add staff.",
+        type: "warning",
+      });
+
       return;
     }
 
@@ -222,11 +448,18 @@ export default function Staff() {
 
   const openEditDriver = (driver) => {
     if (!canEdit) {
-      alert("You do not have permission to edit staff.");
+      showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to edit staff.",
+        type: "warning",
+      });
+
       return;
     }
 
     setEditingDriverId(driver.id);
+    setOpenActionId(null);
     setDriverForm({
       ...driver,
       documents: {
@@ -238,7 +471,13 @@ export default function Staff() {
 
   const openAddWaiter = () => {
     if (!canAdd) {
-      alert("You do not have permission to add staff.");
+      showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to add staff.",
+        type: "warning",
+      });
+
       return;
     }
 
@@ -249,11 +488,18 @@ export default function Staff() {
 
   const openEditWaiter = (waiter) => {
     if (!canEdit) {
-      alert("You do not have permission to edit staff.");
+      showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to edit staff.",
+        type: "warning",
+      });
+
       return;
     }
 
     setEditingWaiterId(waiter.id);
+    setOpenActionId(null);
     setWaiterForm({
       ...waiter,
       documents: {
@@ -294,58 +540,149 @@ export default function Staff() {
     }));
   };
 
-  const saveDriver = (event) => {
+  const saveDriver = async (event) => {
     event.preventDefault();
+
+    if (
+      editingDriverId
+        ? !canEdit
+        : !canAdd
+    ) {
+      return;
+    }
 
     if (
       !driverForm.fullName.trim() ||
       !driverForm.phone.trim() ||
       !driverForm.nationalId.trim() ||
       !driverForm.licenseNumber.trim() ||
+      !driverForm.licenseExpiryDate ||
       !driverForm.carNumber.trim()
     ) {
-      alert(
-        "Please complete the driver information."
-      );
+      showAlert({
+        message: "Please complete the driver information.",
+      });
       return;
     }
 
-    if (editingDriverId) {
-      updateDriver(
-        editingDriverId,
-        driverForm
-      );
-    } else {
-      addDriver(driverForm);
-    }
+    try {
+      setSaving(true);
 
-    setShowDriverModal(false);
+      if (editingDriverId) {
+        const updated =
+          await updateDriver(
+            editingDriverId,
+            driverForm
+          );
+
+        setDrivers((current) =>
+          current.map((driver) =>
+            driver.id === editingDriverId
+              ? updated
+              : driver
+          )
+        );
+      } else {
+        const created =
+          await createDriver(
+            driverForm
+          );
+
+        setDrivers((current) => [
+          created,
+          ...current,
+        ]);
+      }
+
+      setShowDriverModal(false);
+      setEditingDriverId(null);
+      setDriverForm(driverEmptyForm);
+    } catch (error) {
+      console.error(
+        "Error saving driver:",
+        error
+      );
+
+      showAlert({
+        message: error.code === "23505"
+          ? "National ID or license number already exists."
+          : error.message ||
+              "Could not save driver.",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const saveWaiter = (event) => {
+  const saveWaiter = async (event) => {
     event.preventDefault();
+
+    if (
+      editingWaiterId
+        ? !canEdit
+        : !canAdd
+    ) {
+      return;
+    }
 
     if (
       !waiterForm.fullName.trim() ||
       !waiterForm.phone.trim() ||
       !waiterForm.nationalId.trim()
     ) {
-      alert(
-        "Please complete the waiter information."
-      );
+      showAlert({
+        message: "Please complete the waiter information.",
+      });
       return;
     }
 
-    if (editingWaiterId) {
-      updateWaiter(
-        editingWaiterId,
-        waiterForm
-      );
-    } else {
-      addWaiter(waiterForm);
-    }
+    try {
+      setSaving(true);
 
-    setShowWaiterModal(false);
+      if (editingWaiterId) {
+        const updated =
+          await updateWaiter(
+            editingWaiterId,
+            waiterForm
+          );
+
+        setWaiters((current) =>
+          current.map((waiter) =>
+            waiter.id === editingWaiterId
+              ? updated
+              : waiter
+          )
+        );
+      } else {
+        const created =
+          await createWaiter(
+            waiterForm
+          );
+
+        setWaiters((current) => [
+          created,
+          ...current,
+        ]);
+      }
+
+      setShowWaiterModal(false);
+      setEditingWaiterId(null);
+      setWaiterForm(waiterEmptyForm);
+    } catch (error) {
+      console.error(
+        "Error saving waiter:",
+        error
+      );
+
+      showAlert({
+        message: error.code === "23505"
+          ? "National ID already exists."
+          : error.message ||
+              "Could not save waiter.",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const setDriverDocument = (
@@ -357,7 +694,10 @@ export default function Staff() {
       documents: {
         ...current.documents,
         [field]: file
-          ? { name: file.name }
+          ? {
+              name: file.name,
+              file,
+            }
           : null,
       },
     }));
@@ -380,7 +720,10 @@ export default function Staff() {
               ...current.documents
                 .healthCertificate,
               file: file
-                ? { name: file.name }
+                ? {
+                    name: file.name,
+                    file,
+                  }
                 : null,
             },
           },
@@ -396,7 +739,10 @@ export default function Staff() {
               ...current.documents
                 .contract,
               file: file
-                ? { name: file.name }
+                ? {
+                    name: file.name,
+                    file,
+                  }
                 : null,
             },
           },
@@ -432,6 +778,92 @@ export default function Staff() {
         },
       },
     }));
+  };
+
+  const handleDeleteDriver = async (
+    driverId
+  ) => {
+    if (!canDelete) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to delete staff.",
+        type: "warning",
+      });
+
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this driver?",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteStaff(driverId);
+
+      setDrivers((current) =>
+        current.filter(
+          (driver) =>
+            driver.id !== driverId
+        )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      showAlert({
+        message: error.code === "23503"
+          ? "This driver is connected to events or dispatches and cannot be deleted."
+          : error.message ||
+              "Could not delete driver.",
+      });
+    }
+  };
+
+  const handleDeleteWaiter = async (
+    waiterId
+  ) => {
+    if (!canDelete) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to delete staff.",
+        type: "warning",
+      });
+
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this waiter?",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteStaff(waiterId);
+
+      setWaiters((current) =>
+        current.filter(
+          (waiter) =>
+            waiter.id !== waiterId
+        )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      showAlert({
+        message: error.code === "23503"
+          ? "This waiter is connected to an event and cannot be deleted."
+          : error.message ||
+              "Could not delete waiter.",
+      });
+    }
   };
 
   return (
@@ -562,7 +994,16 @@ export default function Staff() {
                 </thead>
 
                 <tbody>
-                  {filteredDrivers.map(
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan="9"
+                        className="staff-empty-state"
+                      >
+                        Loading drivers...
+                      </td>
+                    </tr>
+                  ) : paginatedDrivers.map(
                     (driver) => (
                       <tr key={driver.id}>
                         <td>
@@ -626,15 +1067,10 @@ export default function Staff() {
                               <button
                                 type="button"
                                 className="staff-more-button"
-                                onClick={() =>
-                                  setOpenActionId(
-                                    (
-                                      currentId
-                                    ) =>
-                                      currentId ===
-                                      driver.id
-                                        ? null
-                                        : driver.id
+                                onClick={(event) =>
+                                  toggleActionMenu(
+                                    event,
+                                    driver.id
                                   )
                                 }
                               >
@@ -643,12 +1079,20 @@ export default function Staff() {
 
                               {openActionId ===
                                 driver.id && (
-                                <div className="staff-action-menu">
+                                <div
+                                  className="staff-action-menu"
+                                  style={{
+                                    top:
+                                      actionMenuPosition.top,
+                                    left:
+                                      actionMenuPosition.left,
+                                  }}
+                                >
                                   <button
                                     type="button"
                                     className="staff-delete-action"
                                     onClick={() => {
-                                      deleteDriver(
+                                      handleDeleteDriver(
                                         driver.id
                                       );
                                       setOpenActionId(
@@ -687,7 +1131,16 @@ export default function Staff() {
                 </thead>
 
                 <tbody>
-                  {filteredWaiters.map(
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan="8"
+                        className="staff-empty-state"
+                      >
+                        Loading waiters...
+                      </td>
+                    </tr>
+                  ) : paginatedWaiters.map(
                     (waiter) => {
                       const count = [
                         waiter.documents
@@ -762,15 +1215,10 @@ export default function Staff() {
                                 <button
                                   type="button"
                                   className="staff-more-button"
-                                  onClick={() =>
-                                    setOpenActionId(
-                                      (
-                                        currentId
-                                      ) =>
-                                        currentId ===
-                                        waiter.id
-                                          ? null
-                                          : waiter.id
+                                  onClick={(event) =>
+                                    toggleActionMenu(
+                                      event,
+                                      waiter.id
                                     )
                                   }
                                 >
@@ -779,12 +1227,20 @@ export default function Staff() {
 
                                 {openActionId ===
                                   waiter.id && (
-                                  <div className="staff-action-menu">
+                                  <div
+                                    className="staff-action-menu"
+                                    style={{
+                                      top:
+                                        actionMenuPosition.top,
+                                      left:
+                                        actionMenuPosition.left,
+                                    }}
+                                  >
                                     <button
                                       type="button"
                                       className="staff-delete-action"
                                       onClick={() => {
-                                        deleteWaiter(
+                                        handleDeleteWaiter(
                                           waiter.id
                                         );
                                         setOpenActionId(
@@ -809,10 +1265,82 @@ export default function Staff() {
             </div>
           )}
 
-          <div className="staff-footer">
-            {activeTab === "drivers"
-              ? `${filteredDrivers.length} drivers`
-              : `${filteredWaiters.length} waiters`}
+          <div className="staff-pagination">
+            <p>
+              Showing{" "}
+              {activeStaff.length === 0
+                ? 0
+                : (currentPage - 1) *
+                    staffPerPage +
+                  1}
+              {" - "}
+              {Math.min(
+                currentPage *
+                  staffPerPage,
+                activeStaff.length
+              )}{" "}
+              of {activeStaff.length}{" "}
+              {activeTab === "drivers"
+                ? "drivers"
+                : "waiters"}
+            </p>
+
+            <div>
+              <button
+                type="button"
+                disabled={
+                  currentPage === 1
+                }
+                onClick={() =>
+                  setCurrentPage(
+                    (page) => page - 1
+                  )
+                }
+              >
+                 ‹
+              </button>
+
+              {Array.from(
+                {
+                  length: totalPages,
+                },
+                (_, index) =>
+                  index + 1
+              ).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={
+                    currentPage ===
+                    pageNumber
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setCurrentPage(
+                      pageNumber
+                    )
+                  }
+                >
+                  {pageNumber}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                disabled={
+                  currentPage ===
+                  totalPages
+                }
+                onClick={() =>
+                  setCurrentPage(
+                    (page) => page + 1
+                  )
+                }
+              >
+                ›
+              </button>
+            </div>
           </div>
         </section>
       </main>
@@ -848,6 +1376,7 @@ export default function Staff() {
                 onClick={() =>
                   setShowDriverModal(false)
                 }
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -1000,16 +1529,25 @@ export default function Staff() {
                 onClick={() =>
                   setShowDriverModal(false)
                 }
+                disabled={saving}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 className="staff-save-button"
+                disabled={
+                  saving ||
+                  (editingDriverId
+                    ? !canEdit
+                    : !canAdd)
+                }
               >
-                {editingDriverId
-                  ? "Save Changes"
-                  : "Save Driver"}
+                {saving
+                  ? "Saving..."
+                  : editingDriverId
+                    ? "Save Changes"
+                    : "Save Driver"}
               </button>
             </div>
           </form>
@@ -1047,6 +1585,7 @@ export default function Staff() {
                 onClick={() =>
                   setShowWaiterModal(false)
                 }
+                disabled={saving}
               >
                 <FiX />
               </button>
@@ -1236,16 +1775,25 @@ export default function Staff() {
                 onClick={() =>
                   setShowWaiterModal(false)
                 }
+                disabled={saving}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 className="staff-save-button"
+                disabled={
+                  saving ||
+                  (editingWaiterId
+                    ? !canEdit
+                    : !canAdd)
+                }
               >
-                {editingWaiterId
-                  ? "Save Changes"
-                  : "Save Waiter"}
+                {saving
+                  ? "Saving..."
+                  : editingWaiterId
+                    ? "Save Changes"
+                    : "Save Waiter"}
               </button>
             </div>
           </form>

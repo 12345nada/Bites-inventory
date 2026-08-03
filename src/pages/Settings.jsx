@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
@@ -43,6 +45,7 @@ import {
 const emptyUserForm = {
   fullName: "",
   username: "",
+  email: "",
   password: "",
   confirmPassword: "",
   roleId: "",
@@ -50,6 +53,9 @@ const emptyUserForm = {
 };
 
 export default function Settings() {
+  const { showAlert, showConfirm } = useDialog();
+
+
   const navigate =
     useNavigate();
 
@@ -200,10 +206,10 @@ export default function Settings() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not load settings."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not load settings.",
+      });
     } finally {
       setLoading(false);
     }
@@ -279,9 +285,9 @@ export default function Settings() {
     action
   ) => {
     if (!canEditUsersRoles) {
-      alert(
-        "You do not have permission to edit permissions."
-      );
+      showAlert({
+        message: "You do not have permission to edit permissions.",
+      });
       return;
     }
 
@@ -305,14 +311,16 @@ export default function Settings() {
 
   const savePermissions = async () => {
     if (!canEditUsersRoles) {
-      alert(
-        "You do not have permission to edit permissions."
-      );
+      showAlert({
+        message: "You do not have permission to edit permissions.",
+      });
       return;
     }
 
     if (!selectedRoleId) {
-      alert("Please select a role.");
+      showAlert({
+        message: "Please select a role.",
+      });
       return;
     }
 
@@ -340,19 +348,19 @@ export default function Settings() {
         )
       );
 
-      alert(
-        "Permissions saved successfully."
-      );
+      showAlert({
+        message: "Permissions saved successfully.",
+      });
     } catch (error) {
       console.error(
         "Error saving permissions:",
         error
       );
 
-      alert(
-        error.message ||
-          "Could not save permissions."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not save permissions.",
+      });
     } finally {
       setSaving(false);
     }
@@ -362,18 +370,18 @@ export default function Settings() {
     event
   ) => {
     if (!canAddUsersRoles) {
-      alert(
-        "You do not have permission to add roles."
-      );
+      showAlert({
+        message: "You do not have permission to add roles.",
+      });
       return;
     }
 
     event.preventDefault();
 
     if (!roleForm.name.trim()) {
-      alert(
-        "Please enter the role name."
-      );
+      showAlert({
+        message: "Please enter the role name.",
+      });
 
       return;
     }
@@ -398,12 +406,12 @@ export default function Settings() {
 
       setShowRoleModal(false);
     } catch (error) {
-      alert(
-        error.code === "23505"
+      showAlert({
+        message: error.code === "23505"
           ? "This role name already exists."
           : error.message ||
-              "Could not create role."
-      );
+              "Could not create role.",
+      });
     } finally {
       setSaving(false);
     }
@@ -411,9 +419,9 @@ export default function Settings() {
 
   const openUserModal = () => {
     if (!canAddUsersRoles) {
-      alert(
-        "You do not have permission to add users."
-      );
+      showAlert({
+        message: "You do not have permission to add users.",
+      });
       return;
     }
 
@@ -463,9 +471,9 @@ export default function Settings() {
     event
   ) => {
     if (!canAddUsersRoles) {
-      alert(
-        "You do not have permission to add users."
-      );
+      showAlert({
+        message: "You do not have permission to add users.",
+      });
       return;
     }
 
@@ -479,17 +487,23 @@ export default function Settings() {
         .trim()
         .toLowerCase();
 
+    const email =
+      userForm.email
+        .trim()
+        .toLowerCase();
+
     if (
       !fullName ||
       !username ||
+      !email ||
       !userForm.password ||
       !userForm.confirmPassword ||
       !userForm.roleId ||
       !userForm.branch
     ) {
-      alert(
-        "Please complete all user fields."
-      );
+      showAlert({
+        message: "Please complete all user fields.",
+      });
 
       return;
     }
@@ -499,9 +513,21 @@ export default function Settings() {
         username
       )
     ) {
-      alert(
-        "Username must be 3-30 characters and contain only lowercase letters, numbers, dots, underscores or hyphens."
-      );
+      showAlert({
+        message: "Username must be 3-30 characters and contain only lowercase letters, numbers, dots, underscores or hyphens.",
+      });
+
+      return;
+    }
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        email
+      )
+    ) {
+      showAlert({
+        message: "Please enter a valid real email address.",
+      });
 
       return;
     }
@@ -509,9 +535,9 @@ export default function Settings() {
     if (
       userForm.password.length < 6
     ) {
-      alert(
-        "Password must contain at least 6 characters."
-      );
+      showAlert({
+        message: "Password must contain at least 6 characters.",
+      });
 
       return;
     }
@@ -520,9 +546,9 @@ export default function Settings() {
       userForm.password !==
       userForm.confirmPassword
     ) {
-      alert(
-        "Passwords do not match."
-      );
+      showAlert({
+        message: "Passwords do not match.",
+      });
 
       return;
     }
@@ -535,9 +561,9 @@ export default function Settings() {
       );
 
     if (!selectedUserRole) {
-      alert(
-        "The selected role is no longer available. Please close the form and select the role again."
-      );
+      showAlert({
+        message: "The selected role is no longer available. Please close the form and select the role again.",
+      });
 
       return;
     }
@@ -549,9 +575,9 @@ export default function Settings() {
         Number(selectedUserRole.id);
 
       if (!Number.isInteger(currentRoleId)) {
-        alert(
-          "The selected role has an invalid ID."
-        );
+        showAlert({
+        message: "The selected role has an invalid ID.",
+      });
         return;
       }
 
@@ -568,6 +594,7 @@ export default function Settings() {
         await createSystemUser({
           fullName,
           username,
+          email,
           password:
             userForm.password,
           roleId:
@@ -596,19 +623,19 @@ export default function Settings() {
       setUserForm(emptyUserForm);
       setShowUserModal(false);
 
-      alert(
-        "User created successfully."
-      );
+      showAlert({
+        message: "User created successfully.",
+      });
     } catch (error) {
       console.error(
         "Create user error:",
         error
       );
 
-      alert(
-        error.message ||
-          "Could not create user."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not create user.",
+      });
     } finally {
       setSaving(false);
     }
@@ -618,9 +645,9 @@ export default function Settings() {
     roleId
   ) => {
     if (!canDeleteUsersRoles) {
-      alert(
-        "You do not have permission to delete roles."
-      );
+      showAlert({
+        message: "You do not have permission to delete roles.",
+      });
       return;
     }
 
@@ -633,16 +660,16 @@ export default function Settings() {
     if (
       role?.name === "Administrator"
     ) {
-      alert(
-        "The Administrator role cannot be deleted."
-      );
+      showAlert({
+        message: "The Administrator role cannot be deleted.",
+      });
 
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this role?"
-    );
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this role?",
+    });
 
     if (!confirmed) {
       return;
@@ -669,12 +696,12 @@ export default function Settings() {
         );
       }
     } catch (error) {
-      alert(
-        error.code === "ROLE_IN_USE"
+      showAlert({
+        message: error.code === "ROLE_IN_USE"
           ? error.message
           : error.message ||
-              "Could not delete role."
-      );
+              "Could not delete role.",
+      });
     }
   };
 
@@ -684,9 +711,9 @@ export default function Settings() {
       roleId
     ) => {
     if (!canEditUsersRoles) {
-      alert(
-        "You do not have permission to assign roles."
-      );
+      showAlert({
+        message: "You do not have permission to assign roles.",
+      });
       return;
     }
 
@@ -710,10 +737,10 @@ export default function Settings() {
 
         setSelectedRoleId(roleId);
       } catch (error) {
-        alert(
-          error.message ||
-            "Could not assign the role."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not assign the role.",
+      });
       }
     };
 
@@ -736,9 +763,9 @@ export default function Settings() {
   const handleSaveGeneralSettings =
     async () => {
     if (!canEditSettings) {
-      alert(
-        "You do not have permission to edit settings."
-      );
+      showAlert({
+        message: "You do not have permission to edit settings.",
+      });
       return;
     }
 
@@ -746,9 +773,9 @@ export default function Settings() {
         !generalSettings.companyName.trim() ||
         !generalSettings.companyEmail.trim()
       ) {
-        alert(
-          "Please enter the company name and email."
-        );
+        showAlert({
+        message: "Please enter the company name and email.",
+      });
 
         return;
       }
@@ -765,14 +792,14 @@ export default function Settings() {
           updatedSettings
         );
 
-        alert(
-          "General settings saved."
-        );
+        showAlert({
+        message: "General settings saved.",
+      });
       } catch (error) {
-        alert(
-          error.message ||
-            "Could not save general settings."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not save general settings.",
+      });
       } finally {
         setSaving(false);
       }
@@ -780,9 +807,9 @@ export default function Settings() {
 
   const handleLogout = async () => {
     const confirmed =
-      window.confirm(
-        "Are you sure you want to logout?"
-      );
+      await showConfirm({
+      message: "Are you sure you want to logout?",
+    });
 
     if (!confirmed) {
       return;
@@ -813,10 +840,10 @@ export default function Settings() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not logout."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not logout.",
+      });
     }
   };
 
@@ -1209,9 +1236,9 @@ export default function Settings() {
                     if (
                       !canAddUsersRoles
                     ) {
-                      alert(
-                        "You do not have permission to add roles."
-                      );
+                      showAlert({
+        message: "You do not have permission to add roles.",
+      });
                       return;
                     }
 
@@ -1555,6 +1582,24 @@ export default function Settings() {
                       handleUserFormChange
                     }
                     autoComplete="off"
+                    disabled={saving}
+                  />
+                </label>
+
+                <label>
+                  Real Email
+
+                  <input
+                    type="email"
+                    name="email"
+                    value={
+                      userForm.email
+                    }
+                    placeholder="ahmed@gmail.com"
+                    onChange={
+                      handleUserFormChange
+                    }
+                    autoComplete="email"
                     disabled={saving}
                   />
                 </label>

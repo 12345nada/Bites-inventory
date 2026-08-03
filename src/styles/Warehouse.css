@@ -156,29 +156,19 @@
   background: linear-gradient(90deg, #fffaf6, #fceddf);
 }
 
-.warehouse-table-wrapper th:first-child,
-.warehouse-table-wrapper td:first-child {
-  width: 42px;
-  text-align: center;
-}
 
-.warehouse-table-wrapper th:nth-child(2) { width: 17%; }
-.warehouse-table-wrapper th:nth-child(3) { width: 9%; }
-.warehouse-table-wrapper th:nth-child(4) { width: 17%; }
+.warehouse-table-wrapper th:nth-child(1) { width: 17%; }
+.warehouse-table-wrapper th:nth-child(2) { width: 9%; }
+.warehouse-table-wrapper th:nth-child(3) { width: 17%; }
 
-.warehouse-table-wrapper th:nth-child(5),
-.warehouse-table-wrapper th:nth-child(6) {
+.warehouse-table-wrapper th:nth-child(4),
+.warehouse-table-wrapper th:nth-child(5) {
   width: 13%;
 }
 
-.warehouse-table-wrapper th:nth-child(7) { width: 17%; }
-.warehouse-table-wrapper th:nth-child(8) { width: 10%; }
+.warehouse-table-wrapper th:nth-child(6) { width: 17%; }
+.warehouse-table-wrapper th:nth-child(7) { width: 10%; }
 
-.warehouse-table-wrapper input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: #7a2706;
-}
 
 .warehouse-name-cell {
   display: flex;
@@ -276,10 +266,8 @@
 }
 
 .warehouse-action-menu {
-  position: absolute;
-  top: 38px;
-  right: 0;
-  z-index: 999;
+  position: fixed;
+  z-index: 1500;
   width: 120px;
   padding: 6px;
   display: flex;
@@ -288,7 +276,20 @@
   background: #ffffff;
   border: 1px solid #eadbd0;
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(44, 25, 14, 0.16);
+  box-shadow: 0 14px 34px rgba(44, 25, 14, 0.2);
+  animation: warehouseMenuAppear 0.16s ease;
+}
+
+@keyframes warehouseMenuAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .warehouse-action-menu button {
@@ -326,18 +327,56 @@
 }
 
 .warehouse-pagination {
-  min-height: 48px;
-  padding: 0 14px;
+  min-height: 54px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid #f0e8e2;
+  gap: 12px;
+  border-top: 1px solid #f0ddcf;
 }
 
 .warehouse-pagination p {
   margin: 0;
-  color: #332e2a;
-  font-size: 9px;
+  color: #5f5751;
+  font-size: 10px;
+}
+
+.warehouse-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.warehouse-pagination button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #eadbd0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4b4038;
+  font-size: 10px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.warehouse-pagination button:hover:not(:disabled),
+.warehouse-pagination button.active {
+  border-color: #713006;
+  background: #713006;
+  color: #ffffff;
+}
+
+.warehouse-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 .warehouse-modal-overlay {

@@ -240,6 +240,7 @@
 .items-table-wrapper {
   width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .items-table-wrapper table {
@@ -267,41 +268,30 @@
   background: linear-gradient(90deg, #fffaf6, #fceddf);
 }
 
-.items-table-wrapper th:first-child,
-.items-table-wrapper td:first-child {
-  width: 42px;
-  text-align: center;
-}
 
-.items-table-wrapper th:nth-child(2) {
+.items-table-wrapper th:nth-child(1) {
   width: 18%;
 }
 
-.items-table-wrapper th:nth-child(3) {
+.items-table-wrapper th:nth-child(2) {
   width: 12%;
 }
 
-.items-table-wrapper th:nth-child(4) {
+.items-table-wrapper th:nth-child(3) {
   width: 11%;
 }
 
+.items-table-wrapper th:nth-child(4),
 .items-table-wrapper th:nth-child(5),
 .items-table-wrapper th:nth-child(6),
-.items-table-wrapper th:nth-child(7),
-.items-table-wrapper th:nth-child(8) {
+.items-table-wrapper th:nth-child(7) {
   width: 11%;
 }
 
-.items-table-wrapper th:nth-child(9) {
+.items-table-wrapper th:nth-child(8) {
   width: 10%;
 }
 
-.items-table-wrapper input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: #7a2706;
-  cursor: pointer;
-}
 
 .item-name-cell {
   display: flex;
@@ -383,44 +373,35 @@
 
 .item-more-wrapper {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
 }
 
 .item-action-menu {
-  position: absolute;
-  top: calc(100% + 7px);
-  right: 0;
-  z-index: 100;
-
-  width: 120px;
-  padding: 6px;
-
+  position: fixed;
+  z-index: 1500;
+  width: 132px;
+  padding: 7px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-
+  gap: 4px;
   background: #ffffff;
   border: 1px solid #eadbd0;
-  border-radius: 10px;
-
-  box-shadow: 0 12px 28px rgba(44, 25, 14, 0.16);
+  border-radius: 11px;
+  box-shadow: 0 14px 34px rgba(44, 25, 14, 0.2);
+  animation: itemMenuAppear 0.16s ease;
 }
 
-.item-action-menu::before {
-  content: "";
-  position: absolute;
-  top: -5px;
-  right: 13px;
+@keyframes itemMenuAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
 
-  width: 9px;
-  height: 9px;
-
-  background: #ffffff;
-  border-top: 1px solid #eadbd0;
-  border-left: 1px solid #eadbd0;
-
-  transform: rotate(45deg);
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .item-action-menu button {
@@ -461,12 +442,64 @@
   background: #fff0ef;
 }
 
+.items-pagination {
+  min-height: 54px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #f0ddcf;
+}
+
+.items-pagination p {
+  margin: 0;
+  color: #5f5751;
+  font-size: 10px;
+}
+
+.items-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.items-pagination button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #eadbd0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4b4038;
+  font-size: 10px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.items-pagination button:hover:not(:disabled),
+.items-pagination button.active {
+  border-color: #713006;
+  background: #713006;
+  color: #ffffff;
+}
+
+.items-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .items-empty-state {
   height: 100px;
   text-align: center !important;
   color: #8f8983 !important;
 }
-
 
 
 .item-modal-overlay {
@@ -855,6 +888,17 @@
     min-width: 900px;
   }
 
+  .items-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .items-pagination > div {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 3px;
+  }
+
   .item-images-area {
     flex-direction: column;
   }
@@ -960,7 +1004,7 @@
 }
 
 .item-add-category-button {
-  min-width: 118px;
+  min-width: 150px;
   height: 43px;
   padding: 0 12px;
 
@@ -1014,7 +1058,7 @@
 }
 
 .item-category-modal {
-  width: min(480px, 100%);
+  width: min(560px, 100%);
   padding: 24px;
 
   border: 1px solid #f0ddcf;
@@ -1167,6 +1211,123 @@
   }
 
   .item-category-modal-actions button {
+    width: 100%;
+  }
+}
+
+.item-category-form {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #f0ddcf;
+}
+
+.item-category-form-actions {
+  width: 100%;
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.item-category-form-actions button {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.item-category-cancel-edit-button {
+  border: 1px solid #eadbd0;
+  background: #ffffff;
+  color: #302a26;
+}
+
+.item-category-list {
+  max-height: 260px;
+  margin-top: 18px;
+  overflow-y: auto;
+  border: 1px solid #f0ddcf;
+  border-radius: 12px;
+  background: #fffdfb;
+}
+
+.item-category-row {
+  min-height: 52px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #f0e8e2;
+}
+
+.item-category-row:last-child {
+  border-bottom: none;
+}
+
+.item-category-row > span {
+  min-width: 0;
+  color: #302a26;
+  font-size: 11px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.item-category-row > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.item-category-row button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.item-category-edit-button {
+  border: 1px solid #eadbd0;
+  color: #713006;
+}
+
+.item-category-delete-button {
+  border: 1px solid #f2c8c4;
+  color: #d62d20;
+}
+
+.item-category-delete-button:hover {
+  background: #fff0ef;
+}
+
+.item-category-empty {
+  margin: 0;
+  padding: 24px 12px;
+  color: #8f8983;
+  font-size: 10px;
+  text-align: center;
+}
+
+.item-category-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.item-category-list::-webkit-scrollbar-thumb {
+  background: #d9cec5;
+  border-radius: 10px;
+}
+
+@media (max-width: 650px) {
+  .item-category-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .item-category-form-actions button {
     width: 100%;
   }
 }

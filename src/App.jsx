@@ -13,6 +13,9 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 import GetStarted from "./pages/GetStarted";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import VerifyResetOtp from "./pages/VerifyResetOtp";
+import ResetPassword from "./pages/ResetPassword";
 
 import Dashboard from "./pages/Dashboard";
 import Events from "./pages/Events";
@@ -39,6 +42,21 @@ function App() {
           <Route
             path="/login"
             element={<Login />}
+          />
+
+          <Route
+            path="/forgot-password"
+            element={<ForgotPassword />}
+          />
+
+          <Route
+            path="/verify-reset-otp"
+            element={<VerifyResetOtp />}
+          />
+
+          <Route
+            path="/reset-password"
+            element={<ResetPassword />}
           />
 
           <Route

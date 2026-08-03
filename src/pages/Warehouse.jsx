@@ -8,6 +8,8 @@ import "../styles/mobile-sidebar-offcanvas.css";
 
 import { useAuth } from "../context/AuthContext";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
@@ -39,6 +41,9 @@ const emptyForm = {
 };
 
 export default function Warehouse() {
+  const { showAlert, showConfirm } = useDialog();
+
+
   const { hasPermission } = useAuth();
 
   const canAdd = hasPermission("Warehouse", "add");
@@ -77,12 +82,54 @@ export default function Warehouse() {
     setOpenActionId,
   ] = useState(null);
 
+  const [actionMenuPosition, setActionMenuPosition] =
+    useState({
+      top: 0,
+      left: 0,
+    });
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const warehousesPerPage = 5;
+
   const [formData, setFormData] =
     useState(emptyForm);
 
   useEffect(() => {
     loadWarehouses();
   }, []);
+
+  useEffect(() => {
+    if (openActionId === null) {
+      return undefined;
+    }
+
+    const closeActionMenu = (event) => {
+      if (
+        event?.target instanceof Element &&
+        event.target.closest(".warehouse-more-wrapper")
+      ) {
+        return;
+      }
+
+      setOpenActionId(null);
+    };
+
+    const closeOnPageMove = () => {
+      setOpenActionId(null);
+    };
+
+    document.addEventListener("mousedown", closeActionMenu);
+    window.addEventListener("scroll", closeOnPageMove, true);
+    window.addEventListener("resize", closeOnPageMove);
+
+    return () => {
+      document.removeEventListener("mousedown", closeActionMenu);
+      window.removeEventListener("scroll", closeOnPageMove, true);
+      window.removeEventListener("resize", closeOnPageMove);
+    };
+  }, [openActionId]);
 
   const loadWarehouses = async () => {
     try {
@@ -98,10 +145,10 @@ export default function Warehouse() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not load warehouses."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not load warehouses.",
+      });
     } finally {
       setLoading(false);
     }
@@ -137,6 +184,39 @@ export default function Warehouse() {
     selectedBranch,
   ]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredWarehouses.length /
+        warehousesPerPage
+    )
+  );
+
+  const paginatedWarehouses = useMemo(() => {
+    const startIndex =
+      (currentPage - 1) *
+      warehousesPerPage;
+
+    return filteredWarehouses.slice(
+      startIndex,
+      startIndex + warehousesPerPage
+    );
+  }, [
+    filteredWarehouses,
+    currentPage,
+  ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setOpenActionId(null);
+  }, [searchValue, selectedBranch]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const handleFormChange = (event) => {
     const {
       name,
@@ -151,7 +231,9 @@ export default function Warehouse() {
 
   const openAddModal = () => {
     if (!canAdd) {
-      alert("You do not have permission to add warehouses.");
+      showAlert({
+        message: "You do not have permission to add warehouses.",
+      });
       return;
     }
 
@@ -163,7 +245,9 @@ export default function Warehouse() {
 
   const openEditModal = (warehouse) => {
     if (!canEdit) {
-      alert("You do not have permission to edit warehouses.");
+      showAlert({
+        message: "You do not have permission to edit warehouses.",
+      });
       return;
     }
 
@@ -207,9 +291,9 @@ export default function Warehouse() {
       );
 
     if (hasEmptyField) {
-      alert(
-        "Please complete all warehouse fields."
-      );
+      showAlert({
+        message: "Please complete all warehouse fields.",
+      });
 
       return false;
     }
@@ -222,9 +306,9 @@ export default function Warehouse() {
       !Number.isFinite(capacity) ||
       capacity <= 0
     ) {
-      alert(
-        "Total capacity must be greater than zero."
-      );
+      showAlert({
+        message: "Total capacity must be greater than zero.",
+      });
 
       return false;
     }
@@ -244,9 +328,9 @@ export default function Warehouse() {
             currentWarehouse.usedCapacity
           )
       ) {
-        alert(
-          "Total capacity cannot be less than the current used capacity."
-        );
+        showAlert({
+        message: "Total capacity cannot be less than the current used capacity.",
+      });
 
         return false;
       }
@@ -306,14 +390,14 @@ export default function Warehouse() {
       );
 
       if (error.code === "23505") {
-        alert(
-          "A warehouse with this name already exists."
-        );
+        showAlert({
+        message: "A warehouse with this name already exists.",
+      });
       } else {
-        alert(
-          error.message ||
-            "Could not save warehouse."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not save warehouse.",
+      });
       }
     } finally {
       setSaving(false);
@@ -324,7 +408,9 @@ export default function Warehouse() {
     warehouseId
   ) => {
     if (!canDelete) {
-      alert("You do not have permission to delete warehouses.");
+      showAlert({
+        message: "You do not have permission to delete warehouses.",
+      });
       return;
     }
 
@@ -337,17 +423,17 @@ export default function Warehouse() {
       warehouse &&
       Number(warehouse.usedCapacity) > 0
     ) {
-      alert(
-        "You cannot delete a warehouse that contains inventory."
-      );
+      showAlert({
+        message: "You cannot delete a warehouse that contains inventory.",
+      });
 
       setOpenActionId(null);
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this warehouse?"
-    );
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this warehouse?",
+    });
 
     if (!confirmed) {
       return;
@@ -373,14 +459,14 @@ export default function Warehouse() {
       );
 
       if (error.code === "23503") {
-        alert(
-          "This warehouse cannot be deleted because it is connected to events, purchases, dispatches, or company settings."
-        );
+        showAlert({
+        message: "This warehouse cannot be deleted because it is connected to events, purchases, dispatches, or company settings.",
+      });
       } else {
-        alert(
-          error.message ||
-            "Could not delete warehouse."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not delete warehouse.",
+      });
       }
     }
   };
@@ -414,6 +500,57 @@ export default function Warehouse() {
       availableCapacity,
       usagePercentage,
     };
+  };
+
+  const toggleActionMenu = (
+    event,
+    warehouseId
+  ) => {
+    event.stopPropagation();
+
+    if (openActionId === warehouseId) {
+      setOpenActionId(null);
+      return;
+    }
+
+    const buttonRect =
+      event.currentTarget.getBoundingClientRect();
+
+    const menuWidth = 120;
+    const menuHeight = 92;
+    const gap = 10;
+
+    const availableSpaceBelow =
+      window.innerHeight -
+      buttonRect.bottom;
+
+    const top =
+      availableSpaceBelow >=
+      menuHeight + gap
+        ? buttonRect.bottom + gap
+        : buttonRect.top -
+          menuHeight -
+          gap;
+
+    const preferredLeft =
+      buttonRect.right - menuWidth;
+
+    const left = Math.max(
+      12,
+      Math.min(
+        preferredLeft,
+        window.innerWidth -
+          menuWidth -
+          12
+      )
+    );
+
+    setActionMenuPosition({
+      top: Math.max(12, top),
+      left,
+    });
+
+    setOpenActionId(warehouseId);
   };
 
   return (
@@ -497,12 +634,6 @@ export default function Warehouse() {
             <table>
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      aria-label="Select all warehouses"
-                    />
-                  </th>
 
                   <th>Warehouse Name</th>
                   <th>Branch</th>
@@ -518,7 +649,7 @@ export default function Warehouse() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="7"
                       className="warehouse-empty-state"
                     >
                       Loading warehouses...
@@ -526,7 +657,7 @@ export default function Warehouse() {
                   </tr>
                 ) : filteredWarehouses.length >
                   0 ? (
-                  filteredWarehouses.map(
+                  paginatedWarehouses.map(
                     (warehouse) => {
                       const {
                         availableCapacity,
@@ -540,12 +671,6 @@ export default function Warehouse() {
                         <tr
                           key={warehouse.id}
                         >
-                          <td>
-                            <input
-                              type="checkbox"
-                              aria-label={`Select ${warehouse.name}`}
-                            />
-                          </td>
 
                           <td>
                             <div className="warehouse-name-cell">
@@ -629,15 +754,10 @@ export default function Warehouse() {
                                   type="button"
                                   className="warehouse-more-button"
                                   aria-label={`More actions for ${warehouse.name}`}
-                                  onClick={() =>
-                                    setOpenActionId(
-                                      (
-                                        currentId
-                                      ) =>
-                                        currentId ===
-                                        warehouse.id
-                                          ? null
-                                          : warehouse.id
+                                  onClick={(event) =>
+                                    toggleActionMenu(
+                                      event,
+                                      warehouse.id
                                     )
                                   }
                                 >
@@ -646,7 +766,13 @@ export default function Warehouse() {
 
                                 {openActionId ===
                                   warehouse.id && (
-                                  <div className="warehouse-action-menu">
+                                  <div
+                                    className="warehouse-action-menu"
+                                    style={{
+                                      top: actionMenuPosition.top,
+                                      left: actionMenuPosition.left,
+                                    }}
+                                  >
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -683,7 +809,7 @@ export default function Warehouse() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="7"
                       className="warehouse-empty-state"
                     >
                       No warehouses match your
@@ -698,9 +824,76 @@ export default function Warehouse() {
           <div className="warehouse-pagination">
             <p>
               Showing{" "}
-              {filteredWarehouses.length} of{" "}
-              {warehouses.length} warehouses
+              {filteredWarehouses.length === 0
+                ? 0
+                : (currentPage - 1) *
+                    warehousesPerPage +
+                  1}
+              {" - "}
+              {Math.min(
+                currentPage *
+                  warehousesPerPage,
+                filteredWarehouses.length
+              )}{" "}
+              of{" "}
+              {filteredWarehouses.length} warehouses
             </p>
+
+            <div>
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() =>
+                  setCurrentPage(
+                    (current) =>
+                      Math.max(
+                        1,
+                        current - 1
+                      )
+                  )
+                }
+              >
+                 ‹
+              </button>
+
+              {Array.from(
+                { length: totalPages },
+                (_, index) => index + 1
+              ).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={
+                    currentPage === pageNumber
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setCurrentPage(pageNumber)
+                  }
+                >
+                  {pageNumber}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                disabled={
+                  currentPage === totalPages
+                }
+                onClick={() =>
+                  setCurrentPage(
+                    (current) =>
+                      Math.min(
+                        totalPages,
+                        current + 1
+                      )
+                  )
+                }
+              >
+                  ›
+              </button>
+            </div>
           </div>
         </section>
       </main>

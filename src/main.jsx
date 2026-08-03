@@ -39,28 +39,34 @@ import {
   StaffProvider,
 } from "./context/StaffContext.jsx";
 
+import {
+  DialogProvider,
+} from "./context/DialogContext.jsx";
+
 createRoot(
   document.getElementById("root")
 ).render(
   <StrictMode>
-    <EventsProvider>
-      <ItemsProvider>
-        <PurchasesProvider>
-          <SuppliersProvider>
-            <WarehousesProvider>
-              <DispatchesProvider>
-                <ReturnsProvider>
-                  <SettingsProvider>
-                    <StaffProvider>
-                      <App />
-                    </StaffProvider>
-                  </SettingsProvider>
-                </ReturnsProvider>
-              </DispatchesProvider>
-            </WarehousesProvider>
-          </SuppliersProvider>
-        </PurchasesProvider>
-      </ItemsProvider>
-    </EventsProvider>
+    <DialogProvider>
+      <EventsProvider>
+        <ItemsProvider>
+          <PurchasesProvider>
+            <SuppliersProvider>
+              <WarehousesProvider>
+                <DispatchesProvider>
+                  <ReturnsProvider>
+                    <SettingsProvider>
+                      <StaffProvider>
+                        <App />
+                      </StaffProvider>
+                    </SettingsProvider>
+                  </ReturnsProvider>
+                </DispatchesProvider>
+              </WarehousesProvider>
+            </SuppliersProvider>
+          </PurchasesProvider>
+        </ItemsProvider>
+      </EventsProvider>
+    </DialogProvider>
   </StrictMode>
 );

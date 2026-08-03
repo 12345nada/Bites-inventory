@@ -7,6 +7,8 @@ import {
 import "../styles/mobile-sidebar-offcanvas.css";
 import { useAuth } from "../context/AuthContext";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
@@ -52,6 +54,9 @@ const createEmptyForm = () => ({
 });
 
 export default function Purchase() {
+  const { showAlert, showConfirm } = useDialog();
+
+
   const { hasPermission } = useAuth();
 
   const canAdd = hasPermission("Purchase", "add");
@@ -117,9 +122,51 @@ export default function Purchase() {
     setOpenActionId,
   ] = useState(null);
 
+  const [actionMenuPosition, setActionMenuPosition] =
+    useState({
+      top: 0,
+      left: 0,
+    });
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const purchasesPerPage = 5;
+
   useEffect(() => {
     loadPurchaseData();
   }, []);
+
+  useEffect(() => {
+    if (openActionId === null) {
+      return undefined;
+    }
+
+    const closeActionMenu = (event) => {
+      if (
+        event?.target instanceof Element &&
+        event.target.closest(".purchase-more-wrapper")
+      ) {
+        return;
+      }
+
+      setOpenActionId(null);
+    };
+
+    const closeOnPageMove = () => {
+      setOpenActionId(null);
+    };
+
+    document.addEventListener("mousedown", closeActionMenu);
+    window.addEventListener("scroll", closeOnPageMove, true);
+    window.addEventListener("resize", closeOnPageMove);
+
+    return () => {
+      document.removeEventListener("mousedown", closeActionMenu);
+      window.removeEventListener("scroll", closeOnPageMove, true);
+      window.removeEventListener("resize", closeOnPageMove);
+    };
+  }, [openActionId]);
 
   const loadPurchaseData = async () => {
     try {
@@ -138,10 +185,10 @@ export default function Purchase() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not load purchase orders."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not load purchase orders.",
+      });
     } finally {
       setLoading(false);
     }
@@ -192,6 +239,43 @@ export default function Purchase() {
     selectedWarehouse,
     selectedStatus,
   ]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredPurchases.length /
+        purchasesPerPage
+    )
+  );
+
+  const paginatedPurchases = useMemo(() => {
+    const startIndex =
+      (currentPage - 1) *
+      purchasesPerPage;
+
+    return filteredPurchases.slice(
+      startIndex,
+      startIndex + purchasesPerPage
+    );
+  }, [
+    filteredPurchases,
+    currentPage,
+  ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setOpenActionId(null);
+  }, [
+    searchValue,
+    selectedWarehouse,
+    selectedStatus,
+  ]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const totalSpent = useMemo(
     () =>
@@ -271,7 +355,9 @@ export default function Purchase() {
     purchase
   ) => {
     if (!canEdit) {
-      alert("You do not have permission to edit purchases.");
+      showAlert({
+        message: "You do not have permission to edit purchases.",
+      });
       return;
     }
 
@@ -328,9 +414,9 @@ export default function Purchase() {
       );
 
     if (hasEmptyField) {
-      alert(
-        "Please complete all purchase fields."
-      );
+      showAlert({
+        message: "Please complete all purchase fields.",
+      });
 
       return false;
     }
@@ -339,9 +425,9 @@ export default function Purchase() {
       Number(formData.quantity) <= 0 ||
       Number(formData.unitCost) < 0
     ) {
-      alert(
-        "Quantity must be greater than zero and unit cost cannot be negative."
-      );
+      showAlert({
+        message: "Quantity must be greater than zero and unit cost cannot be negative.",
+      });
 
       return false;
     }
@@ -350,9 +436,9 @@ export default function Purchase() {
       formData.expectedDate <
       formData.orderDate
     ) {
-      alert(
-        "Expected date cannot be before the order date."
-      );
+      showAlert({
+        message: "Expected date cannot be before the order date.",
+      });
 
       return false;
     }
@@ -410,10 +496,10 @@ export default function Purchase() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not save purchase order."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not save purchase order.",
+      });
     } finally {
       setSaving(false);
     }
@@ -441,10 +527,10 @@ export default function Purchase() {
 
       setOpenActionId(null);
     } catch (error) {
-      alert(
-        error.message ||
-          "Could not approve purchase order."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not approve purchase order.",
+      });
     }
   };
 
@@ -467,7 +553,9 @@ export default function Purchase() {
     event
   ) => {
     if (!canEdit) {
-      alert("You do not have permission to receive purchases.");
+      showAlert({
+        message: "You do not have permission to receive purchases.",
+      });
       return;
     }
 
@@ -504,21 +592,21 @@ export default function Purchase() {
         error
       );
 
-      alert(
-        error.message ||
-          "Could not receive purchase items."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not receive purchase items.",
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleCancelPurchase = (
+  const handleCancelPurchase = async (
     purchaseId
   ) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this purchase order?"
-    );
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to cancel this purchase order?",
+    });
 
     if (!confirmed) {
       return;
@@ -543,10 +631,10 @@ export default function Purchase() {
         setOpenActionId(null);
       })
       .catch((error) => {
-        alert(
-          error.message ||
-            "Could not cancel purchase order."
-        );
+        showAlert({
+        message: error.message ||
+            "Could not cancel purchase order.",
+      });
       });
   };
 
@@ -554,13 +642,15 @@ export default function Purchase() {
     purchaseId
   ) => {
     if (!canDelete) {
-      alert("You do not have permission to delete purchases.");
+      showAlert({
+        message: "You do not have permission to delete purchases.",
+      });
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this purchase order?"
-    );
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this purchase order?",
+    });
 
     if (!confirmed) {
       return;
@@ -579,21 +669,63 @@ export default function Purchase() {
 
       setOpenActionId(null);
     } catch (error) {
-      alert(
-        error.message ||
-          "Could not delete purchase order."
-      );
+      showAlert({
+        message: error.message ||
+          "Could not delete purchase order.",
+      });
     }
   };
 
   const toggleActionMenu = (
+    event,
     purchaseId
   ) => {
-    setOpenActionId((currentId) =>
-      currentId === purchaseId
-        ? null
-        : purchaseId
+    event.stopPropagation();
+
+    if (openActionId === purchaseId) {
+      setOpenActionId(null);
+      return;
+    }
+
+    const buttonRect =
+      event.currentTarget.getBoundingClientRect();
+
+    const menuWidth = 145;
+    const menuHeight = 176;
+    const gap = 10;
+
+    const availableSpaceBelow =
+      window.innerHeight -
+      buttonRect.bottom;
+
+    const top =
+      availableSpaceBelow >=
+      menuHeight + gap
+        ? buttonRect.bottom + gap
+        : buttonRect.top -
+          menuHeight -
+          gap;
+
+    const preferredLeft =
+      buttonRect.right -
+      menuWidth;
+
+    const left = Math.max(
+      12,
+      Math.min(
+        preferredLeft,
+        window.innerWidth -
+          menuWidth -
+          12
+      )
     );
+
+    setActionMenuPosition({
+      top: Math.max(12, top),
+      left,
+    });
+
+    setOpenActionId(purchaseId);
   };
 
   const getStatusClass = (status) =>
@@ -752,12 +884,6 @@ export default function Purchase() {
             <table>
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      aria-label="Select all purchases"
-                    />
-                  </th>
 
                   <th>PO Number</th>
                   <th>Supplier</th>
@@ -776,7 +902,7 @@ export default function Purchase() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan="11"
+                      colSpan="10"
                       className="purchase-empty-state"
                     >
                       Loading purchase orders...
@@ -784,15 +910,9 @@ export default function Purchase() {
                   </tr>
                 ) : filteredPurchases.length >
                   0 ? (
-                  filteredPurchases.map(
+                  paginatedPurchases.map(
                     (purchase) => (
                       <tr key={purchase.id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${purchase.poNumber}`}
-                          />
-                        </td>
 
                         <td>
                           {purchase.poNumber}
@@ -876,8 +996,9 @@ export default function Purchase() {
                                 type="button"
                                 className="purchase-more-button"
                                 aria-label={`More actions for ${purchase.poNumber}`}
-                                onClick={() =>
+                                onClick={(event) =>
                                   toggleActionMenu(
+                                    event,
                                     purchase.id
                                   )
                                 }
@@ -887,7 +1008,13 @@ export default function Purchase() {
 
                               {openActionId ===
                                 purchase.id && (
-                                <div className="purchase-action-menu">
+                                <div
+                                  className="purchase-action-menu"
+                                  style={{
+                                    top: `${actionMenuPosition.top}px`,
+                                    left: `${actionMenuPosition.left}px`,
+                                  }}
+                                >
                                   {purchase.status ===
                                     "Pending" && (
                                     <button
@@ -976,7 +1103,7 @@ export default function Purchase() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="11"
+                      colSpan="10"
                       className="purchase-empty-state"
                     >
                       No purchase orders match
@@ -991,9 +1118,72 @@ export default function Purchase() {
           <div className="purchase-pagination">
             <p>
               Showing{" "}
-              {filteredPurchases.length} of{" "}
-              {purchases.length} purchase orders
+              {filteredPurchases.length === 0
+                ? 0
+                : (currentPage - 1) *
+                    purchasesPerPage +
+                  1}
+              -
+              {Math.min(
+                currentPage *
+                  purchasesPerPage,
+                filteredPurchases.length
+              )}{" "}
+              of{" "}
+              {filteredPurchases.length} purchase
+              orders
             </p>
+
+            <div>
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((page) =>
+                    Math.max(1, page - 1)
+                  )
+                }
+                disabled={currentPage === 1}
+              >
+                 ‹
+              </button>
+
+              {Array.from(
+                { length: totalPages },
+                (_, index) => index + 1
+              ).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={
+                    currentPage === pageNumber
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setCurrentPage(pageNumber)
+                  }
+                >
+                  {pageNumber}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((page) =>
+                    Math.min(
+                      totalPages,
+                      page + 1
+                    )
+                  )
+                }
+                disabled={
+                  currentPage === totalPages
+                }
+              >
+                 ›
+              </button>
+            </div>
           </div>
         </section>
       </main>

@@ -1,10 +1,13 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
 
 import { useAuth } from "../context/AuthContext";
 
+
+import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
@@ -43,6 +46,9 @@ const emptyForm = {
 };
 
 export default function Suppliers() {
+  const { showAlert, showConfirm } = useDialog();
+
+
   const { hasPermission } = useAuth();
 
   const canAdd = hasPermission("Suppliers", "add");
@@ -78,8 +84,76 @@ export default function Suppliers() {
     setOpenActionId,
   ] = useState(null);
 
+  const [
+    actionMenuPosition,
+    setActionMenuPosition,
+  ] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const suppliersPerPage = 5;
+
   const [formData, setFormData] =
     useState(emptyForm);
+
+  useEffect(() => {
+    if (openActionId === null) {
+      return undefined;
+    }
+
+    const closeActionMenu = (event) => {
+      if (
+        event?.target instanceof Element &&
+        event.target.closest(".supplier-more-wrapper")
+      ) {
+        return;
+      }
+
+      setOpenActionId(null);
+    };
+
+    const closeOnPageMove = () => {
+      setOpenActionId(null);
+    };
+
+    document.addEventListener(
+      "mousedown",
+      closeActionMenu
+    );
+
+    window.addEventListener(
+      "scroll",
+      closeOnPageMove,
+      true
+    );
+
+    window.addEventListener(
+      "resize",
+      closeOnPageMove
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        closeActionMenu
+      );
+
+      window.removeEventListener(
+        "scroll",
+        closeOnPageMove,
+        true
+      );
+
+      window.removeEventListener(
+        "resize",
+        closeOnPageMove
+      );
+    };
+  }, [openActionId]);
 
   const filteredSuppliers = useMemo(() => {
     const normalizedSearch =
@@ -114,9 +188,95 @@ export default function Suppliers() {
     activeTab,
   ]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      filteredSuppliers.length /
+        suppliersPerPage
+    )
+  );
+
+  const paginatedSuppliers = useMemo(() => {
+    const startIndex =
+      (currentPage - 1) *
+      suppliersPerPage;
+
+    return filteredSuppliers.slice(
+      startIndex,
+      startIndex + suppliersPerPage
+    );
+  }, [
+    filteredSuppliers,
+    currentPage,
+  ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setOpenActionId(null);
+  }, [searchValue, activeTab]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const toggleActionMenu = (
+    event,
+    supplierId
+  ) => {
+    event.stopPropagation();
+
+    if (openActionId === supplierId) {
+      setOpenActionId(null);
+      return;
+    }
+
+    const buttonRect =
+      event.currentTarget.getBoundingClientRect();
+
+    const menuWidth = 135;
+    const menuHeight = 78;
+    const gap = 10;
+
+    const availableSpaceBelow =
+      window.innerHeight -
+      buttonRect.bottom;
+
+    const top =
+      availableSpaceBelow >=
+      menuHeight + gap
+        ? buttonRect.bottom + gap
+        : buttonRect.top -
+          menuHeight -
+          gap;
+
+    const preferredLeft =
+      buttonRect.right - menuWidth;
+
+    const left = Math.max(
+      12,
+      Math.min(
+        preferredLeft,
+        window.innerWidth -
+          menuWidth -
+          12
+      )
+    );
+
+    setActionMenuPosition({
+      top: Math.max(12, top),
+      left,
+    });
+
+    setOpenActionId(supplierId);
+  };
+
   const openAddModal = () => {
     if (!canAdd) {
-      alert("You do not have permission to add suppliers.");
+      showAlert({
+        message: "You do not have permission to add suppliers.",
+      });
       return;
     }
 
@@ -127,7 +287,9 @@ export default function Suppliers() {
 
   const openEditModal = (supplier) => {
     if (!canEdit) {
-      alert("You do not have permission to edit suppliers.");
+      showAlert({
+        message: "You do not have permission to edit suppliers.",
+      });
       return;
     }
 
@@ -185,9 +347,9 @@ export default function Suppliers() {
       );
 
     if (hasEmptyField) {
-      alert(
-        "Please complete all supplier fields."
-      );
+      showAlert({
+        message: "Please complete all supplier fields.",
+      });
       return;
     }
 
@@ -199,24 +361,28 @@ export default function Suppliers() {
       : addSupplier(formData);
 
     if (!result.success) {
-      alert(result.message);
+      showAlert({
+        message: result.message,
+      });
       return;
     }
 
     closeModal();
   };
 
-  const handleDeleteSupplier = (
+  const handleDeleteSupplier = async (
     supplierId
   ) => {
     if (!canDelete) {
-      alert("You do not have permission to delete suppliers.");
+      showAlert({
+        message: "You do not have permission to delete suppliers.",
+      });
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this supplier?"
-    );
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this supplier?",
+    });
 
     if (!confirmed) {
       return;
@@ -308,8 +474,8 @@ export default function Suppliers() {
               </thead>
 
               <tbody>
-                {filteredSuppliers.length > 0 ? (
-                  filteredSuppliers.map(
+                {paginatedSuppliers.length > 0 ? (
+                  paginatedSuppliers.map(
                     (supplier) => (
                       <tr key={supplier.id}>
                         <td>
@@ -374,15 +540,10 @@ export default function Suppliers() {
                               <button
                                 type="button"
                                 className="supplier-more-button"
-                                onClick={() =>
-                                  setOpenActionId(
-                                    (
-                                      currentId
-                                    ) =>
-                                      currentId ===
-                                      supplier.id
-                                        ? null
-                                        : supplier.id
+                                onClick={(event) =>
+                                  toggleActionMenu(
+                                    event,
+                                    supplier.id
                                   )
                                 }
                                 aria-label={`More actions for ${supplier.name}`}
@@ -392,7 +553,13 @@ export default function Suppliers() {
 
                               {openActionId ===
                                 supplier.id && (
-                                <div className="supplier-action-menu">
+                                <div
+                                  className="supplier-action-menu"
+                                  style={{
+                                    top: `${actionMenuPosition.top}px`,
+                                    left: `${actionMenuPosition.left}px`,
+                                  }}
+                                >
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -452,10 +619,80 @@ export default function Suppliers() {
             </table>
           </div>
 
-          <div className="suppliers-footer">
-            Showing{" "}
-            {filteredSuppliers.length} of{" "}
-            {suppliers.length} suppliers
+          <div className="suppliers-pagination">
+            <p>
+              Showing{" "}
+              {filteredSuppliers.length === 0
+                ? 0
+                : (currentPage - 1) *
+                    suppliersPerPage +
+                  1}
+              {" - "}
+              {Math.min(
+                currentPage *
+                  suppliersPerPage,
+                filteredSuppliers.length
+              )}{" "}
+              of{" "}
+              {filteredSuppliers.length}{" "}
+              suppliers
+            </p>
+
+            <div>
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() =>
+                  setCurrentPage(
+                    (current) =>
+                      Math.max(
+                        1,
+                        current - 1
+                      )
+                  )
+                }
+              >
+                ‹
+              </button>
+
+              {Array.from(
+                { length: totalPages },
+                (_, index) => index + 1
+              ).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={
+                    currentPage === pageNumber
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setCurrentPage(pageNumber)
+                  }
+                >
+                  {pageNumber}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                disabled={
+                  currentPage === totalPages
+                }
+                onClick={() =>
+                  setCurrentPage(
+                    (current) =>
+                      Math.min(
+                        totalPages,
+                        current + 1
+                      )
+                  )
+                }
+              >
+                 ›
+              </button>
+            </div>
           </div>
         </section>
       </main>
