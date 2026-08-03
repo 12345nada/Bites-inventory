@@ -12,8 +12,13 @@ import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
-  useSuppliers,
-} from "../context/SuppliersContext";
+  createSupplier,
+  getSuppliers,
+  removeSupplier,
+  toggleSupplierStatus,
+  updateSupplier,
+} from "../services/suppliersService";
+
 
 import "../styles/dashboard.css";
 import "../styles/Suppliers.css";
@@ -55,13 +60,14 @@ export default function Suppliers() {
   const canEdit = hasPermission("Suppliers", "edit");
   const canDelete = hasPermission("Suppliers", "delete");
 
-  const {
-    suppliers,
-    addSupplier,
-    updateSupplier,
-    toggleSupplierStatus,
-    deleteSupplier,
-  } = useSuppliers();
+  const [suppliers, setSuppliers] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
 
   const [searchValue, setSearchValue] =
     useState("");
@@ -99,6 +105,33 @@ export default function Suppliers() {
 
   const [formData, setFormData] =
     useState(emptyForm);
+
+  useEffect(() => {
+    loadSuppliers();
+  }, []);
+
+  const loadSuppliers = async () => {
+    try {
+      setLoading(true);
+
+      const data = await getSuppliers();
+
+      setSuppliers(data);
+    } catch (error) {
+      console.error(
+        "Error loading suppliers:",
+        error
+      );
+
+      showAlert({
+        message:
+          error.message ||
+          "Could not load suppliers.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (openActionId === null) {
@@ -164,6 +197,7 @@ export default function Suppliers() {
         normalizedSearch === "" ||
         [
           supplier.id,
+          supplier.supplierCode,
           supplier.name,
           supplier.contactPerson,
           supplier.phone,
@@ -310,6 +344,10 @@ export default function Suppliers() {
   };
 
   const closeModal = () => {
+    if (saving) {
+      return;
+    }
+
     setShowSupplierModal(false);
     setEditingSupplierId(null);
     setFormData(emptyForm);
@@ -327,7 +365,9 @@ export default function Suppliers() {
     }));
   };
 
-  const handleSaveSupplier = (event) => {
+  const handleSaveSupplier = async (
+    event
+  ) => {
     event.preventDefault();
 
     const requiredFields = [
@@ -348,26 +388,61 @@ export default function Suppliers() {
 
     if (hasEmptyField) {
       showAlert({
-        message: "Please complete all supplier fields.",
+        message:
+          "Please complete all supplier fields.",
       });
       return;
     }
 
-    const result = editingSupplierId
-      ? updateSupplier(
-          editingSupplierId,
-          formData
-        )
-      : addSupplier(formData);
+    try {
+      setSaving(true);
 
-    if (!result.success) {
+      if (editingSupplierId) {
+        const updatedSupplier =
+          await updateSupplier(
+            editingSupplierId,
+            formData
+          );
+
+        setSuppliers(
+          (currentSuppliers) =>
+            currentSuppliers.map(
+              (supplier) =>
+                supplier.id ===
+                editingSupplierId
+                  ? updatedSupplier
+                  : supplier
+            )
+        );
+      } else {
+        const createdSupplier =
+          await createSupplier(
+            formData
+          );
+
+        setSuppliers(
+          (currentSuppliers) => [
+            createdSupplier,
+            ...currentSuppliers,
+          ]
+        );
+      }
+
+      closeModal();
+    } catch (error) {
+      console.error(
+        "Error saving supplier:",
+        error
+      );
+
       showAlert({
-        message: result.message,
+        message:
+          error.message ||
+          "Could not save supplier.",
       });
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    closeModal();
   };
 
   const handleDeleteSupplier = async (
@@ -388,8 +463,68 @@ export default function Suppliers() {
       return;
     }
 
-    deleteSupplier(supplierId);
-    setOpenActionId(null);
+    try {
+      await removeSupplier(
+        supplierId
+      );
+
+      setSuppliers(
+        (currentSuppliers) =>
+          currentSuppliers.filter(
+            (supplier) =>
+              supplier.id !== supplierId
+          )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      console.error(
+        "Error deleting supplier:",
+        error
+      );
+
+      showAlert({
+        message:
+          error.message ||
+          "Could not delete supplier.",
+      });
+    }
+  };
+
+  const handleToggleSupplierStatus = async (
+    supplier
+  ) => {
+    try {
+      const updatedSupplier =
+        await toggleSupplierStatus(
+          supplier.id,
+          supplier.status
+        );
+
+      setSuppliers(
+        (currentSuppliers) =>
+          currentSuppliers.map(
+            (currentSupplier) =>
+              currentSupplier.id ===
+              supplier.id
+                ? updatedSupplier
+                : currentSupplier
+          )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      console.error(
+        "Error updating supplier status:",
+        error
+      );
+
+      showAlert({
+        message:
+          error.message ||
+          "Could not update supplier status.",
+      });
+    }
   };
 
   return (
@@ -474,7 +609,16 @@ export default function Suppliers() {
               </thead>
 
               <tbody>
-                {paginatedSuppliers.length > 0 ? (
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan="7"
+                      className="suppliers-empty-state"
+                    >
+                      Loading suppliers...
+                    </td>
+                  </tr>
+                ) : paginatedSuppliers.length > 0 ? (
                   paginatedSuppliers.map(
                     (supplier) => (
                       <tr key={supplier.id}>
@@ -490,7 +634,8 @@ export default function Suppliers() {
                               </strong>
 
                               <span>
-                                {supplier.id}
+                                {supplier.supplierCode ||
+                                  supplier.id}
                               </span>
                             </div>
                           </div>
@@ -562,14 +707,11 @@ export default function Suppliers() {
                                 >
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      toggleSupplierStatus(
-                                        supplier.id
-                                      );
-                                      setOpenActionId(
-                                        null
-                                      );
-                                    }}
+                                    onClick={() =>
+                                      handleToggleSupplierStatus(
+                                        supplier
+                                      )
+                                    }
                                   >
                                     {supplier.status ===
                                     "Active" ? (
@@ -812,6 +954,7 @@ export default function Suppliers() {
                 type="button"
                 className="supplier-cancel-button"
                 onClick={closeModal}
+                disabled={saving}
               >
                 Cancel
               </button>
@@ -819,10 +962,13 @@ export default function Suppliers() {
               <button
                 type="submit"
                 className="supplier-save-button"
+                disabled={saving}
               >
-                {editingSupplierId
-                  ? "Save Changes"
-                  : "Save Supplier"}
+                {saving
+                  ? "Saving..."
+                  : editingSupplierId
+                    ? "Save Changes"
+                    : "Save Supplier"}
               </button>
             </div>
           </form>
