@@ -60,6 +60,8 @@ export default function Settings() {
     useNavigate();
 
   const {
+    user,
+    profile,
     signOut,
     hasPermission,
   } = useAuth();
@@ -918,22 +920,6 @@ export default function Settings() {
                     name="companyName"
                     value={
                       generalSettings.companyName
-                    }
-                    onChange={
-                      handleGeneralChange
-                    }
-                    disabled={saving || !canEditSettings}
-                  />
-                </label>
-
-                <label>
-                  Company Email
-
-                  <input
-                    type="email"
-                    name="companyEmail"
-                    value={
-                      generalSettings.companyEmail
                     }
                     onChange={
                       handleGeneralChange

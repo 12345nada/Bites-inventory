@@ -139,7 +139,9 @@ export default function EventTable({
         <table>
           <thead>
             <tr>
-              <th>Event Type</th>
+              <th className="event-type-header">
+                Event Type
+              </th>
               <th>Client</th>
               <th>Date</th>
               <th>Location</th>
