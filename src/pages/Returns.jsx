@@ -16,6 +16,7 @@ import {
   createReturn,
   getReturnsPageData,
   removeReturn,
+  updateReturn,
 } from "../services/returnsService";
 
 import "../styles/dashboard.css";
@@ -153,6 +154,11 @@ export default function Returns() {
 
   const [formData, setFormData] =
     useState(createEmptyForm());
+
+  const [
+    editingReturnId,
+    setEditingReturnId,
+  ] = useState(null);
 
   useEffect(() => {
     loadReturnsData();
@@ -367,17 +373,24 @@ export default function Returns() {
   };
 
   const openAddModal = () => {
-    if (!canAdd) {
+    const requiredPermission =
+      editingReturnId
+        ? canEdit
+        : canAdd;
+
+    if (!requiredPermission) {
       showAlert({
         title: "Permission Denied",
-        message:
-          "You do not have permission to receive returns.",
+        message: editingReturnId
+          ? "You do not have permission to edit returns."
+          : "You do not have permission to receive returns.",
         type: "warning",
       });
 
       return;
     }
 
+    setEditingReturnId(null);
     setFormData(createEmptyForm());
     setOpenActionId(null);
     setShowReturnModal(true);
@@ -389,6 +402,7 @@ export default function Returns() {
     }
 
     setShowReturnModal(false);
+    setEditingReturnId(null);
     setFormData(createEmptyForm());
   };
 
@@ -551,26 +565,46 @@ export default function Returns() {
     try {
       setSaving(true);
 
-      const newReturn =
-        await createReturn(formData);
+      if (editingReturnId) {
+        const updatedReturn =
+          await updateReturn(
+            editingReturnId,
+            formData
+          );
 
-      setReturns(
-        (currentReturns) => [
-          newReturn,
-          ...currentReturns,
-        ]
-      );
+        setReturns(
+          (currentReturns) =>
+            currentReturns.map(
+              (returnRecord) =>
+                String(returnRecord.id) ===
+                String(editingReturnId)
+                  ? updatedReturn
+                  : returnRecord
+            )
+        );
+      } else {
+        const newReturn =
+          await createReturn(formData);
 
-      setAvailableDispatches(
-        (currentDispatches) =>
-          currentDispatches.filter(
-            (dispatch) =>
-              String(dispatch.id) !==
-              String(formData.dispatchId)
-          )
-      );
+        setReturns(
+          (currentReturns) => [
+            newReturn,
+            ...currentReturns,
+          ]
+        );
+
+        setAvailableDispatches(
+          (currentDispatches) =>
+            currentDispatches.filter(
+              (dispatch) =>
+                String(dispatch.id) !==
+                String(formData.dispatchId)
+            )
+        );
+      }
 
       setShowReturnModal(false);
+      setEditingReturnId(null);
       setFormData(createEmptyForm());
     } catch (error) {
       console.error(
@@ -607,7 +641,43 @@ export default function Returns() {
       return;
     }
 
+    setEditingReturnId(
+      returnRecord.id
+    );
+
+    setFormData({
+      dispatchId:
+        returnRecord.dispatchId,
+      dispatchCode:
+        returnRecord.dispatchCode,
+      eventReference:
+        returnRecord.eventReference,
+      warehouseId:
+        returnRecord.warehouseId,
+      warehouse:
+        returnRecord.warehouse,
+      returnDate:
+        returnRecord.returnDate,
+      returnedBy:
+        returnRecord.returnedBy,
+      notes:
+        returnRecord.notes || "",
+      items:
+        returnRecord.items.map(
+          (item) => ({
+            ...item,
+            goodReturned:
+              String(item.goodReturned),
+            damaged:
+              String(item.damaged),
+            missing:
+              String(item.missing),
+          })
+        ),
+    });
+
     setOpenActionId(null);
+    setShowReturnModal(true);
   };
 
   const handleDeleteReturn = async (
@@ -1022,11 +1092,16 @@ export default function Returns() {
           >
             <div className="returns-modal-header">
               <div>
-                <h2>Receive Return</h2>
+                <h2>
+                  {editingReturnId
+                    ? "Edit Return"
+                    : "Receive Return"}
+                </h2>
 
                 <p>
-                  Record returned, damaged and
-                  missing quantities.
+                  {editingReturnId
+                    ? "Update returned, damaged and missing quantities."
+                    : "Record returned, damaged and missing quantities."}
                 </p>
               </div>
 
@@ -1046,11 +1121,27 @@ export default function Returns() {
                 <select
                   value={formData.dispatchId}
                   onChange={handleDispatchChange}
-                  disabled={saving}
+                  disabled={
+                    saving ||
+                    Boolean(editingReturnId)
+                  }
                 >
                   <option value="">
                     Select delivered dispatch
                   </option>
+
+                  {editingReturnId &&
+                    formData.dispatchId && (
+                    <option
+                      value={
+                        formData.dispatchId
+                      }
+                    >
+                      {formData.dispatchCode}{" "}
+                      —{" "}
+                      {formData.eventReference}
+                    </option>
+                  )}
 
                   {availableDispatches.map(
                     (dispatch) => (
@@ -1070,8 +1161,9 @@ export default function Returns() {
                   )}
                 </select>
 
-                {availableDispatches.length ===
-                  0 && (
+                {!editingReturnId &&
+                  availableDispatches.length ===
+                    0 && (
                   <span className="returns-field-help">
                     No delivered dispatch is
                     currently waiting for return.
@@ -1306,12 +1398,16 @@ export default function Returns() {
                 disabled={
                   saving ||
                   !formData.dispatchId ||
-                  !canAdd
+                  (editingReturnId
+                    ? !canEdit
+                    : !canAdd)
                 }
               >
                 {saving
                   ? "Saving..."
-                  : "Complete Return"}
+                  : editingReturnId
+                    ? "Update Return"
+                    : "Complete Return"}
               </button>
             </div>
           </form>

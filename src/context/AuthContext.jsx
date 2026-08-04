@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -9,6 +10,11 @@ import {
 import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
+
+const normalizeKey = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
 
 const normalizePermissions = (
   permissionRows = []
@@ -22,7 +28,9 @@ const normalizePermissions = (
         return permissions;
       }
 
-      permissions[moduleName] = {
+      permissions[
+        normalizeKey(moduleName)
+      ] = {
         view: Boolean(row.can_view),
         add: Boolean(row.can_add),
         edit: Boolean(row.can_edit),
@@ -52,79 +60,77 @@ export const AuthProvider = ({
   const [loading, setLoading] =
     useState(true);
 
-  const getProfile = async (
-    userId
-  ) => {
-    if (!userId) {
-      setProfile(null);
-      return null;
-    }
+  const getProfile = useCallback(
+    async (userId) => {
+      if (!userId) {
+        setProfile(null);
+        return null;
+      }
 
-    const {
-      data,
-      error,
-    } = await supabase
-      .from("profiles")
-      .select(`
-        id,
-        full_name,
-        email,
-        avatar_url,
-        is_active,
-        role_id,
-        roles (
-          id,
-          name,
-          description,
-          is_system_admin,
-          role_permissions (
+      const { data, error } =
+        await supabase
+          .from("profiles")
+          .select(`
             id,
-            module_name,
-            can_view,
-            can_add,
-            can_edit,
-            can_delete
-          )
-        )
-      `)
-      .eq("id", userId)
-      .single();
+            full_name,
+            username,
+            email,
+            avatar_url,
+            is_active,
+            role_id,
+            roles (
+              id,
+              name,
+              description,
+              is_system_admin,
+              role_permissions (
+                id,
+                module_name,
+                can_view,
+                can_add,
+                can_edit,
+                can_delete
+              )
+            )
+          `)
+          .eq("id", userId)
+          .single();
 
-    if (error) {
-      console.error(
-        "Profile error:",
-        error
+      if (error) {
+        console.error(
+          "Profile error:",
+          error
+        );
+
+        setProfile(null);
+        return null;
+      }
+
+      const normalizedProfile = {
+        ...data,
+
+        permissions:
+          normalizePermissions(
+            data.roles
+              ?.role_permissions || []
+          ),
+      };
+
+      setProfile(
+        normalizedProfile
       );
 
-      setProfile(null);
-      return null;
-    }
-
-    const normalizedProfile = {
-      ...data,
-      permissions:
-        normalizePermissions(
-          data.roles
-            ?.role_permissions || []
-        ),
-    };
-
-    setProfile(
-      normalizedProfile
-    );
-
-    return normalizedProfile;
-  };
+      return normalizedProfile;
+    },
+    []
+  );
 
   useEffect(() => {
     let isMounted = true;
 
     const loadSession = async () => {
       try {
-        const {
-          data,
-          error,
-        } =
+        const { data, error } =
           await supabase.auth
             .getSession();
 
@@ -181,49 +187,49 @@ export const AuthProvider = ({
       data: {
         subscription,
       },
-    } =
-      supabase.auth
-        .onAuthStateChange(
-          async (
-            event,
-            currentSession
-          ) => {
-            if (!isMounted) {
-              return;
-            }
-
-            setSession(
-              currentSession
-            );
-
-            setUser(
-              currentSession
-                ?.user ?? null
-            );
-
-            if (
-              event ===
-                "SIGNED_OUT" ||
-              !currentSession?.user
-            ) {
-              setProfile(null);
-              setLoading(false);
-              return;
-            }
-
-            await getProfile(
-              currentSession.user.id
-            );
-
-            setLoading(false);
+    } = supabase.auth
+      .onAuthStateChange(
+        async (
+          event,
+          currentSession
+        ) => {
+          if (!isMounted) {
+            return;
           }
-        );
+
+          setSession(
+            currentSession
+          );
+
+          setUser(
+            currentSession?.user ??
+              null
+          );
+
+          if (
+            event ===
+              "SIGNED_OUT" ||
+            !currentSession?.user
+          ) {
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+
+          await getProfile(
+            currentSession.user.id
+          );
+
+          setLoading(false);
+        }
+      );
 
     return () => {
       isMounted = false;
+
       subscription.unsubscribe();
     };
-  }, []);
+  }, [getProfile]);
 
   const signOut = async () => {
     const { error } =
@@ -257,7 +263,7 @@ export const AuthProvider = ({
   };
 
   const refreshProfile =
-    async () => {
+    useCallback(async () => {
       if (!user?.id) {
         return null;
       }
@@ -265,28 +271,31 @@ export const AuthProvider = ({
       return getProfile(
         user.id
       );
-    };
+    }, [
+      user?.id,
+      getProfile,
+    ]);
 
   const updateProfileAvatar =
     async (avatarUrl) => {
       if (!user?.id) {
         return {
           success: false,
+
           error: new Error(
             "No authenticated user."
           ),
         };
       }
 
-      const {
-        error,
-      } = await supabase
-        .from("profiles")
-        .update({
-          avatar_url:
-            avatarUrl,
-        })
-        .eq("id", user.id);
+      const { error } =
+        await supabase
+          .from("profiles")
+          .update({
+            avatar_url:
+              avatarUrl,
+          })
+          .eq("id", user.id);
 
       if (error) {
         console.error(
@@ -318,41 +327,68 @@ export const AuthProvider = ({
       ?.is_system_admin
   );
 
-  const hasPermission = (
-    moduleName,
-    action = "view"
-  ) => {
-    if (isAdmin) {
-      return true;
-    }
+  const hasPermission =
+    useCallback(
+      (
+        moduleName,
+        action = "view"
+      ) => {
+        if (isAdmin) {
+          return true;
+        }
 
-    if (!moduleName) {
-      return false;
-    }
+        const moduleKey =
+          normalizeKey(
+            moduleName
+          );
 
-    return Boolean(
-      profile?.permissions?.[
-        moduleName
-      ]?.[action]
+        const actionKey =
+          normalizeKey(
+            action
+          );
+
+        if (
+          !moduleKey ||
+          !actionKey
+        ) {
+          return false;
+        }
+
+        return Boolean(
+          profile?.permissions?.[
+            moduleKey
+          ]?.[actionKey]
+        );
+      },
+      [
+        isAdmin,
+        profile?.permissions,
+      ]
     );
-  };
 
-  const hasAnyPermission = (
-    moduleNames = [],
-    action = "view"
-  ) => {
-    if (isAdmin) {
-      return true;
-    }
+  const hasAnyPermission =
+    useCallback(
+      (
+        moduleNames = [],
+        action = "view"
+      ) => {
+        if (isAdmin) {
+          return true;
+        }
 
-    return moduleNames.some(
-      (moduleName) =>
-        hasPermission(
-          moduleName,
-          action
-        )
+        return moduleNames.some(
+          (moduleName) =>
+            hasPermission(
+              moduleName,
+              action
+            )
+        );
+      },
+      [
+        isAdmin,
+        hasPermission,
+      ]
     );
-  };
 
   const value = useMemo(
     () => ({
@@ -360,8 +396,10 @@ export const AuthProvider = ({
       session,
       profile,
       loading,
+
       isAuthenticated:
         Boolean(user),
+
       isAdmin,
       hasPermission,
       hasAnyPermission,
@@ -375,6 +413,9 @@ export const AuthProvider = ({
       profile,
       loading,
       isAdmin,
+      hasPermission,
+      hasAnyPermission,
+      refreshProfile,
     ]
   );
 

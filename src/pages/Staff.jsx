@@ -12,8 +12,6 @@ import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
-  createDriver,
-  createWaiter,
   deleteStaff,
   getStaff,
   updateDriver,
@@ -26,7 +24,6 @@ import "../styles/Staff.css";
 import {
   FiUsers,
   FiTruck,
-  FiPlus,
   FiSearch,
   FiEdit2,
   FiTrash2,
@@ -92,7 +89,6 @@ export default function Staff() {
 
   const { hasPermission } = useAuth();
 
-  const canAdd = hasPermission("Staff", "add");
   const canEdit = hasPermission("Staff", "edit");
   const canDelete = hasPermission("Staff", "delete");
 
@@ -429,23 +425,6 @@ export default function Staff() {
     setOpenActionId(staffId);
   };
 
-  const openAddDriver = () => {
-    if (!canAdd) {
-      showAlert({
-        title: "Permission Denied",
-        message:
-          "You do not have permission to add staff.",
-        type: "warning",
-      });
-
-      return;
-    }
-
-    setEditingDriverId(null);
-    setDriverForm(driverEmptyForm);
-    setShowDriverModal(true);
-  };
-
   const openEditDriver = (driver) => {
     if (!canEdit) {
       showAlert({
@@ -467,23 +446,6 @@ export default function Staff() {
       },
     });
     setShowDriverModal(true);
-  };
-
-  const openAddWaiter = () => {
-    if (!canAdd) {
-      showAlert({
-        title: "Permission Denied",
-        message:
-          "You do not have permission to add staff.",
-        type: "warning",
-      });
-
-      return;
-    }
-
-    setEditingWaiterId(null);
-    setWaiterForm(waiterEmptyForm);
-    setShowWaiterModal(true);
   };
 
   const openEditWaiter = (waiter) => {
@@ -544,9 +506,8 @@ export default function Staff() {
     event.preventDefault();
 
     if (
-      editingDriverId
-        ? !canEdit
-        : !canAdd
+      !editingDriverId ||
+      !canEdit
     ) {
       return;
     }
@@ -568,31 +529,19 @@ export default function Staff() {
     try {
       setSaving(true);
 
-      if (editingDriverId) {
-        const updated =
-          await updateDriver(
-            editingDriverId,
-            driverForm
-          );
-
-        setDrivers((current) =>
-          current.map((driver) =>
-            driver.id === editingDriverId
-              ? updated
-              : driver
-          )
+      const updated =
+        await updateDriver(
+          editingDriverId,
+          driverForm
         );
-      } else {
-        const created =
-          await createDriver(
-            driverForm
-          );
 
-        setDrivers((current) => [
-          created,
-          ...current,
-        ]);
-      }
+      setDrivers((current) =>
+        current.map((driver) =>
+          driver.id === editingDriverId
+            ? updated
+            : driver
+        )
+      );
 
       setShowDriverModal(false);
       setEditingDriverId(null);
@@ -618,9 +567,8 @@ export default function Staff() {
     event.preventDefault();
 
     if (
-      editingWaiterId
-        ? !canEdit
-        : !canAdd
+      !editingWaiterId ||
+      !canEdit
     ) {
       return;
     }
@@ -639,31 +587,19 @@ export default function Staff() {
     try {
       setSaving(true);
 
-      if (editingWaiterId) {
-        const updated =
-          await updateWaiter(
-            editingWaiterId,
-            waiterForm
-          );
-
-        setWaiters((current) =>
-          current.map((waiter) =>
-            waiter.id === editingWaiterId
-              ? updated
-              : waiter
-          )
+      const updated =
+        await updateWaiter(
+          editingWaiterId,
+          waiterForm
         );
-      } else {
-        const created =
-          await createWaiter(
-            waiterForm
-          );
 
-        setWaiters((current) => [
-          created,
-          ...current,
-        ]);
-      }
+      setWaiters((current) =>
+        current.map((waiter) =>
+          waiter.id === editingWaiterId
+            ? updated
+            : waiter
+        )
+      );
 
       setShowWaiterModal(false);
       setEditingWaiterId(null);
@@ -884,21 +820,6 @@ export default function Staff() {
               their documents
             </p>
           </div>
-
-          <button
-            type="button"
-            className="add-staff-button"
-            onClick={
-              activeTab === "drivers"
-                ? openAddDriver
-                : openAddWaiter
-            }
-          >
-            <FiPlus />
-            {activeTab === "drivers"
-              ? "Add New Driver"
-              : "Add New Waiter"}
-          </button>
         </section>
 
         <section className="staff-table-card">
@@ -1362,9 +1283,7 @@ export default function Staff() {
             <div className="staff-modal-header">
               <div>
                 <h2>
-                  {editingDriverId
-                    ? "Edit Driver"
-                    : "Add New Driver"}
+"Edit Driver"
                 </h2>
                 <p>
                   Enter driver and vehicle
@@ -1538,16 +1457,12 @@ export default function Staff() {
                 className="staff-save-button"
                 disabled={
                   saving ||
-                  (editingDriverId
-                    ? !canEdit
-                    : !canAdd)
+                  !canEdit
                 }
               >
                 {saving
                   ? "Saving..."
-                  : editingDriverId
-                    ? "Save Changes"
-                    : "Save Driver"}
+                  : "Save Changes"}
               </button>
             </div>
           </form>
@@ -1571,9 +1486,7 @@ export default function Staff() {
             <div className="staff-modal-header">
               <div>
                 <h2>
-                  {editingWaiterId
-                    ? "Edit Waiter"
-                    : "Add New Waiter"}
+"Edit Waiter"
                 </h2>
                 <p>
                   Enter waiter information and
@@ -1784,16 +1697,12 @@ export default function Staff() {
                 className="staff-save-button"
                 disabled={
                   saving ||
-                  (editingWaiterId
-                    ? !canEdit
-                    : !canAdd)
+                  !canEdit
                 }
               >
                 {saving
                   ? "Saving..."
-                  : editingWaiterId
-                    ? "Save Changes"
-                    : "Save Waiter"}
+                  : "Save Changes"}
               </button>
             </div>
           </form>

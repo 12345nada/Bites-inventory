@@ -388,10 +388,6 @@ export async function createSystemUser(
           userData.username
             .trim()
             .toLowerCase(),
-        email:
-          userData.email
-            .trim()
-            .toLowerCase(),
         password:
           userData.password,
         roleId,

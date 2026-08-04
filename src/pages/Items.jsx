@@ -405,7 +405,22 @@ export default function Items() {
     }));
   };
 
-  const openCategoryModal = () => {
+  const openCategoryModal = async () => {
+    if (
+      !canAdd &&
+      !canEdit &&
+      !canDelete
+    ) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to manage item categories.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     setEditingCategoryId(null);
     setCategoryName("");
     setShowAddCategory(true);
@@ -419,7 +434,18 @@ export default function Items() {
     setCategoryName("");
   };
 
-  const startEditCategory = (category) => {
+  const startEditCategory = async (category) => {
+    if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to edit item categories.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     setEditingCategoryId(category.id);
     setCategoryName(category.name);
   };
@@ -431,6 +457,23 @@ export default function Items() {
 
   const handleSaveCategory = async (event) => {
     event.preventDefault();
+
+    const requiredPermission =
+      editingCategoryId
+        ? canEdit
+        : canAdd;
+
+    if (!requiredPermission) {
+      await showAlert({
+        title: "Permission Denied",
+        message: editingCategoryId
+          ? "You do not have permission to edit item categories."
+          : "You do not have permission to add item categories.",
+        type: "warning",
+      });
+
+      return;
+    }
 
     const normalizedName = categoryName.trim();
 
@@ -526,6 +569,17 @@ export default function Items() {
   };
 
   const handleDeleteCategory = async (category) => {
+    if (!canDelete) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to delete item categories.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     const confirmed = await showConfirm({
       message: `Are you sure you want to delete ${category.name}?`,
     });
@@ -793,6 +847,23 @@ console.log(
   const handleSaveItem = async (event) => {
     event.preventDefault();
 
+    const requiredPermission =
+      editingItemId
+        ? canEdit
+        : canAdd;
+
+    if (!requiredPermission) {
+      await showAlert({
+        title: "Permission Denied",
+        message: editingItemId
+          ? "You do not have permission to edit items."
+          : "You do not have permission to add items.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     const requiredFields = [
       "itemCode",
       "name",
@@ -953,6 +1024,17 @@ console.log(
   };
 
   const deleteItem = async (item) => {
+    if (!canDelete) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to delete items.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     const confirmed = await showConfirm({
       message: `Are you sure you want to delete ${item.name}?`,
     });

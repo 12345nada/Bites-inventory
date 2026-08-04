@@ -1,11 +1,13 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 import { useAuth } from "../context/AuthContext";
 
@@ -31,6 +33,7 @@ import {
   FiSearch,
   FiDownload,
   FiFilter,
+  FiChevronDown,
 } from "react-icons/fi";
 
 const formatDate = (dateValue) => {
@@ -114,10 +117,47 @@ export default function Reports() {
   const [currentPage, setCurrentPage] =
     useState(1);
 
+  const [
+    isExportMenuOpen,
+    setIsExportMenuOpen,
+  ] = useState(false);
+
+  const exportMenuRef =
+    useRef(null);
+
   const rowsPerPage = 5;
 
   useEffect(() => {
     loadReports();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (
+      event
+    ) => {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(
+          event.target
+        )
+      ) {
+        setIsExportMenuOpen(
+          false
+        );
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      handleOutsideClick
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
+    };
   }, []);
 
   const loadReports = async () => {
@@ -421,7 +461,18 @@ export default function Reports() {
     );
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
+    if (!canAdd) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to export reports.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     if (filteredRows.length === 0) {
       showAlert({
         message: "There is no data to export.",
@@ -510,6 +561,92 @@ export default function Reports() {
     );
   };
 
+  const exportExcel = async () => {
+    if (!canAdd) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to export reports.",
+        type: "warning",
+      });
+
+      return;
+    }
+
+    if (filteredRows.length === 0) {
+      await showAlert({
+        message:
+          "There is no data to export.",
+      });
+
+      return;
+    }
+
+    const worksheetRows =
+      filteredRows.map((row) => {
+        const cells =
+          getExportCells(row);
+
+        return Object.fromEntries(
+          reportConfig.columns.map(
+            (column, index) => [
+              column,
+              cells[index] ?? "",
+            ]
+          )
+        );
+      });
+
+    const worksheet =
+      XLSX.utils.json_to_sheet(
+        worksheetRows,
+        {
+          header:
+            reportConfig.columns,
+        }
+      );
+
+    const workbook =
+      XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      reportConfig.title
+        .replace(
+          /[\\/?*\[\]:]/g,
+          ""
+        )
+        .slice(0, 31)
+    );
+
+    const fileName =
+      `${reportConfig.title
+        .toLowerCase()
+        .replace(
+          /\s+/g,
+          "-"
+        )}.xlsx`;
+
+    XLSX.writeFile(
+      workbook,
+      fileName
+    );
+  };
+
+  const handleExport = async (
+    type
+  ) => {
+    setIsExportMenuOpen(false);
+
+    if (type === "pdf") {
+      await exportPdf();
+      return;
+    }
+
+    await exportExcel();
+  };
+
   const renderCell = (
     cell,
     cellIndex
@@ -546,15 +683,67 @@ export default function Reports() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="export-pdf-button"
-            onClick={exportPdf}
-            disabled={loading}
+          <div
+            className="reports-export-wrapper"
+            ref={exportMenuRef}
           >
-            <FiDownload />
-            Export PDF
-          </button>
+            <button
+              type="button"
+              className="export-pdf-button reports-export-button"
+              onClick={() =>
+                setIsExportMenuOpen(
+                  (current) =>
+                    !current
+                )
+              }
+              disabled={loading}
+              aria-haspopup="menu"
+              aria-expanded={
+                isExportMenuOpen
+              }
+            >
+              <FiDownload />
+              Export
+              <FiChevronDown
+                className={
+                  isExportMenuOpen
+                    ? "open"
+                    : ""
+                }
+              />
+            </button>
+
+            {isExportMenuOpen && (
+              <div
+                className="reports-export-menu"
+                role="menu"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() =>
+                    handleExport(
+                      "pdf"
+                    )
+                  }
+                >
+                  Export as PDF
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() =>
+                    handleExport(
+                      "excel"
+                    )
+                  }
+                >
+                  Export as Excel
+                </button>
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="reports-filter-card">

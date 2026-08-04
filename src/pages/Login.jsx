@@ -131,6 +131,11 @@ const Login = () => {
   ] = useState("");
 
   const [
+    accountType,
+    setAccountType,
+  ] = useState("employee");
+
+  const [
     formData,
     setFormData,
   ] = useState({
@@ -182,6 +187,7 @@ const Login = () => {
                 username,
                 password:
                   formData.password,
+                accountType,
               },
             }
           );
@@ -322,6 +328,42 @@ const Login = () => {
         );
       }
 
+      const normalizedRoleName =
+        String(
+          profile.roles.name || ""
+        ).toLowerCase();
+
+      const isAdministrativeAccount =
+        Boolean(
+          profile.roles
+            .is_system_admin
+        ) ||
+        normalizedRoleName.includes(
+          "admin"
+        ) ||
+        normalizedRoleName.includes(
+          "manager"
+        );
+
+      const selectedAdministrativeTab =
+        accountType === "admin";
+
+      if (
+        selectedAdministrativeTab !==
+        isAdministrativeAccount
+      ) {
+        await supabase.auth
+          .signOut({
+            scope: "local",
+          });
+
+        throw new Error(
+          selectedAdministrativeTab
+            ? "This account is not an Admin or Manager account."
+            : "Please use the Admin / Manager tab for this account."
+        );
+      }
+
       const firstAllowedRoute =
         getFirstAllowedRoute(
           profile
@@ -423,6 +465,56 @@ const Login = () => {
             account
           </p>
 
+          <div
+            className="login-account-tabs"
+            role="tablist"
+            aria-label="Account type"
+          >
+            <button
+              type="button"
+              role="tab"
+              className={
+                accountType === "admin"
+                  ? "active"
+                  : ""
+              }
+              aria-selected={
+                accountType === "admin"
+              }
+              onClick={() => {
+                setAccountType("admin");
+                setErrorMessage("");
+              }}
+              disabled={isSubmitting}
+            >
+              Admin / Manager
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              className={
+                accountType ===
+                "employee"
+                  ? "active"
+                  : ""
+              }
+              aria-selected={
+                accountType ===
+                "employee"
+              }
+              onClick={() => {
+                setAccountType(
+                  "employee"
+                );
+                setErrorMessage("");
+              }}
+              disabled={isSubmitting}
+            >
+              Employee
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit}>
             <div className="input-group">
               <label htmlFor="username">
@@ -497,13 +589,16 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="remember-forgot">
-              <span />
+            {accountType ===
+              "admin" && (
+              <div className="remember-forgot">
+                <span />
 
-              <Link to="/forgot-password">
-                Forgot Password?
-              </Link>
-            </div>
+                <Link to="/forgot-password">
+                  Forgot Password?
+                </Link>
+              </div>
+            )}
 
             {errorMessage && (
               <p

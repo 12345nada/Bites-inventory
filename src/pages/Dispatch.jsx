@@ -654,6 +654,23 @@ export default function Dispatch() {
   ) => {
     event.preventDefault();
 
+    const requiredPermission =
+      editingDispatchId
+        ? canEdit
+        : canAdd;
+
+    if (!requiredPermission) {
+      await showAlert({
+        title: "Permission Denied",
+        message: editingDispatchId
+          ? "You do not have permission to edit dispatches."
+          : "You do not have permission to add dispatches.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     const normalizedData =
       validateDispatchForm();
 
@@ -752,6 +769,16 @@ export default function Dispatch() {
   const handleCancelDispatch = async (
     dispatchId
   ) => {
+    if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to edit dispatches.",
+        type: "warning",
+      });
+
+      return;
+    }
     const confirmed = await showConfirm({
       message: "Are you sure you want to cancel this dispatch?",
     });

@@ -370,6 +370,23 @@ export default function Suppliers() {
   ) => {
     event.preventDefault();
 
+    const requiredPermission =
+      editingSupplierId
+        ? canEdit
+        : canAdd;
+
+    if (!requiredPermission) {
+      await showAlert({
+        title: "Permission Denied",
+        message: editingSupplierId
+          ? "You do not have permission to edit suppliers."
+          : "You do not have permission to add suppliers.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     const requiredFields = [
       "name",
       "contactPerson",
@@ -494,6 +511,16 @@ export default function Suppliers() {
   const handleToggleSupplierStatus = async (
     supplier
   ) => {
+    if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to edit suppliers.",
+        type: "warning",
+      });
+
+      return;
+    }
     try {
       const updatedSupplier =
         await toggleSupplierStatus(

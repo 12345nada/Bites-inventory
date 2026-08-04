@@ -344,6 +344,23 @@ export default function Warehouse() {
   ) => {
     event.preventDefault();
 
+    const requiredPermission =
+      editingWarehouseId
+        ? canEdit
+        : canAdd;
+
+    if (!requiredPermission) {
+      await showAlert({
+        title: "Permission Denied",
+        message: editingWarehouseId
+          ? "You do not have permission to edit warehouses."
+          : "You do not have permission to add warehouses.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     if (!validateWarehouseForm()) {
       return;
     }

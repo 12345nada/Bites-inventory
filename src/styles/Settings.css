@@ -381,6 +381,46 @@
   font-size: 9px;
 }
 
+.permissions-master-toggle {
+  margin-bottom: 14px;
+  padding: 12px 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  border: 1px solid #f0ddcf;
+  border-radius: 10px;
+
+  background: #fffaf6;
+}
+
+.permissions-master-toggle > div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.permissions-master-toggle strong {
+  color: #332e2a;
+  font-size: 10px;
+}
+
+.permissions-master-toggle
+  > div
+  > span {
+  color: #81766e;
+  font-size: 8px;
+}
+
+.permissions-master-toggle
+  .permission-switch {
+  flex-shrink: 0;
+}
+
 .permission-table {
   overflow-x: auto;
   overflow-y: hidden;
@@ -999,6 +1039,10 @@
 
   .permissions-panel {
     padding: 14px;
+  }
+
+  .permissions-master-toggle {
+    padding: 12px 14px;
   }
 
   .permissions-panel-header {

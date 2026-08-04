@@ -344,7 +344,18 @@ export default function Purchase() {
     }));
   };
 
-  const openNewPurchaseModal = () => {
+  const openNewPurchaseModal = async () => {
+    if (!canAdd) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to add purchases.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     setEditingPurchaseId(null);
     setFormData(createEmptyForm());
     setOpenActionId(null);
@@ -451,6 +462,23 @@ export default function Purchase() {
   ) => {
     event.preventDefault();
 
+    const requiredPermission =
+      editingPurchaseId
+        ? canEdit
+        : canAdd;
+
+    if (!requiredPermission) {
+      await showAlert({
+        title: "Permission Denied",
+        message: editingPurchaseId
+          ? "You do not have permission to edit purchases."
+          : "You do not have permission to add purchases.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     if (!validatePurchaseForm()) {
       return;
     }
@@ -508,6 +536,17 @@ export default function Purchase() {
   const handleApprovePurchase = async (
     purchaseId
   ) => {
+    if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to approve purchases.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     try {
       const updatedPurchase =
         await updatePurchaseStatus(
@@ -534,7 +573,18 @@ export default function Purchase() {
     }
   };
 
-  const openReceiveModal = (purchase) => {
+  const openReceiveModal = async (purchase) => {
+    if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to receive purchases.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     setReceivingPurchase(purchase);
     setOpenActionId(null);
     setShowReceiveModal(true);
@@ -604,6 +654,17 @@ export default function Purchase() {
   const handleCancelPurchase = async (
     purchaseId
   ) => {
+    if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to cancel purchases.",
+        type: "warning",
+      });
+
+      return;
+    }
+
     const confirmed = await showConfirm({
       message: "Are you sure you want to cancel this purchase order?",
     });

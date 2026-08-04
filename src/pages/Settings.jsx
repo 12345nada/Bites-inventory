@@ -12,6 +12,7 @@ import Topbar from "../components/dashboard/Topbar";
 import "../styles/mobile-sidebar-offcanvas.css";
 import "../styles/dashboard.css";
 import "../styles/Settings.css";
+import "../styles/Staff.css";
 
 import {
   assignEmployeeRole,
@@ -24,6 +25,11 @@ import {
 } from "../services/settingsService";
 
 import {
+  createDriver,
+  createWaiter,
+} from "../services/staffService";
+
+import {
   FiSearch,
   FiPlus,
   FiTrash2,
@@ -31,12 +37,11 @@ import {
   FiShield,
   FiUser,
   FiX,
-  FiLogOut,
+  FiUpload,
+  FiFileText,
+  FiImage,
 } from "react-icons/fi";
 
-import {
-  useNavigate,
-} from "react-router-dom";
 
 import {
   useAuth,
@@ -45,26 +50,69 @@ import {
 const emptyUserForm = {
   fullName: "",
   username: "",
-  email: "",
   password: "",
   confirmPassword: "",
   roleId: "",
   branch: "Cairo",
 };
 
+const driverEmptyForm = {
+  phone: "",
+  nationalId: "",
+  licenseNumber: "",
+  licenseExpiryDate: "",
+  carNumber: "",
+  carType: "Van",
+  status: "Active",
+  documents: {
+    nationalIdImage: null,
+    licenseImage: null,
+  },
+};
+
+const waiterEmptyForm = {
+  phone: "",
+  nationalId: "",
+  status: "Active",
+  documents: {
+    personalPhoto: null,
+    nationalIdImage: null,
+    healthCertificate: {
+      file: null,
+      expiryDate: "",
+    },
+    contract: {
+      file: null,
+      startDate: "",
+      endDate: "",
+    },
+  },
+};
+
+
 export default function Settings() {
   const { showAlert, showConfirm } = useDialog();
 
 
-  const navigate =
-    useNavigate();
 
   const {
     user,
     profile,
-    signOut,
     hasPermission,
+    refreshProfile,
   } = useAuth();
+
+  const canViewSettings =
+    hasPermission(
+      "Settings",
+      "view"
+    );
+
+  const canViewUsersRoles =
+    hasPermission(
+      "Users / Role",
+      "view"
+    );
 
   const canEditSettings =
     hasPermission(
@@ -145,6 +193,32 @@ export default function Settings() {
     setPermissionDraft,
   ] = useState({});
 
+  const allPermissionsEnabled =
+    useMemo(() => {
+      if (
+        modules.length === 0 ||
+        actions.length === 0
+      ) {
+        return false;
+      }
+
+      return modules.every(
+        (moduleName) =>
+          actions.every(
+            (action) =>
+              Boolean(
+                permissionDraft[
+                  moduleName
+                ]?.[action]
+              )
+          )
+      );
+    }, [
+      modules,
+      actions,
+      permissionDraft,
+    ]);
+
   const [
     showRoleModal,
     setShowRoleModal,
@@ -164,9 +238,46 @@ export default function Settings() {
   const [userForm, setUserForm] =
     useState(emptyUserForm);
 
+  const [
+    driverForm,
+    setDriverForm,
+  ] = useState(
+    driverEmptyForm
+  );
+
+  const [
+    waiterForm,
+    setWaiterForm,
+  ] = useState(
+    waiterEmptyForm
+  );
+
   useEffect(() => {
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (
+      activeTab === "general" &&
+      !canViewSettings &&
+      canViewUsersRoles
+    ) {
+      setActiveTab("permissions");
+      return;
+    }
+
+    if (
+      activeTab === "permissions" &&
+      !canViewUsersRoles &&
+      canViewSettings
+    ) {
+      setActiveTab("general");
+    }
+  }, [
+    activeTab,
+    canViewSettings,
+    canViewUsersRoles,
+  ]);
 
   const loadSettings = async () => {
     try {
@@ -240,6 +351,36 @@ export default function Settings() {
     ]
   );
 
+  const selectedUserRole =
+    useMemo(
+      () =>
+        roles.find(
+          (role) =>
+            String(role.id) ===
+            String(userForm.roleId)
+        ),
+      [
+        roles,
+        userForm.roleId,
+      ]
+    );
+
+  const selectedUserRoleName =
+    String(
+      selectedUserRole?.name || ""
+    )
+      .trim()
+      .toLowerCase();
+
+  const isDriverRole =
+    selectedUserRoleName ===
+    "driver";
+
+  const isWaiterRole =
+    selectedUserRoleName ===
+    "waiter";
+
+
   useEffect(() => {
     setPermissionDraft(
       selectedRole
@@ -311,6 +452,41 @@ export default function Settings() {
     );
   };
 
+  const handleToggleAllPermissions =
+    () => {
+      if (!canEditUsersRoles) {
+        showAlert({
+          message:
+            "You do not have permission to edit permissions.",
+        });
+        return;
+      }
+
+      const nextValue =
+        !allPermissionsEnabled;
+
+      const updatedPermissions =
+        Object.fromEntries(
+          modules.map(
+            (moduleName) => [
+              moduleName,
+              Object.fromEntries(
+                actions.map(
+                  (action) => [
+                    action,
+                    nextValue,
+                  ]
+                )
+              ),
+            ]
+          )
+        );
+
+      setPermissionDraft(
+        updatedPermissions
+      );
+    };
+
   const savePermissions = async () => {
     if (!canEditUsersRoles) {
       showAlert({
@@ -333,6 +509,13 @@ export default function Settings() {
         selectedRoleId,
         permissionDraft
       );
+
+      if (
+        String(profile?.role_id) ===
+        String(selectedRoleId)
+      ) {
+        await refreshProfile();
+      }
 
       setRoles((currentRoles) =>
         currentRoles.map((role) =>
@@ -443,6 +626,14 @@ export default function Settings() {
           : "",
     });
 
+    setDriverForm(
+      driverEmptyForm
+    );
+
+    setWaiterForm(
+      waiterEmptyForm
+    );
+
     setShowUserModal(true);
   };
 
@@ -453,6 +644,12 @@ export default function Settings() {
 
     setShowUserModal(false);
     setUserForm(emptyUserForm);
+    setDriverForm(
+      driverEmptyForm
+    );
+    setWaiterForm(
+      waiterEmptyForm
+    );
   };
 
   const handleUserFormChange = (
@@ -468,6 +665,152 @@ export default function Settings() {
       [name]: value,
     }));
   };
+
+  const handleDriverChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setDriverForm(
+      (currentForm) => ({
+        ...currentForm,
+        [name]: value,
+      })
+    );
+  };
+
+  const handleWaiterChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setWaiterForm(
+      (currentForm) => ({
+        ...currentForm,
+        [name]: value,
+      })
+    );
+  };
+
+  const setDriverDocument = (
+    field,
+    file
+  ) => {
+    setDriverForm(
+      (currentForm) => ({
+        ...currentForm,
+        documents: {
+          ...currentForm.documents,
+          [field]: file
+            ? {
+                name: file.name,
+                file,
+              }
+            : null,
+        },
+      })
+    );
+  };
+
+  const setWaiterDocument = (
+    field,
+    file
+  ) => {
+    setWaiterForm(
+      (currentForm) => {
+        if (
+          field ===
+          "healthCertificate"
+        ) {
+          return {
+            ...currentForm,
+            documents: {
+              ...currentForm.documents,
+              healthCertificate: {
+                ...currentForm
+                  .documents
+                  .healthCertificate,
+                file: file
+                  ? {
+                      name:
+                        file.name,
+                      file,
+                    }
+                  : null,
+              },
+            },
+          };
+        }
+
+        if (
+          field ===
+          "contract"
+        ) {
+          return {
+            ...currentForm,
+            documents: {
+              ...currentForm.documents,
+              contract: {
+                ...currentForm
+                  .documents
+                  .contract,
+                file: file
+                  ? {
+                      name:
+                        file.name,
+                      file,
+                    }
+                  : null,
+              },
+            },
+          };
+        }
+
+        return {
+          ...currentForm,
+          documents: {
+            ...currentForm.documents,
+            [field]: file
+              ? {
+                  name:
+                    file.name,
+                  file,
+                }
+              : null,
+          },
+        };
+      }
+    );
+  };
+
+  const setWaiterDate = (
+    section,
+    field,
+    value
+  ) => {
+    setWaiterForm(
+      (currentForm) => ({
+        ...currentForm,
+        documents: {
+          ...currentForm.documents,
+          [section]: {
+            ...currentForm
+              .documents[
+                section
+              ],
+            [field]: value,
+          },
+        },
+      })
+    );
+  };
+
 
   const handleCreateUser = async (
     event
@@ -489,15 +832,10 @@ export default function Settings() {
         .trim()
         .toLowerCase();
 
-    const email =
-      userForm.email
-        .trim()
-        .toLowerCase();
 
     if (
       !fullName ||
       !username ||
-      !email ||
       !userForm.password ||
       !userForm.confirmPassword ||
       !userForm.roleId ||
@@ -522,17 +860,6 @@ export default function Settings() {
       return;
     }
 
-    if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        email
-      )
-    ) {
-      showAlert({
-        message: "Please enter a valid real email address.",
-      });
-
-      return;
-    }
 
     if (
       userForm.password.length < 6
@@ -570,6 +897,40 @@ export default function Settings() {
       return;
     }
 
+    if (
+      isDriverRole &&
+      (
+        !driverForm.phone.trim() ||
+        !driverForm.nationalId.trim() ||
+        !driverForm.licenseNumber.trim() ||
+        !driverForm.licenseExpiryDate ||
+        !driverForm.carNumber.trim()
+      )
+    ) {
+      showAlert({
+        message:
+          "Please complete the driver information.",
+      });
+
+      return;
+    }
+
+    if (
+      isWaiterRole &&
+      (
+        !waiterForm.phone.trim() ||
+        !waiterForm.nationalId.trim()
+      )
+    ) {
+      showAlert({
+        message:
+          "Please complete the waiter information.",
+      });
+
+      return;
+    }
+
+
     try {
       setSaving(true);
 
@@ -596,7 +957,6 @@ export default function Settings() {
         await createSystemUser({
           fullName,
           username,
-          email,
           password:
             userForm.password,
           roleId:
@@ -606,6 +966,20 @@ export default function Settings() {
           branch:
             userForm.branch,
         });
+
+      if (isDriverRole) {
+        await createDriver({
+          ...driverForm,
+          fullName,
+        });
+      }
+
+      if (isWaiterRole) {
+        await createWaiter({
+          ...waiterForm,
+          fullName,
+        });
+      }
 
       setEmployees(
         (currentEmployees) => [
@@ -623,6 +997,12 @@ export default function Settings() {
       );
 
       setUserForm(emptyUserForm);
+      setDriverForm(
+        driverEmptyForm
+      );
+      setWaiterForm(
+        waiterEmptyForm
+      );
       setShowUserModal(false);
 
       showAlert({
@@ -807,48 +1187,6 @@ export default function Settings() {
       }
     };
 
-  const handleLogout = async () => {
-    const confirmed =
-      await showConfirm({
-      message: "Are you sure you want to logout?",
-    });
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const result =
-        await signOut();
-
-      if (!result.success) {
-        throw (
-          result.error ||
-          new Error(
-            "Could not logout."
-          )
-        );
-      }
-
-      navigate(
-        "/login",
-        {
-          replace: true,
-        }
-      );
-    } catch (error) {
-      console.error(
-        "Logout error:",
-        error
-      );
-
-      showAlert({
-        message: error.message ||
-          "Could not logout.",
-      });
-    }
-  };
-
   return (
     <div className="dashboard-page">
       <Sidebar activePage="settings" />
@@ -874,36 +1212,40 @@ export default function Settings() {
 
         <section className="settings-card">
           <div className="settings-tabs">
-            <button
-              type="button"
-              className={
-                activeTab === "general"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setActiveTab("general")
-              }
-            >
-              General Settings
-            </button>
+            {canViewSettings && (
+              <button
+                type="button"
+                className={
+                  activeTab === "general"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setActiveTab("general")
+                }
+              >
+                General Settings
+              </button>
+            )}
 
-            <button
-              type="button"
-              className={
-                activeTab ===
-                "permissions"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setActiveTab(
-                  "permissions"
-                )
-              }
-            >
-              Permissions & User Rights
-            </button>
+            {canViewUsersRoles && (
+              <button
+                type="button"
+                className={
+                  activeTab ===
+                    "permissions"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setActiveTab(
+                    "permissions"
+                  )
+                }
+              >
+                Permissions & User Rights
+              </button>
+            )}
           </div>
 
           {loading ? (
@@ -1040,17 +1382,6 @@ export default function Settings() {
                   {saving
                     ? "Saving..."
                     : "Save Changes"}
-                </button>
-
-                <button
-                  type="button"
-                  className="settings-logout-button"
-                  onClick={handleLogout}
-                  disabled={saving || !canEditSettings}
-                >
-                  <FiLogOut />
-
-                  Logout
                 </button>
               </div>
             </div>
@@ -1294,6 +1625,38 @@ export default function Settings() {
                   )}
                 </div>
 
+                <div className="permissions-master-toggle">
+                  <div>
+                    <strong>
+                      All Permissions
+                    </strong>
+
+                    <span>
+                      Turn all permissions
+                      on or off
+                    </span>
+                  </div>
+
+                  <label className="permission-switch">
+                    <input
+                      type="checkbox"
+                      checked={
+                        allPermissionsEnabled
+                      }
+                      onChange={
+                        handleToggleAllPermissions
+                      }
+                      disabled={
+                        saving ||
+                        !canEditUsersRoles
+                      }
+                      aria-label="Toggle all permissions"
+                    />
+
+                    <span />
+                  </label>
+                </div>
+
                 <div className="permission-table">
                   <div className="permission-table-header">
                     <span>Module</span>
@@ -1464,6 +1827,8 @@ export default function Settings() {
               />
             </label>
 
+
+
             <div className="settings-role-modal-actions">
               <button
                 type="button"
@@ -1573,24 +1938,6 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Real Email
-
-                  <input
-                    type="email"
-                    name="email"
-                    value={
-                      userForm.email
-                    }
-                    placeholder="ahmed@gmail.com"
-                    onChange={
-                      handleUserFormChange
-                    }
-                    autoComplete="email"
-                    disabled={saving}
-                  />
-                </label>
-
-                <label>
                   Temporary Password
 
                   <input
@@ -1679,12 +2026,501 @@ export default function Settings() {
               </div>
 
               <div className="settings-user-note">
-                New users start as
-                Active and must change
-                the temporary password
-                on first login.
+                Employees sign in using
+                their username and
+                temporary password.
+                They do not have password
+                recovery by email.
               </div>
             </div>
+
+            {isDriverRole && (
+              <div className="settings-user-section">
+                <div className="settings-user-section-header">
+                  <span>2</span>
+
+                  <div>
+                    <h3>
+                      Driver Information
+                    </h3>
+
+                    <p>
+                      Enter driver,
+                      vehicle and document
+                      information.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="staff-form-grid">
+                  <label>
+                    Phone Number
+
+                    <input
+                      name="phone"
+                      value={
+                        driverForm.phone
+                      }
+                      onChange={
+                        handleDriverChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    National ID
+
+                    <input
+                      name="nationalId"
+                      value={
+                        driverForm.nationalId
+                      }
+                      onChange={
+                        handleDriverChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    License Number
+
+                    <input
+                      name="licenseNumber"
+                      value={
+                        driverForm.licenseNumber
+                      }
+                      onChange={
+                        handleDriverChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    License Expiry Date
+
+                    <input
+                      type="date"
+                      name="licenseExpiryDate"
+                      value={
+                        driverForm.licenseExpiryDate
+                      }
+                      onChange={
+                        handleDriverChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    Car Number
+
+                    <input
+                      name="carNumber"
+                      value={
+                        driverForm.carNumber
+                      }
+                      onChange={
+                        handleDriverChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    Car Type
+
+                    <select
+                      name="carType"
+                      value={
+                        driverForm.carType
+                      }
+                      onChange={
+                        handleDriverChange
+                      }
+                      disabled={saving}
+                    >
+                      <option value="Van">
+                        Van
+                      </option>
+                      <option value="Truck">
+                        Truck
+                      </option>
+                      <option value="Pickup">
+                        Pickup
+                      </option>
+                      <option value="Refrigerated Truck">
+                        Refrigerated Truck
+                      </option>
+                      <option value="Other">
+                        Other
+                      </option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Status
+
+                    <select
+                      name="status"
+                      value={
+                        driverForm.status
+                      }
+                      onChange={
+                        handleDriverChange
+                      }
+                      disabled={saving}
+                    >
+                      <option value="Active">
+                        Active
+                      </option>
+                      <option value="Inactive">
+                        Inactive
+                      </option>
+                      <option value="Suspended">
+                        Suspended
+                      </option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="staff-documents-section">
+                  <h3>Documents</h3>
+
+                  <div className="staff-upload-grid">
+                    <label className="staff-upload-box">
+                      <FiImage />
+
+                      <span>
+                        National ID Image
+                      </span>
+
+                      <small>
+                        {driverForm
+                          .documents
+                          .nationalIdImage
+                          ?.name ||
+                          "Upload image"}
+                      </small>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={saving}
+                        onChange={(event) =>
+                          setDriverDocument(
+                            "nationalIdImage",
+                            event.target
+                              .files[0]
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label className="staff-upload-box">
+                      <FiUpload />
+
+                      <span>
+                        License Image
+                      </span>
+
+                      <small>
+                        {driverForm
+                          .documents
+                          .licenseImage
+                          ?.name ||
+                          "Upload image"}
+                      </small>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={saving}
+                        onChange={(event) =>
+                          setDriverDocument(
+                            "licenseImage",
+                            event.target
+                              .files[0]
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isWaiterRole && (
+              <div className="settings-user-section">
+                <div className="settings-user-section-header">
+                  <span>2</span>
+
+                  <div>
+                    <h3>
+                      Waiter Information
+                    </h3>
+
+                    <p>
+                      Enter waiter and
+                      document information.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="staff-form-grid">
+                  <label>
+                    Phone Number
+
+                    <input
+                      name="phone"
+                      value={
+                        waiterForm.phone
+                      }
+                      onChange={
+                        handleWaiterChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    National ID
+
+                    <input
+                      name="nationalId"
+                      value={
+                        waiterForm.nationalId
+                      }
+                      onChange={
+                        handleWaiterChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    Status
+
+                    <select
+                      name="status"
+                      value={
+                        waiterForm.status
+                      }
+                      onChange={
+                        handleWaiterChange
+                      }
+                      disabled={saving}
+                    >
+                      <option value="Active">
+                        Active
+                      </option>
+                      <option value="Inactive">
+                        Inactive
+                      </option>
+                      <option value="Suspended">
+                        Suspended
+                      </option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="staff-documents-section">
+                  <h3>Documents</h3>
+
+                  <div className="staff-upload-grid">
+                    <label className="staff-upload-box">
+                      <FiImage />
+
+                      <span>
+                        Personal Photo
+                      </span>
+
+                      <small>
+                        {waiterForm
+                          .documents
+                          .personalPhoto
+                          ?.name ||
+                          "Upload file"}
+                      </small>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={saving}
+                        onChange={(event) =>
+                          setWaiterDocument(
+                            "personalPhoto",
+                            event.target
+                              .files[0]
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label className="staff-upload-box">
+                      <FiImage />
+
+                      <span>
+                        National ID Image
+                      </span>
+
+                      <small>
+                        {waiterForm
+                          .documents
+                          .nationalIdImage
+                          ?.name ||
+                          "Upload file"}
+                      </small>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={saving}
+                        onChange={(event) =>
+                          setWaiterDocument(
+                            "nationalIdImage",
+                            event.target
+                              .files[0]
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label className="staff-upload-box">
+                      <FiFileText />
+
+                      <span>
+                        Health Certificate
+                      </span>
+
+                      <small>
+                        {waiterForm
+                          .documents
+                          .healthCertificate
+                          .file?.name ||
+                          "Upload file"}
+                      </small>
+
+                      <input
+                        type="file"
+                        disabled={saving}
+                        onChange={(event) =>
+                          setWaiterDocument(
+                            "healthCertificate",
+                            event.target
+                              .files[0]
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label className="staff-upload-box">
+                      <FiFileText />
+
+                      <span>
+                        Contract
+                      </span>
+
+                      <small>
+                        {waiterForm
+                          .documents
+                          .contract.file
+                          ?.name ||
+                          "Upload file"}
+                      </small>
+
+                      <input
+                        type="file"
+                        disabled={saving}
+                        onChange={(event) =>
+                          setWaiterDocument(
+                            "contract",
+                            event.target
+                              .files[0]
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <div className="staff-document-dates">
+                    <label>
+                      Health Certificate
+                      Expiry
+
+                      <input
+                        type="date"
+                        value={
+                          waiterForm
+                            .documents
+                            .healthCertificate
+                            .expiryDate
+                        }
+                        disabled={saving}
+                        onChange={(event) =>
+                          setWaiterDate(
+                            "healthCertificate",
+                            "expiryDate",
+                            event.target
+                              .value
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Contract Start Date
+
+                      <input
+                        type="date"
+                        value={
+                          waiterForm
+                            .documents
+                            .contract
+                            .startDate
+                        }
+                        disabled={saving}
+                        onChange={(event) =>
+                          setWaiterDate(
+                            "contract",
+                            "startDate",
+                            event.target
+                              .value
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Contract End Date
+
+                      <input
+                        type="date"
+                        value={
+                          waiterForm
+                            .documents
+                            .contract
+                            .endDate
+                        }
+                        disabled={saving}
+                        onChange={(event) =>
+                          setWaiterDate(
+                            "contract",
+                            "endDate",
+                            event.target
+                              .value
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+
 
             <div className="settings-role-modal-actions">
               <button

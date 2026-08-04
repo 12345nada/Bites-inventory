@@ -1,20 +1,15 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
-
-import { useDialog } from "../context/DialogContext";
-import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
 import {
   createEvent,
   getActiveDrivers,
-  getActiveWaiters,
   getEvents,
   removeEvent,
   updateEvent,
@@ -56,22 +51,12 @@ const emptyForm = {
   area: "",
   branch: "Cairo",
   driverId: "",
-  waiterIds: [],
-  hasDrinks: false,
   status: "Upcoming",
 };
 
 function Events() {
-  const { showAlert, showConfirm } = useDialog();
-  const { hasPermission } = useAuth();
-
-  const canAdd = hasPermission("Events", "add");
-  const canEdit = hasPermission("Events", "edit");
-  const canDelete = hasPermission("Events", "delete");
-
   const [events, setEvents] = useState([]);
   const [drivers, setDrivers] = useState([]);
-  const [waiters, setWaiters] = useState([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -85,7 +70,7 @@ function Events() {
   const [currentPage, setCurrentPage] =
     useState(1);
 
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   const [activeTab, setActiveTab] =
     useState("All Events");
@@ -99,13 +84,6 @@ function Events() {
     showEventModal,
     setShowEventModal,
   ] = useState(false);
-
-  const [
-    showWaitersDropdown,
-    setShowWaitersDropdown,
-  ] = useState(false);
-
-  const waitersFieldRef = useRef(null);
 
   const [
     editingEventId,
@@ -189,35 +167,6 @@ function Events() {
     };
   }, [openActionId]);
 
-  useEffect(() => {
-    if (!showWaitersDropdown) {
-      return undefined;
-    }
-
-    const closeWaitersDropdown = (event) => {
-      if (
-        waitersFieldRef.current &&
-        !waitersFieldRef.current.contains(
-          event.target
-        )
-      ) {
-        setShowWaitersDropdown(false);
-      }
-    };
-
-    document.addEventListener(
-      "mousedown",
-      closeWaitersDropdown
-    );
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        closeWaitersDropdown
-      );
-    };
-  }, [showWaitersDropdown]);
-
   const loadPageData = async () => {
     try {
       setLoading(true);
@@ -225,26 +174,23 @@ function Events() {
       const [
         eventsData,
         driversData,
-        waitersData,
       ] = await Promise.all([
         getEvents(),
         getActiveDrivers(),
-        getActiveWaiters(),
       ]);
 
       setEvents(eventsData);
       setDrivers(driversData);
-      setWaiters(waitersData);
     } catch (error) {
       console.error(
         "Error loading events:",
         error
       );
 
-      showAlert({
-        message: error.message ||
-          "Could not load events.",
-      });
+      alert(
+        error.message ||
+          "Could not load events."
+      );
     } finally {
       setLoading(false);
     }
@@ -267,8 +213,6 @@ function Events() {
         event.area,
         event.branch,
         event.driver,
-        event.waiterNames?.join(" "),
-        event.waiters,
         event.status,
       ];
 
@@ -486,20 +430,9 @@ function Events() {
   const handleDeleteEvent = async (
     eventId
   ) => {
-    if (!canDelete) {
-      await showAlert({
-        title: "Permission Denied",
-        message:
-          "You do not have permission to delete events.",
-        type: "warning",
-      });
-
-      return;
-    }
-
-    const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this event?",
-    });
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this event?"
+    );
 
     if (!confirmed) {
       return;
@@ -522,61 +455,16 @@ function Events() {
       );
 
       if (error.code === "23503") {
-        showAlert({
-        message: "This event cannot be deleted because it is connected to a dispatch or another record.",
-      });
+        alert(
+          "This event cannot be deleted because it is connected to a dispatch or another record."
+        );
       } else {
-        showAlert({
-        message: error.message ||
-            "Could not delete event.",
-      });
+        alert(
+          error.message ||
+            "Could not delete event."
+        );
       }
     }
-  };
-
-  const toggleWaiter = (waiterId) => {
-    setFormData((currentData) => {
-      const normalizedId =
-        String(waiterId);
-
-      const isSelected =
-        currentData.waiterIds.some(
-          (id) =>
-            String(id) ===
-            normalizedId
-        );
-
-      return {
-        ...currentData,
-        waiterIds: isSelected
-          ? currentData.waiterIds.filter(
-              (id) =>
-                String(id) !==
-                normalizedId
-            )
-          : [
-              ...currentData.waiterIds,
-              waiterId,
-            ],
-      };
-    });
-  };
-
-  const removeWaiter = (
-    event,
-    waiterId
-  ) => {
-    event.stopPropagation();
-
-    setFormData((currentData) => ({
-      ...currentData,
-      waiterIds:
-        currentData.waiterIds.filter(
-          (id) =>
-            String(id) !==
-            String(waiterId)
-        ),
-    }));
   };
 
   const handleFormChange = (event) => {
@@ -591,37 +479,14 @@ function Events() {
     }));
   };
 
-  const openAddModal = async () => {
-    if (!canAdd) {
-      await showAlert({
-        title: "Permission Denied",
-        message:
-          "You do not have permission to add events.",
-        type: "warning",
-      });
-
-      return;
-    }
-
+  const openAddModal = () => {
     setEditingEventId(null);
     setFormData(emptyForm);
     setOpenActionId(null);
-    setShowWaitersDropdown(false);
     setShowEventModal(true);
   };
 
-  const openEditModal = async (event) => {
-    if (!canEdit) {
-      await showAlert({
-        title: "Permission Denied",
-        message:
-          "You do not have permission to edit events.",
-        type: "warning",
-      });
-
-      return;
-    }
-
+  const openEditModal = (event) => {
     setEditingEventId(event.id);
 
     setFormData({
@@ -636,15 +501,10 @@ function Events() {
       area: event.area,
       branch: event.branch,
       driverId: event.driverId || "",
-      waiterIds: event.waiterIds || [],
-      hasDrinks: Boolean(
-        event.hasDrinks
-      ),
       status: event.status,
     });
 
     setOpenActionId(null);
-    setShowWaitersDropdown(false);
     setShowEventModal(true);
   };
 
@@ -654,7 +514,6 @@ function Events() {
     }
 
     setShowEventModal(false);
-    setShowWaitersDropdown(false);
     setEditingEventId(null);
     setFormData(emptyForm);
   };
@@ -683,23 +542,9 @@ function Events() {
       );
 
     if (hasEmptyField) {
-      showAlert({
-        message: "Please complete all event fields.",
-      });
-
-      return false;
-    }
-
-    if (
-      !Array.isArray(
-        formData.waiterIds
-      ) ||
-      formData.waiterIds.length === 0
-    ) {
-      showAlert({
-        message:
-          "Please select at least one waiter.",
-      });
+      alert(
+        "Please complete all event fields."
+      );
 
       return false;
     }
@@ -711,21 +556,6 @@ function Events() {
     event
   ) => {
     event.preventDefault();
-
-    const requiredPermission =
-      editingEventId ? canEdit : canAdd;
-
-    if (!requiredPermission) {
-      await showAlert({
-        title: "Permission Denied",
-        message: editingEventId
-          ? "You do not have permission to edit events."
-          : "You do not have permission to add events.",
-        type: "warning",
-      });
-
-      return;
-    }
 
     if (!validateEventForm()) {
       return;
@@ -764,7 +594,6 @@ function Events() {
       }
 
       setShowEventModal(false);
-      setShowWaitersDropdown(false);
       setEditingEventId(null);
       setFormData(emptyForm);
     } catch (error) {
@@ -774,14 +603,14 @@ function Events() {
       );
 
       if (error.code === "23505") {
-        showAlert({
-        message: "An event with this code already exists.",
-      });
+        alert(
+          "An event with this code already exists."
+        );
       } else {
-        showAlert({
-        message: error.message ||
-            "Could not save event.",
-      });
+        alert(
+          error.message ||
+            "Could not save event."
+        );
       }
     } finally {
       setSaving(false);
@@ -948,13 +777,18 @@ function Events() {
             <table>
               <thead>
                 <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      aria-label="Select all events"
+                    />
+                  </th>
 
                   <th>Event Type</th>
                   <th>Client</th>
                   <th>Date</th>
                   <th>Location</th>
                   <th>Branch</th>
-                  <th># of Waiters</th>
                   <th>Driver</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -976,6 +810,12 @@ function Events() {
                   paginatedEvents.map(
                     (event) => (
                       <tr key={event.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${event.name}`}
+                          />
+                        </td>
 
                         <td>
                           <div className="event-name-cell">
@@ -1045,10 +885,6 @@ function Events() {
 
                         <td>
                           {event.branch}
-                        </td>
-
-                        <td>
-                          {event.waiters}
                         </td>
 
                         <td>
@@ -1435,190 +1271,6 @@ function Events() {
                 </select>
               </label>
 
-              <div
-                className="event-waiters-field event-modal-full-field"
-                ref={waitersFieldRef}
-              >
-                <span className="event-field-label">
-                  Waiters
-                </span>
-
-                <button
-                  type="button"
-                  className={`event-waiters-trigger ${
-                    showWaitersDropdown
-                      ? "open"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setShowWaitersDropdown(
-                      (current) => !current
-                    )
-                  }
-                  disabled={saving}
-                >
-                  <span className="event-waiters-selected">
-                    {formData.waiterIds.length >
-                    0 ? (
-                      formData.waiterIds.map(
-                        (waiterId) => {
-                          const waiter =
-                            waiters.find(
-                              (currentWaiter) =>
-                                String(
-                                  currentWaiter.id
-                                ) ===
-                                String(
-                                  waiterId
-                                )
-                            );
-
-                          return (
-                            <span
-                              key={waiterId}
-                              className="event-waiter-chip"
-                            >
-                              {waiter?.full_name ||
-                                "Waiter"}
-
-                              <span
-                                role="button"
-                                tabIndex={0}
-                                className="event-waiter-chip-remove"
-                                onClick={(event) =>
-                                  removeWaiter(
-                                    event,
-                                    waiterId
-                                  )
-                                }
-                                onKeyDown={(event) => {
-                                  if (
-                                    event.key ===
-                                      "Enter" ||
-                                    event.key === " "
-                                  ) {
-                                    removeWaiter(
-                                      event,
-                                      waiterId
-                                    );
-                                  }
-                                }}
-                                aria-label={`Remove ${
-                                  waiter?.full_name ||
-                                  "waiter"
-                                }`}
-                              >
-                                ×
-                              </span>
-                            </span>
-                          );
-                        }
-                      )
-                    ) : (
-                      <span className="event-waiters-placeholder">
-                        Select waiters
-                      </span>
-                    )}
-                  </span>
-
-                  <span className="event-waiters-arrow">
-                    ▾
-                  </span>
-                </button>
-
-                {showWaitersDropdown && (
-                  <div className="event-waiters-dropdown">
-                    {waiters.length > 0 ? (
-                      waiters.map((waiter) => {
-                        const isSelected =
-                          formData.waiterIds.some(
-                            (id) =>
-                              String(id) ===
-                              String(waiter.id)
-                          );
-
-                        return (
-                          <label
-                            key={waiter.id}
-                            className="event-waiter-option"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() =>
-                                toggleWaiter(
-                                  waiter.id
-                                )
-                              }
-                            />
-
-                            <span>
-                              <strong>
-                                {waiter.full_name}
-                              </strong>
-
-                              {waiter.staff_code && (
-                                <small>
-                                  {waiter.staff_code}
-                                </small>
-                              )}
-                            </span>
-                          </label>
-                        );
-                      })
-                    ) : (
-                      <p className="event-no-waiters">
-                        No active waiters found.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <small className="event-waiters-count">
-                  {formData.waiterIds.length} waiter
-                  {formData.waiterIds.length === 1
-                    ? ""
-                    : "s"}{" "}
-                  selected
-                </small>
-              </div>
-
-              <label className="event-drinks-field event-modal-full-field">
-                <span className="event-drinks-copy">
-                  <strong>
-                    Drinks Included
-                  </strong>
-
-                  <small>
-                    Enable this when the event includes drinks.
-                  </small>
-                </span>
-
-                <span className="event-drinks-switch">
-                  <input
-                    type="checkbox"
-                    name="hasDrinks"
-                    checked={
-                      formData.hasDrinks
-                    }
-                    onChange={(event) =>
-                      setFormData(
-                        (currentData) => ({
-                          ...currentData,
-                          hasDrinks:
-                            event.target
-                              .checked,
-                        })
-                      )
-                    }
-                    disabled={saving}
-                    aria-label="Drinks included"
-                  />
-
-                  <span className="event-drinks-slider" />
-                </span>
-              </label>
-
               <label className="event-modal-full-field">
                 Status
 
@@ -1706,4 +1358,5 @@ function StatCard({
     </article>
   );
 }
+
 export default Events;

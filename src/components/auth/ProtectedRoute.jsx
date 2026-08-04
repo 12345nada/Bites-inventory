@@ -9,55 +9,22 @@ import {
 } from "../../context/AuthContext";
 
 const MODULE_ROUTES = [
-  {
-    moduleName: "Dashboard",
-    path: "/dashboard",
-  },
-  {
-    moduleName: "Events",
-    path: "/events",
-  },
-  {
-    moduleName: "Items",
-    path: "/items",
-  },
-  {
-    moduleName: "Purchase",
-    path: "/purchase",
-  },
-  {
-    moduleName: "Suppliers",
-    path: "/suppliers",
-  },
-  {
-    moduleName: "Warehouse",
-    path: "/warehouse",
-  },
-  {
-    moduleName: "Staff",
-    path: "/staff",
-  },
-  {
-    moduleName: "Dispatch",
-    path: "/dispatch",
-  },
-  {
-    moduleName: "Returns",
-    path: "/returns",
-  },
-  {
-    moduleName: "Reports",
-    path: "/reports",
-  },
-  {
-    moduleName: "Settings",
-    path: "/settings",
-  },
-  {
-    moduleName: "Users / Role",
-    path: "/settings",
-  },
-];
+  ["Dashboard", "/dashboard"],
+  ["Events", "/events"],
+  ["Items", "/items"],
+  ["Purchase", "/purchase"],
+  ["Suppliers", "/suppliers"],
+  ["Warehouse", "/warehouse"],
+  ["Staff", "/staff"],
+  ["Dispatch", "/dispatch"],
+  ["Returns", "/returns"],
+  ["Reports", "/reports"],
+  ["Settings", "/settings"],
+  ["Users / Role", "/settings"],
+].map(([moduleName, path]) => ({
+  moduleName,
+  path,
+}));
 
 const ProtectedRoute = ({
   moduleName,
@@ -80,10 +47,7 @@ const ProtectedRoute = ({
     return (
       <div className="auth-loading-page">
         <div className="auth-loading-spinner" />
-
-        <p>
-          Loading your account...
-        </p>
+        <p>Loading your account...</p>
       </div>
     );
   }
@@ -104,10 +68,7 @@ const ProtectedRoute = ({
   if (!profile) {
     return (
       <div className="auth-access-page">
-        <h2>
-          Profile Not Found
-        </h2>
-
+        <h2>Profile Not Found</h2>
         <p>
           Your employee profile could
           not be found. Please contact
@@ -120,10 +81,7 @@ const ProtectedRoute = ({
   if (!profile.is_active) {
     return (
       <div className="auth-access-page">
-        <h2>
-          Account Inactive
-        </h2>
-
+        <h2>Account Inactive</h2>
         <p>
           Your account is inactive.
           Please contact the
@@ -139,10 +97,7 @@ const ProtectedRoute = ({
   ) {
     return (
       <div className="auth-access-page">
-        <h2>
-          Role Not Assigned
-        </h2>
-
+        <h2>Role Not Assigned</h2>
         <p>
           No role has been assigned to
           your account.
@@ -191,10 +146,7 @@ const ProtectedRoute = ({
 
     return (
       <div className="auth-access-page">
-        <h2>
-          Access Denied
-        </h2>
-
+        <h2>Access Denied</h2>
         <p>
           Your role does not have
           access to any page. Please
