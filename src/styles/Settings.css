@@ -1230,3 +1230,78 @@
     width: 100%;
   }
 }
+
+
+.selected-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selected-user-actions select {
+  min-width: 130px;
+}
+
+.reset-user-password-button {
+  min-height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #713006;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #713006;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.reset-user-password-button:hover {
+  background: #713006;
+  color: #ffffff;
+}
+
+.reset-user-password-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.reset-password-user {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #f0ddcf;
+  border-radius: 10px;
+  background: #fff8f2;
+}
+
+.reset-password-user strong,
+.reset-password-user span {
+  display: block;
+}
+
+.reset-password-user strong {
+  color: #2e2824;
+  font-size: 11px;
+}
+
+.reset-password-user span {
+  margin-top: 3px;
+  color: #81766e;
+  font-size: 9px;
+}
+
+@media (max-width: 768px) {
+  .selected-user-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .selected-user-actions select,
+  .reset-user-password-button {
+    width: 100%;
+  }
+}

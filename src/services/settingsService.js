@@ -548,3 +548,41 @@ export async function deleteRole(
 
   return true;
 }
+
+export async function resetUserPassword(
+  userId,
+  newPassword
+) {
+  const { data, error } =
+    await supabase.functions.invoke(
+      "reset-user-password",
+      {
+        body: {
+          userId,
+          newPassword,
+        },
+      }
+    );
+
+  if (error) {
+    const message =
+      await getFunctionErrorMessage(
+        error,
+        "Could not reset password."
+      );
+
+    throw new Error(message);
+  }
+
+  if (!data?.success) {
+    throw new Error(
+      data?.error ||
+        "Could not reset password."
+    );
+  }
+
+  return {
+    success: true,
+    mustChangePassword: true,
+  };
+}

@@ -20,6 +20,7 @@ import {
   createSystemUser,
   deleteRole,
   getSettingsData,
+  resetUserPassword,
   saveGeneralSettings,
   saveRolePermissions,
 } from "../services/settingsService";
@@ -40,6 +41,7 @@ import {
   FiUpload,
   FiFileText,
   FiImage,
+  FiKey,
 } from "react-icons/fi";
 
 
@@ -98,6 +100,7 @@ export default function Settings() {
   const {
     user,
     profile,
+    isAdmin,
     hasPermission,
     refreshProfile,
   } = useAuth();
@@ -229,6 +232,24 @@ export default function Settings() {
     setShowUserModal,
   ] = useState(false);
 
+  const [
+    showResetPasswordModal,
+    setShowResetPasswordModal,
+  ] = useState(false);
+
+  const [
+    resetPasswordUser,
+    setResetPasswordUser,
+  ] = useState(null);
+
+  const [
+    resetPasswordForm,
+    setResetPasswordForm,
+  ] = useState({
+    password: "",
+    confirmPassword: "",
+  });
+
   const [roleForm, setRoleForm] =
     useState({
       name: "",
@@ -258,6 +279,14 @@ export default function Settings() {
 
   useEffect(() => {
     if (
+      !isAdmin &&
+      activeTab === "permissions"
+    ) {
+      setActiveTab("general");
+      return;
+    }
+
+    if (
       activeTab === "general" &&
       !canViewSettings &&
       canViewUsersRoles
@@ -275,6 +304,7 @@ export default function Settings() {
     }
   }, [
     activeTab,
+    isAdmin,
     canViewSettings,
     canViewUsersRoles,
   ]);
@@ -1126,6 +1156,121 @@ export default function Settings() {
       }
     };
 
+
+  const openResetPasswordModal = (
+    employee
+  ) => {
+    if (!canEditUsersRoles) {
+      showAlert({
+        message:
+          "You do not have permission to reset user passwords.",
+      });
+      return;
+    }
+
+    setResetPasswordUser(employee);
+    setResetPasswordForm({
+      password: "",
+      confirmPassword: "",
+    });
+    setShowResetPasswordModal(true);
+  };
+
+  const closeResetPasswordModal =
+    () => {
+      if (saving) {
+        return;
+      }
+
+      setShowResetPasswordModal(false);
+      setResetPasswordUser(null);
+      setResetPasswordForm({
+        password: "",
+        confirmPassword: "",
+      });
+    };
+
+  const handleResetPassword =
+    async (event) => {
+      event.preventDefault();
+
+      if (!resetPasswordUser?.id) {
+        showAlert({
+          message:
+            "Please select a user.",
+        });
+        return;
+      }
+
+      if (
+        resetPasswordForm.password.length <
+        6
+      ) {
+        showAlert({
+          message:
+            "Password must contain at least 6 characters.",
+        });
+        return;
+      }
+
+      if (
+        resetPasswordForm.password !==
+        resetPasswordForm.confirmPassword
+      ) {
+        showAlert({
+          message:
+            "Passwords do not match.",
+        });
+        return;
+      }
+
+      try {
+        setSaving(true);
+
+        await resetUserPassword(
+          resetPasswordUser.id,
+          resetPasswordForm.password
+        );
+
+        setEmployees(
+          (currentEmployees) =>
+            currentEmployees.map(
+              (employee) =>
+                String(employee.id) ===
+                String(
+                  resetPasswordUser.id
+                )
+                  ? {
+                      ...employee,
+                      mustChangePassword:
+                        true,
+                    }
+                  : employee
+            )
+        );
+
+        setShowResetPasswordModal(false);
+        setResetPasswordUser(null);
+        setResetPasswordForm({
+          password: "",
+          confirmPassword: "",
+        });
+
+        showAlert({
+          message:
+            "Password reset successfully.",
+        });
+      } catch (error) {
+        showAlert({
+          message:
+            error.message ||
+            "Could not reset password.",
+        });
+      } finally {
+        setSaving(false);
+      }
+    };
+
   const handleGeneralChange = (
     event
   ) => {
@@ -1228,7 +1373,8 @@ export default function Settings() {
               </button>
             )}
 
-            {canViewUsersRoles && (
+            {isAdmin &&
+              canViewUsersRoles && (
               <button
                 type="button"
                 className={
@@ -1252,7 +1398,8 @@ export default function Settings() {
             <div className="settings-loading-state">
               Loading settings...
             </div>
-          ) : activeTab === "general" ? (
+          ) : activeTab === "general" ||
+            !isAdmin ? (
             <div className="general-settings-panel">
               <div className="general-settings-grid">
                 <label>
@@ -1576,8 +1723,7 @@ export default function Settings() {
                 <div className="permissions-panel-header">
                   <div>
                     <h2>
-                      Choose a role to
-                      configure permissions
+                      Manage user passwords and account access
                     </h2>
 
                     <p>
@@ -1591,37 +1737,56 @@ export default function Settings() {
                   </div>
 
                   {selectedEmployee && (
-                    <select
-                      value={
-                        selectedEmployee.roleId ||
-                        ""
-                      }
-                      onChange={(event) =>
-                        handleEmployeeRoleChange(
-                          selectedEmployee.id,
-                          event.target.value
-                        )
-                      }
-                      disabled={
-                        saving ||
-                        !canEditUsersRoles
-                      }
-                    >
-                      <option value="">
-                        Select role
-                      </option>
+                    <div className="selected-user-actions">
+                      <select
+                        value={
+                          selectedEmployee.roleId ||
+                          ""
+                        }
+                        onChange={(event) =>
+                          handleEmployeeRoleChange(
+                            selectedEmployee.id,
+                            event.target.value
+                          )
+                        }
+                        disabled={
+                          saving ||
+                          !canEditUsersRoles
+                        }
+                      >
+                        <option value="">
+                          Select role
+                        </option>
 
-                      {roles.map(
-                        (role) => (
-                          <option
-                            key={role.id}
-                            value={role.id}
-                          >
-                            {role.name}
-                          </option>
-                        )
-                      )}
-                    </select>
+                        {roles.map(
+                          (role) => (
+                            <option
+                              key={role.id}
+                              value={role.id}
+                            >
+                              {role.name}
+                            </option>
+                          )
+                        )}
+                      </select>
+
+                      <button
+                        type="button"
+                        className="reset-user-password-button"
+                        onClick={() =>
+                          openResetPasswordModal(
+                            selectedEmployee
+                          )
+                        }
+                        disabled={
+                          saving ||
+                          !canEditUsersRoles
+                        }
+                      >
+                        <FiKey />
+                        Reset Password
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -2539,6 +2704,123 @@ export default function Settings() {
                 {saving
                   ? "Creating..."
                   : "Create User"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+
+      {showResetPasswordModal && (
+        <div
+          className="settings-modal-overlay"
+          onMouseDown={
+            closeResetPasswordModal
+          }
+        >
+          <form
+            className="settings-role-modal reset-password-modal"
+            onSubmit={
+              handleResetPassword
+            }
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="settings-role-modal-header">
+              <div>
+                <h2>Reset Password</h2>
+                <p>
+                  Create a new password
+                  for{" "}
+                  {resetPasswordUser?.name ||
+                    "this user"}.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  closeResetPasswordModal
+                }
+                disabled={saving}
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <div className="reset-password-user">
+              <strong>
+                {resetPasswordUser?.name ||
+                  "User"}
+              </strong>
+              <span>
+                @{resetPasswordUser?.username ||
+                  "username"}
+              </span>
+            </div>
+
+            <label>
+              New Password
+              <input
+                type="password"
+                value={
+                  resetPasswordForm.password
+                }
+                placeholder="Minimum 6 characters"
+                disabled={saving}
+                onChange={(event) =>
+                  setResetPasswordForm(
+                    (current) => ({
+                      ...current,
+                      password:
+                        event.target.value,
+                    })
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Confirm Password
+              <input
+                type="password"
+                value={
+                  resetPasswordForm.confirmPassword
+                }
+                placeholder="Repeat password"
+                disabled={saving}
+                onChange={(event) =>
+                  setResetPasswordForm(
+                    (current) => ({
+                      ...current,
+                      confirmPassword:
+                        event.target.value,
+                    })
+                  )
+                }
+              />
+            </label>
+
+            <div className="settings-role-modal-actions">
+              <button
+                type="button"
+                onClick={
+                  closeResetPasswordModal
+                }
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="create-role-button"
+                disabled={saving}
+              >
+                {saving
+                  ? "Resetting..."
+                  : "Reset Password"}
               </button>
             </div>
           </form>
