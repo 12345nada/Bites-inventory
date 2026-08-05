@@ -302,33 +302,36 @@ body  {
   #fceddf
   );
 }
+.events-table-wrapper th:nth-child(1) {
+  width: 18%;
+}
 
-.events-table-wrapper th:nth-child(1)  {
+.events-table-wrapper th:nth-child(2) {
+  width: 13%;
+}
+
+.events-table-wrapper th:nth-child(3) {
   width: 15%;
 }
-.events-table-wrapper th:nth-child(2)  {
-  width: 10%;
-}
-.events-table-wrapper th:nth-child(3)  {
-  width: 14%;
-}
-.events-table-wrapper th:nth-child(4)  {
+
+.events-table-wrapper th:nth-child(4) {
   width: 12%;
 }
-.events-table-wrapper th:nth-child(5)  {
-  width: 8%;
-}
-.events-table-wrapper th:nth-child(6)  {
+
+.events-table-wrapper th:nth-child(5) {
   width: 9%;
 }
-.events-table-wrapper th:nth-child(7)  {
+
+.events-table-wrapper th:nth-child(6) {
+  width: 12%;
+}
+
+.events-table-wrapper th:nth-child(7) {
+  width: 11%;
+}
+
+.events-table-wrapper th:nth-child(8) {
   width: 10%;
-}
-.events-table-wrapper th:nth-child(8)  {
-  width: 9%;
-}
-.events-table-wrapper th:nth-child(9)  {
-  width: 8%;
 }
 
 .event-name-cell  {

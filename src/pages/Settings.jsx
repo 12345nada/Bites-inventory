@@ -1938,7 +1938,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Temporary Password
+                   Password
 
                   <input
                     type="password"

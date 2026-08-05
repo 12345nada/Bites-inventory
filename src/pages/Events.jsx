@@ -777,13 +777,6 @@ function Events() {
             <table>
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      aria-label="Select all events"
-                    />
-                  </th>
-
                   <th>Event Type</th>
                   <th>Client</th>
                   <th>Date</th>
@@ -810,12 +803,6 @@ function Events() {
                   paginatedEvents.map(
                     (event) => (
                       <tr key={event.id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${event.name}`}
-                          />
-                        </td>
 
                         <td>
                           <div className="event-name-cell">
@@ -979,7 +966,7 @@ function Events() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="9"
+                      colSpan="8"
                       className="events-empty-state"
                     >
                       No events match your search or
