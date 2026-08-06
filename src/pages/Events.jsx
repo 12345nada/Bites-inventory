@@ -382,6 +382,13 @@ function Events() {
       event.date <= nextSevenDays
   ).length;
 
+  const totalActiveEvents = events.filter(
+    (event) =>
+      String(event.status)
+        .trim()
+        .toLowerCase() !== "cancelled"
+  ).length;
+
   const getStatusClass = (status) =>
     String(status || "")
       .toLowerCase()
@@ -704,6 +711,31 @@ function Events() {
       return false;
     }
 
+    const now = new Date();
+
+    const localToday = [
+      now.getFullYear(),
+      String(
+        now.getMonth() + 1
+      ).padStart(2, "0"),
+      String(
+        now.getDate()
+      ).padStart(2, "0"),
+    ].join("-");
+
+    if (
+      formData.status ===
+        "In Progress" &&
+      formData.date > localToday
+    ) {
+      showAlert({
+        message:
+          "Future events cannot be marked as In Progress.",
+      });
+
+      return false;
+    }
+
     return true;
   };
 
@@ -818,7 +850,7 @@ function Events() {
           <StatCard
             icon={<FiCalendar />}
             title="Total Events"
-            number={events.length}
+            number={totalActiveEvents}
             description="All events"
           />
 

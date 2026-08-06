@@ -354,6 +354,238 @@ export async function updateDispatchStatus(
   dispatchId,
   status
 ) {
+  const {
+    data: currentDispatch,
+    error: dispatchLoadError,
+  } = await supabase
+    .from("dispatches")
+    .select(`
+      id,
+      warehouse_id,
+      status,
+      dispatch_items (
+        item_id,
+        quantity
+      )
+    `)
+    .eq("id", dispatchId)
+    .single();
+
+  if (dispatchLoadError) {
+    throw dispatchLoadError;
+  }
+
+  const previousStatus =
+    currentDispatch.status;
+
+  const dispatchItems =
+    currentDispatch.dispatch_items || [];
+
+  const shouldDeductInventory =
+    previousStatus === "Prepared" &&
+    status === "In Transit";
+
+  const shouldRestoreInventory =
+    previousStatus === "In Transit" &&
+    status === "Cancelled";
+
+  const updatedInventoryRows = [];
+
+  if (shouldDeductInventory) {
+    for (const dispatchItem of dispatchItems) {
+      const {
+        data: inventoryRow,
+        error: inventoryError,
+      } = await supabase
+        .from("warehouse_inventory")
+        .select(`
+          id,
+          available_quantity
+        `)
+        .eq(
+          "warehouse_id",
+          currentDispatch.warehouse_id
+        )
+        .eq(
+          "item_id",
+          dispatchItem.item_id
+        )
+        .single();
+
+      if (inventoryError) {
+        throw inventoryError;
+      }
+
+      const currentAvailable =
+        Number(
+          inventoryRow.available_quantity ||
+            0
+        );
+
+      const dispatchQuantity =
+        Number(
+          dispatchItem.quantity || 0
+        );
+
+      if (
+        currentAvailable <
+        dispatchQuantity
+      ) {
+        throw new Error(
+          "One or more items do not have enough available stock."
+        );
+      }
+    }
+
+    try {
+      for (const dispatchItem of dispatchItems) {
+        const {
+          data: inventoryRow,
+          error: inventoryError,
+        } = await supabase
+          .from("warehouse_inventory")
+          .select(`
+            id,
+            available_quantity
+          `)
+          .eq(
+            "warehouse_id",
+            currentDispatch.warehouse_id
+          )
+          .eq(
+            "item_id",
+            dispatchItem.item_id
+          )
+          .single();
+
+        if (inventoryError) {
+          throw inventoryError;
+        }
+
+        const oldAvailable =
+          Number(
+            inventoryRow.available_quantity ||
+              0
+          );
+
+        const newAvailable =
+          oldAvailable -
+          Number(
+            dispatchItem.quantity || 0
+          );
+
+        const {
+          error: updateInventoryError,
+        } = await supabase
+          .from("warehouse_inventory")
+          .update({
+            available_quantity:
+              newAvailable,
+          })
+          .eq("id", inventoryRow.id);
+
+        if (updateInventoryError) {
+          throw updateInventoryError;
+        }
+
+        updatedInventoryRows.push({
+          id: inventoryRow.id,
+          oldAvailable,
+        });
+      }
+    } catch (inventoryUpdateError) {
+      for (
+        const updatedRow of
+        updatedInventoryRows
+      ) {
+        await supabase
+          .from("warehouse_inventory")
+          .update({
+            available_quantity:
+              updatedRow.oldAvailable,
+          })
+          .eq("id", updatedRow.id);
+      }
+
+      throw inventoryUpdateError;
+    }
+  }
+
+  if (shouldRestoreInventory) {
+    try {
+      for (const dispatchItem of dispatchItems) {
+        const {
+          data: inventoryRow,
+          error: inventoryError,
+        } = await supabase
+          .from("warehouse_inventory")
+          .select(`
+            id,
+            available_quantity
+          `)
+          .eq(
+            "warehouse_id",
+            currentDispatch.warehouse_id
+          )
+          .eq(
+            "item_id",
+            dispatchItem.item_id
+          )
+          .single();
+
+        if (inventoryError) {
+          throw inventoryError;
+        }
+
+        const oldAvailable =
+          Number(
+            inventoryRow.available_quantity ||
+              0
+          );
+
+        const restoredQuantity =
+          oldAvailable +
+          Number(
+            dispatchItem.quantity || 0
+          );
+
+        const {
+          error: restoreError,
+        } = await supabase
+          .from("warehouse_inventory")
+          .update({
+            available_quantity:
+              restoredQuantity,
+          })
+          .eq("id", inventoryRow.id);
+
+        if (restoreError) {
+          throw restoreError;
+        }
+
+        updatedInventoryRows.push({
+          id: inventoryRow.id,
+          oldAvailable,
+        });
+      }
+    } catch (restoreInventoryError) {
+      for (
+        const updatedRow of
+        updatedInventoryRows
+      ) {
+        await supabase
+          .from("warehouse_inventory")
+          .update({
+            available_quantity:
+              updatedRow.oldAvailable,
+          })
+          .eq("id", updatedRow.id);
+      }
+
+      throw restoreInventoryError;
+    }
+  }
+
   const { data, error } = await supabase
     .from("dispatches")
     .update({ status })
@@ -362,6 +594,19 @@ export async function updateDispatchStatus(
     .single();
 
   if (error) {
+    for (
+      const updatedRow of
+      updatedInventoryRows
+    ) {
+      await supabase
+        .from("warehouse_inventory")
+        .update({
+          available_quantity:
+            updatedRow.oldAvailable,
+        })
+        .eq("id", updatedRow.id);
+    }
+
     throw error;
   }
 

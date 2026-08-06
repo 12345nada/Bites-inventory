@@ -13,7 +13,7 @@ import Topbar from "../components/dashboard/Topbar";
 
 import {
   createSupplier,
-  getSuppliers,
+  getSupplierPageData,
   removeSupplier,
   toggleSupplierStatus,
   updateSupplier,
@@ -47,6 +47,7 @@ const emptyForm = {
   phone: "",
   email: "",
   address: "",
+  itemIds: [],
   status: "Active",
 };
 
@@ -61,6 +62,9 @@ export default function Suppliers() {
   const canDelete = hasPermission("Suppliers", "delete");
 
   const [suppliers, setSuppliers] =
+    useState([]);
+
+  const [items, setItems] =
     useState([]);
 
   const [loading, setLoading] =
@@ -103,6 +107,11 @@ export default function Suppliers() {
 
   const suppliersPerPage = 5;
 
+  const [
+    showItemsDropdown,
+    setShowItemsDropdown,
+  ] = useState(false);
+
   const [formData, setFormData] =
     useState(emptyForm);
 
@@ -114,9 +123,11 @@ export default function Suppliers() {
     try {
       setLoading(true);
 
-      const data = await getSuppliers();
+      const data =
+        await getSupplierPageData();
 
-      setSuppliers(data);
+      setSuppliers(data.suppliers);
+      setItems(data.items);
     } catch (error) {
       console.error(
         "Error loading suppliers:",
@@ -203,6 +214,7 @@ export default function Suppliers() {
           supplier.phone,
           supplier.email,
           supplier.address,
+          supplier.itemNames?.join(" "),
           supplier.status,
         ].some((value) =>
           String(value)
@@ -316,6 +328,7 @@ export default function Suppliers() {
 
     setEditingSupplierId(null);
     setFormData(emptyForm);
+    setShowItemsDropdown(false);
     setShowSupplierModal(true);
   };
 
@@ -336,10 +349,12 @@ export default function Suppliers() {
       phone: supplier.phone,
       email: supplier.email,
       address: supplier.address,
+      itemIds: supplier.itemIds || [],
       status: supplier.status,
     });
 
     setOpenActionId(null);
+    setShowItemsDropdown(false);
     setShowSupplierModal(true);
   };
 
@@ -349,6 +364,7 @@ export default function Suppliers() {
     }
 
     setShowSupplierModal(false);
+    setShowItemsDropdown(false);
     setEditingSupplierId(null);
     setFormData(emptyForm);
   };
@@ -363,6 +379,31 @@ export default function Suppliers() {
       ...currentData,
       [name]: value,
     }));
+  };
+
+  const toggleItem = (itemId) => {
+    setFormData((currentData) => {
+      const normalizedId = String(itemId);
+
+      const isSelected =
+        currentData.itemIds.some(
+          (id) =>
+            String(id) === normalizedId
+        );
+
+      return {
+        ...currentData,
+        itemIds: isSelected
+          ? currentData.itemIds.filter(
+              (id) =>
+                String(id) !== normalizedId
+            )
+          : [
+              ...currentData.itemIds,
+              itemId,
+            ],
+      };
+    });
   };
 
   const handleSaveSupplier = async (
@@ -407,6 +448,17 @@ export default function Suppliers() {
       showAlert({
         message:
           "Please complete all supplier fields.",
+      });
+      return;
+    }
+
+    if (
+      !Array.isArray(formData.itemIds) ||
+      formData.itemIds.length === 0
+    ) {
+      showAlert({
+        message:
+          "Please select at least one item.",
       });
       return;
     }
@@ -630,6 +682,7 @@ export default function Suppliers() {
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Address</th>
+                  <th>Items</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -639,7 +692,7 @@ export default function Suppliers() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan="8"
                       className="suppliers-empty-state"
                     >
                       Loading suppliers...
@@ -684,6 +737,12 @@ export default function Suppliers() {
 
                         <td>
                           {supplier.address}
+                        </td>
+
+                        <td>
+                          {supplier.itemNames?.length
+                            ? supplier.itemNames.join(", ")
+                            : "-"}
                         </td>
 
                         <td>
@@ -776,7 +835,7 @@ export default function Suppliers() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan="8"
                       className="suppliers-empty-state"
                     >
                       No suppliers match your
@@ -957,6 +1016,83 @@ export default function Suppliers() {
                   onChange={handleFormChange}
                 />
               </label>
+
+              <div className="supplier-items-field supplier-full-field">
+                <span className="supplier-items-label">
+                  Items
+                </span>
+
+                <button
+                  type="button"
+                  className={`supplier-items-trigger ${
+                    showItemsDropdown
+                      ? "open"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setShowItemsDropdown(
+                      (current) => !current
+                    )
+                  }
+                  disabled={saving}
+                >
+                  <span>
+                    {formData.itemIds.length > 0
+                      ? `${formData.itemIds.length} item${
+                          formData.itemIds.length === 1
+                            ? ""
+                            : "s"
+                        } selected`
+                      : "Select items"}
+                  </span>
+
+                  <span>▾</span>
+                </button>
+
+                {showItemsDropdown && (
+                  <div className="supplier-items-dropdown">
+                    {items.length > 0 ? (
+                      items.map((item) => {
+                        const isSelected =
+                          formData.itemIds.some(
+                            (id) =>
+                              String(id) ===
+                              String(item.id)
+                          );
+
+                        return (
+                          <label
+                            key={item.id}
+                            className="supplier-item-option"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() =>
+                                toggleItem(item.id)
+                              }
+                            />
+
+                            <span>
+                              <strong>
+                                {item.name}
+                              </strong>
+
+                              <small>
+                                {item.item_code}
+                              </small>
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="supplier-no-items">
+                        No active items found.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <label className="supplier-full-field">
                 Status

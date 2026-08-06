@@ -16,18 +16,16 @@ const WAREHOUSE_FIELDS = `
     missing_quantity
   )
 `;
-
 const calculateUsedCapacity = (inventoryRows = []) =>
   inventoryRows.reduce((total, row) => {
     return (
       total +
       Number(row.available_quantity || 0) +
       Number(row.reserved_quantity || 0) +
-      Number(row.damaged_quantity || 0) +
-      Number(row.missing_quantity || 0)
+      Number(row.damaged_quantity || 0)
     );
   }, 0);
-
+  
 export const mapWarehouseFromDatabase = (warehouse) => {
   const usedCapacity = calculateUsedCapacity(
     warehouse.warehouse_inventory || []
