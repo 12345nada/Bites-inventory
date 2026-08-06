@@ -200,11 +200,16 @@ export default function Items() {
         ])
       );
 
-      const inventoryByItem = new Map();
+      const inventoriesByItem = new Map();
       (inventoryResult.data ?? []).forEach((inventory) => {
-        if (!inventoryByItem.has(inventory.item_id)) {
-          inventoryByItem.set(inventory.item_id, inventory);
-        }
+        const currentInventories =
+          inventoriesByItem.get(inventory.item_id) ?? [];
+
+        currentInventories.push(inventory);
+        inventoriesByItem.set(
+          inventory.item_id,
+          currentInventories
+        );
       });
 
       const imagesByItem = new Map();
@@ -228,11 +233,9 @@ export default function Items() {
         })
       );
 
-      const normalizedItems = (itemsResult.data ?? []).map((item) => {
-        const inventory = inventoryByItem.get(item.id);
-        const warehouse = inventory
-          ? warehouseMap.get(inventory.warehouse_id)
-          : null;
+      const normalizedItems = (itemsResult.data ?? []).flatMap((item) => {
+        const itemInventories =
+          inventoriesByItem.get(item.id) ?? [];
 
         const itemImages = (imagesByItem.get(item.id) ?? []).map((image) => ({
           id: image.id,
@@ -242,26 +245,38 @@ export default function Items() {
           isExisting: true,
         }));
 
-        return {
-          id: item.id,
-          itemCode: item.item_code,
-          name: item.name,
-          categoryId: item.category_id,
-          category: categoryMap.get(item.category_id) ?? "—",
-          unit: item.unit,
-          purchaseCost: Number(item.purchase_cost ?? 0),
-          supplierId: item.primary_supplier_id,
-          supplier: supplierMap.get(item.primary_supplier_id) ?? "—",
-          inventoryId: inventory?.id ?? null,
-          warehouseId: inventory?.warehouse_id ?? null,
-          warehouse: warehouse?.name ?? "—",
-          available: Number(inventory?.available_quantity ?? 0),
-          reservedQuantity: Number(inventory?.reserved_quantity ?? 0),
-          damaged: Number(inventory?.damaged_quantity ?? 0),
-          missing: Number(inventory?.missing_quantity ?? 0),
-          minimumStock: Number(inventory?.minimum_stock ?? 0),
-          images: itemImages,
-        };
+        const inventoriesToDisplay =
+          itemInventories.length > 0
+            ? itemInventories
+            : [null];
+
+        return inventoriesToDisplay.map((inventory) => {
+          const warehouse = inventory
+            ? warehouseMap.get(inventory.warehouse_id)
+            : null;
+
+          return {
+            id: item.id,
+            rowKey: `${item.id}-${inventory?.id ?? "no-inventory"}`,
+            itemCode: item.item_code,
+            name: item.name,
+            categoryId: item.category_id,
+            category: categoryMap.get(item.category_id) ?? "—",
+            unit: item.unit,
+            purchaseCost: Number(item.purchase_cost ?? 0),
+            supplierId: item.primary_supplier_id,
+            supplier: supplierMap.get(item.primary_supplier_id) ?? "—",
+            inventoryId: inventory?.id ?? null,
+            warehouseId: inventory?.warehouse_id ?? null,
+            warehouse: warehouse?.name ?? "—",
+            available: Number(inventory?.available_quantity ?? 0),
+            reservedQuantity: Number(inventory?.reserved_quantity ?? 0),
+            damaged: Number(inventory?.damaged_quantity ?? 0),
+            missing: Number(inventory?.missing_quantity ?? 0),
+            minimumStock: Number(inventory?.minimum_stock ?? 0),
+            images: itemImages,
+          };
+        });
       });
 
       setCategories(categoriesResult.data ?? []);
@@ -326,6 +341,11 @@ export default function Items() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  const totalItems = useMemo(
+    () => new Set(items.map((item) => item.id)).size,
+    [items]
+  );
 
   const totalAvailableItems = useMemo(
     () =>
@@ -1109,7 +1129,7 @@ console.log(
           <ItemStatCard
             icon={<FiBox />}
             title="Total Items"
-            value={items.length}
+            value={totalItems}
             subtitle="All inventory items"
           />
 
@@ -1188,7 +1208,7 @@ console.log(
                   </tr>
                 ) : filteredItems.length > 0 ? (
                   paginatedItems.map((item) => (
-                    <tr key={item.id}>
+                    <tr key={item.rowKey}>
 
                       <td>
                         <div className="item-name-cell">
@@ -1247,13 +1267,13 @@ console.log(
                               className="item-more-button"
                               aria-label={`More actions for ${item.name}`}
                               onClick={(event) =>
-                                toggleActionMenu(event, item.id)
+                                toggleActionMenu(event, item.rowKey)
                               }
                             >
                               <FiMoreVertical />
                             </button>
 
-                            {openActionMenuId === item.id && (
+                            {openActionMenuId === item.rowKey && (
                               <div
                                 className="item-action-menu"
                                 style={{
