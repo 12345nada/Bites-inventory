@@ -858,3 +858,137 @@ body {
     gap:6px;
   }
 }
+
+
+.purchase-items-section {
+  margin-top: 18px;
+  padding: 14px;
+  background: #fffdfb;
+  border: 1px solid #f0ddcf;
+  border-radius: 12px;
+}
+
+.purchase-items-header {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.purchase-items-header h3 {
+  margin: 0;
+  color: #211b17;
+  font-size: 13px;
+}
+
+.purchase-items-header p {
+  margin: 3px 0 0;
+  color: #81766e;
+  font-size: 9px;
+}
+
+.purchase-add-item-button {
+  min-height: 34px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: none;
+  border-radius: 8px;
+  background: #713006;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.purchase-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.purchase-item-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2fr)
+    minmax(95px, 0.8fr)
+    minmax(110px, 0.9fr)
+    36px;
+  align-items: end;
+  gap: 10px;
+}
+
+.purchase-item-row label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #332e2a;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.purchase-item-row input,
+.purchase-item-row select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #eadbd0;
+  border-radius: 9px;
+  outline: none;
+  background: #ffffff;
+  color: #302a26;
+  font: inherit;
+  font-weight: 400;
+}
+
+.purchase-remove-item-button {
+  width: 36px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #eadbd0;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #d62d20;
+  cursor: pointer;
+}
+
+.purchase-remove-item-button:disabled,
+.purchase-add-item-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.purchase-items-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receive-summary-items {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+  .purchase-items-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .purchase-add-item-button {
+    width: 100%;
+  }
+
+  .purchase-item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-remove-item-button {
+    width: 100%;
+  }
+}

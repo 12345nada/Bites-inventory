@@ -35,17 +35,41 @@ const PURCHASE_FIELDS = `
   )
 `;
 
-export const mapPurchaseFromDatabase = (purchase) => {
-  const firstItem =
-    purchase.purchase_order_items?.[0] || null;
+export const mapPurchaseFromDatabase = (
+  purchase
+) => {
+  const purchaseItems = (
+    purchase.purchase_order_items || []
+  ).map((purchaseItem) => ({
+    id: purchaseItem.id,
+    itemId: purchaseItem.item_id,
+    name: purchaseItem.item?.name || "",
+    itemCode:
+      purchaseItem.item?.item_code || "",
+    quantity: Number(
+      purchaseItem.quantity || 0
+    ),
+    unitCost: Number(
+      purchaseItem.unit_cost || 0
+    ),
+    totalAmount:
+      Number(purchaseItem.quantity || 0) *
+      Number(purchaseItem.unit_cost || 0),
+  }));
 
-  const quantity = Number(
-    firstItem?.quantity || 0
-  );
+  const totalQuantity =
+    purchaseItems.reduce(
+      (total, purchaseItem) =>
+        total + purchaseItem.quantity,
+      0
+    );
 
-  const unitCost = Number(
-    firstItem?.unit_cost || 0
-  );
+  const totalAmount =
+    purchaseItems.reduce(
+      (total, purchaseItem) =>
+        total + purchaseItem.totalAmount,
+      0
+    );
 
   return {
     id: purchase.id,
@@ -67,12 +91,13 @@ export const mapPurchaseFromDatabase = (purchase) => {
     orderDate: purchase.order_date || "",
     expectedDate:
       purchase.expected_date || "",
-    itemId: firstItem?.item_id || "",
-    itemName:
-      firstItem?.item?.name || "",
-    quantity,
-    unitCost,
-    totalAmount: quantity * unitCost,
+    items: purchaseItems,
+    itemNames: purchaseItems.map(
+      (purchaseItem) =>
+        purchaseItem.name
+    ),
+    totalQuantity,
+    totalAmount,
     status: purchase.status || "Pending",
     notes: purchase.notes || "",
     createdAt: purchase.created_at,
@@ -147,7 +172,8 @@ export async function getPurchasePageData() {
     purchases: (
       purchasesResult.data || []
     ).map(mapPurchaseFromDatabase),
-    suppliers: suppliersResult.data || [],
+    suppliers:
+      suppliersResult.data || [],
     warehouses:
       warehousesResult.data || [],
     items: itemsResult.data || [],
@@ -168,6 +194,40 @@ const createPurchaseOrderPayload = (
     formData.expectedDate || null,
   status: "Pending",
 });
+
+const createPurchaseItemsPayload = (
+  purchaseOrderId,
+  items
+) =>
+  items.map((purchaseItem) => ({
+    purchase_order_id:
+      purchaseOrderId,
+    item_id: Number(
+      purchaseItem.itemId
+    ),
+    quantity: Number(
+      purchaseItem.quantity
+    ),
+    unit_cost: Number(
+      purchaseItem.unitCost
+    ),
+  }));
+
+async function getPurchaseById(
+  purchaseId
+) {
+  const { data, error } = await supabase
+    .from("purchase_orders")
+    .select(PURCHASE_FIELDS)
+    .eq("id", purchaseId)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapPurchaseFromDatabase(data);
+}
 
 export async function createPurchase(
   formData
@@ -192,19 +252,12 @@ export async function createPurchase(
   const { error: itemError } =
     await supabase
       .from("purchase_order_items")
-      .insert({
-        purchase_order_id:
+      .insert(
+        createPurchaseItemsPayload(
           purchaseOrder.id,
-        item_id: Number(
-          formData.itemId
-        ),
-        quantity: Number(
-          formData.quantity
-        ),
-        unit_cost: Number(
-          formData.unitCost
-        ),
-      });
+          formData.items
+        )
+      );
 
   if (itemError) {
     await supabase
@@ -215,17 +268,9 @@ export async function createPurchase(
     throw itemError;
   }
 
-  const { data, error } = await supabase
-    .from("purchase_orders")
-    .select(PURCHASE_FIELDS)
-    .eq("id", purchaseOrder.id)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return mapPurchaseFromDatabase(data);
+  return getPurchaseById(
+    purchaseOrder.id
+  );
 }
 
 export async function updatePurchase(
@@ -245,7 +290,8 @@ export async function updatePurchase(
         order_date:
           formData.orderDate,
         expected_date:
-          formData.expectedDate || null,
+          formData.expectedDate ||
+          null,
       })
       .eq("id", purchaseId)
       .in("status", [
@@ -258,75 +304,74 @@ export async function updatePurchase(
   }
 
   const {
-    data: currentItem,
-    error: currentItemError,
+    data: previousItems,
+    error: previousItemsError,
   } = await supabase
     .from("purchase_order_items")
-    .select("id")
+    .select(`
+      item_id,
+      quantity,
+      unit_cost
+    `)
     .eq(
       "purchase_order_id",
       purchaseId
-    )
-    .maybeSingle();
+    );
 
-  if (currentItemError) {
-    throw currentItemError;
+  if (previousItemsError) {
+    throw previousItemsError;
   }
 
-  if (currentItem?.id) {
-    const { error: updateItemError } =
+  const { error: deleteItemsError } =
+    await supabase
+      .from("purchase_order_items")
+      .delete()
+      .eq(
+        "purchase_order_id",
+        purchaseId
+      );
+
+  if (deleteItemsError) {
+    throw deleteItemsError;
+  }
+
+  const { error: insertItemsError } =
+    await supabase
+      .from("purchase_order_items")
+      .insert(
+        createPurchaseItemsPayload(
+          purchaseId,
+          formData.items
+        )
+      );
+
+  if (insertItemsError) {
+    if (
+      previousItems &&
+      previousItems.length > 0
+    ) {
       await supabase
         .from("purchase_order_items")
-        .update({
-          item_id: Number(
-            formData.itemId
-          ),
-          quantity: Number(
-            formData.quantity
-          ),
-          unit_cost: Number(
-            formData.unitCost
-          ),
-        })
-        .eq("id", currentItem.id);
-
-    if (updateItemError) {
-      throw updateItemError;
+        .insert(
+          previousItems.map(
+            (purchaseItem) => ({
+              purchase_order_id:
+                purchaseId,
+              item_id:
+                purchaseItem.item_id,
+              quantity:
+                purchaseItem.quantity,
+              unit_cost:
+                purchaseItem.unit_cost,
+            })
+          )
+        );
     }
-  } else {
-    const { error: insertItemError } =
-      await supabase
-        .from("purchase_order_items")
-        .insert({
-          purchase_order_id:
-            purchaseId,
-          item_id: Number(
-            formData.itemId
-          ),
-          quantity: Number(
-            formData.quantity
-          ),
-          unit_cost: Number(
-            formData.unitCost
-          ),
-        });
 
-    if (insertItemError) {
-      throw insertItemError;
-    }
+    throw insertItemsError;
   }
 
-  const { data, error } = await supabase
-    .from("purchase_orders")
-    .select(PURCHASE_FIELDS)
-    .eq("id", purchaseId)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return mapPurchaseFromDatabase(data);
+  return getPurchaseById(purchaseId);
 }
 
 export async function updatePurchaseStatus(
@@ -350,101 +395,141 @@ export async function updatePurchaseStatus(
 export async function receivePurchase(
   purchase
 ) {
-  const {
-    data: inventoryRow,
-    error: inventoryError,
-  } = await supabase
-    .from("warehouse_inventory")
-    .select(`
-      id,
-      available_quantity
-    `)
-    .eq(
-      "warehouse_id",
-      purchase.warehouseId
-    )
-    .eq("item_id", purchase.itemId)
-    .maybeSingle();
-
-  if (inventoryError) {
-    throw inventoryError;
-  }
-
-  if (inventoryRow?.id) {
-    const { error: updateInventoryError } =
-      await supabase
-        .from("warehouse_inventory")
-        .update({
-          available_quantity:
-            Number(
-              inventoryRow.available_quantity ||
-                0
-            ) +
-            Number(purchase.quantity),
-        })
-        .eq("id", inventoryRow.id);
-
-    if (updateInventoryError) {
-      throw updateInventoryError;
-    }
-  } else {
-    const { error: insertInventoryError } =
-      await supabase
-        .from("warehouse_inventory")
-        .insert({
-          warehouse_id:
-            purchase.warehouseId,
-          item_id: purchase.itemId,
-          available_quantity:
-            Number(purchase.quantity),
-          reserved_quantity: 0,
-          damaged_quantity: 0,
-          missing_quantity: 0,
-          minimum_stock: 0,
-        });
-
-    if (insertInventoryError) {
-      throw insertInventoryError;
-    }
-  }
+  const inventoryChanges = [];
 
   try {
-    return await updatePurchaseStatus(
-      purchase.id,
-      "Received"
-    );
-  } catch (statusError) {
-    const rollbackQuantity = Math.max(
-      0,
-      Number(
-        inventoryRow?.available_quantity ||
-          0
-      )
-    );
-
-    if (inventoryRow?.id) {
-      await supabase
+    for (
+      const purchaseItem of
+      purchase.items
+    ) {
+      const {
+        data: inventoryRow,
+        error: inventoryError,
+      } = await supabase
         .from("warehouse_inventory")
-        .update({
-          available_quantity:
-            rollbackQuantity,
-        })
-        .eq("id", inventoryRow.id);
-    } else {
-      await supabase
-        .from("warehouse_inventory")
-        .delete()
+        .select(`
+          id,
+          available_quantity
+        `)
         .eq(
           "warehouse_id",
           purchase.warehouseId
         )
         .eq(
           "item_id",
-          purchase.itemId
-        );
+          purchaseItem.itemId
+        )
+        .maybeSingle();
+
+      if (inventoryError) {
+        throw inventoryError;
+      }
+
+      if (inventoryRow?.id) {
+        const previousQuantity =
+          Number(
+            inventoryRow.available_quantity ||
+              0
+          );
+
+        const { error:
+          updateInventoryError } =
+          await supabase
+            .from(
+              "warehouse_inventory"
+            )
+            .update({
+              available_quantity:
+                previousQuantity +
+                Number(
+                  purchaseItem.quantity
+                ),
+            })
+            .eq(
+              "id",
+              inventoryRow.id
+            );
+
+        if (updateInventoryError) {
+          throw updateInventoryError;
+        }
+
+        inventoryChanges.push({
+          type: "update",
+          id: inventoryRow.id,
+          previousQuantity,
+        });
+      } else {
+        const {
+          data: insertedRow,
+          error:
+            insertInventoryError,
+        } = await supabase
+          .from("warehouse_inventory")
+          .insert({
+            warehouse_id:
+              purchase.warehouseId,
+            item_id:
+              purchaseItem.itemId,
+            available_quantity:
+              Number(
+                purchaseItem.quantity
+              ),
+            reserved_quantity: 0,
+            damaged_quantity: 0,
+            missing_quantity: 0,
+            minimum_stock: 0,
+          })
+          .select("id")
+          .single();
+
+        if (insertInventoryError) {
+          throw insertInventoryError;
+        }
+
+        inventoryChanges.push({
+          type: "insert",
+          id: insertedRow.id,
+        });
+      }
     }
 
-    throw statusError;
+    return await updatePurchaseStatus(
+      purchase.id,
+      "Received"
+    );
+  } catch (error) {
+    for (
+      const inventoryChange of
+      inventoryChanges.reverse()
+    ) {
+      if (
+        inventoryChange.type ===
+        "update"
+      ) {
+        await supabase
+          .from("warehouse_inventory")
+          .update({
+            available_quantity:
+              inventoryChange
+                .previousQuantity,
+          })
+          .eq(
+            "id",
+            inventoryChange.id
+          );
+      } else {
+        await supabase
+          .from("warehouse_inventory")
+          .delete()
+          .eq(
+            "id",
+            inventoryChange.id
+          );
+      }
+    }
+
+    throw error;
   }
 }
 

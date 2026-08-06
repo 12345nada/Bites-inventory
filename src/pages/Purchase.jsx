@@ -43,14 +43,18 @@ import {
 const getTodayDate = () =>
   new Date().toISOString().split("T")[0];
 
+const createEmptyPurchaseItem = () => ({
+  itemId: "",
+  quantity: "",
+  unitCost: "",
+});
+
 const createEmptyForm = () => ({
   supplierId: "",
   orderDate: getTodayDate(),
   expectedDate: "",
   warehouseId: "",
-  itemId: "",
-  quantity: "",
-  unitCost: "",
+  items: [createEmptyPurchaseItem()],
 });
 
 export default function Purchase() {
@@ -204,7 +208,7 @@ export default function Purchase() {
         [
           purchase.poNumber,
           purchase.supplier,
-          purchase.itemName,
+          purchase.itemNames?.join(" "),
           purchase.orderDate,
           purchase.expectedDate,
           purchase.warehouse,
@@ -310,7 +314,7 @@ export default function Purchase() {
     .reduce(
       (total, purchase) =>
         total +
-        Number(purchase.quantity),
+        Number(purchase.totalQuantity || 0),
       0
     );
 
@@ -320,28 +324,75 @@ export default function Purchase() {
       value,
     } = event.target;
 
-    if (name === "itemId") {
-      const selectedItem = items.find(
-        (item) =>
-          String(item.id) ===
-          String(value)
-      );
-
-      setFormData((currentData) => ({
-        ...currentData,
-        itemId: value,
-        unitCost:
-          selectedItem?.purchase_cost ??
-          currentData.unitCost,
-      }));
-
-      return;
-    }
-
     setFormData((currentData) => ({
       ...currentData,
       [name]: value,
     }));
+  };
+
+  const handlePurchaseItemChange = (
+    itemIndex,
+    field,
+    value
+  ) => {
+    setFormData((currentData) => ({
+      ...currentData,
+      items: currentData.items.map(
+        (purchaseItem, index) => {
+          if (index !== itemIndex) {
+            return purchaseItem;
+          }
+
+          if (field === "itemId") {
+            const selectedItem = items.find(
+              (item) =>
+                String(item.id) ===
+                String(value)
+            );
+
+            return {
+              ...purchaseItem,
+              itemId: value,
+              unitCost:
+                selectedItem?.purchase_cost ??
+                purchaseItem.unitCost,
+            };
+          }
+
+          return {
+            ...purchaseItem,
+            [field]: value,
+          };
+        }
+      ),
+    }));
+  };
+
+  const addPurchaseItem = () => {
+    setFormData((currentData) => ({
+      ...currentData,
+      items: [
+        ...currentData.items,
+        createEmptyPurchaseItem(),
+      ],
+    }));
+  };
+
+  const removePurchaseItem = (
+    itemIndex
+  ) => {
+    setFormData((currentData) => {
+      if (currentData.items.length === 1) {
+        return currentData;
+      }
+
+      return {
+        ...currentData,
+        items: currentData.items.filter(
+          (_, index) => index !== itemIndex
+        ),
+      };
+    });
   };
 
   const openNewPurchaseModal = async () => {
@@ -384,11 +435,20 @@ export default function Purchase() {
       warehouseId: String(
         purchase.warehouseId
       ),
-      itemId: String(
-        purchase.itemId
-      ),
-      quantity: purchase.quantity,
-      unitCost: purchase.unitCost,
+      items:
+        purchase.items?.length > 0
+          ? purchase.items.map(
+              (purchaseItem) => ({
+                itemId: String(
+                  purchaseItem.itemId
+                ),
+                quantity:
+                  purchaseItem.quantity,
+                unitCost:
+                  purchaseItem.unitCost,
+              })
+            )
+          : [createEmptyPurchaseItem()],
     });
 
     setOpenActionId(null);
@@ -411,9 +471,6 @@ export default function Purchase() {
       "orderDate",
       "expectedDate",
       "warehouseId",
-      "itemId",
-      "quantity",
-      "unitCost",
     ];
 
     const hasEmptyField =
@@ -426,18 +483,68 @@ export default function Purchase() {
 
     if (hasEmptyField) {
       showAlert({
-        message: "Please complete all purchase fields.",
+        message:
+          "Please complete all purchase fields.",
       });
 
       return false;
     }
 
     if (
-      Number(formData.quantity) <= 0 ||
-      Number(formData.unitCost) < 0
+      !Array.isArray(formData.items) ||
+      formData.items.length === 0
     ) {
       showAlert({
-        message: "Quantity must be greater than zero and unit cost cannot be negative.",
+        message:
+          "Please add at least one item.",
+      });
+
+      return false;
+    }
+
+    const hasInvalidItem =
+      formData.items.some(
+        (purchaseItem) =>
+          String(
+            purchaseItem.itemId || ""
+          ).trim() === "" ||
+          String(
+            purchaseItem.quantity || ""
+          ).trim() === "" ||
+          String(
+            purchaseItem.unitCost ?? ""
+          ).trim() === "" ||
+          Number(
+            purchaseItem.quantity
+          ) <= 0 ||
+          Number(
+            purchaseItem.unitCost
+          ) < 0
+      );
+
+    if (hasInvalidItem) {
+      showAlert({
+        message:
+          "Complete every item. Quantity must be greater than zero and unit cost cannot be negative.",
+      });
+
+      return false;
+    }
+
+    const uniqueItemIds = new Set(
+      formData.items.map(
+        (purchaseItem) =>
+          String(purchaseItem.itemId)
+      )
+    );
+
+    if (
+      uniqueItemIds.size !==
+      formData.items.length
+    ) {
+      showAlert({
+        message:
+          "The same item cannot be added more than once.",
       });
 
       return false;
@@ -448,7 +555,8 @@ export default function Purchase() {
       formData.orderDate
     ) {
       showAlert({
-        message: "Expected date cannot be before the order date.",
+        message:
+          "Expected date cannot be before the order date.",
       });
 
       return false;
@@ -951,8 +1059,8 @@ export default function Purchase() {
                   <th>Order Date</th>
                   <th>Expected Date</th>
                   <th>Warehouse</th>
-                  <th>Item</th>
-                  <th>Quantity</th>
+                  <th>Items</th>
+                  <th>Total Quantity</th>
                   <th>Total Amount</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -1006,12 +1114,16 @@ export default function Purchase() {
                         </td>
 
                         <td>
-                          {purchase.itemName}
+                          <div className="purchase-items-cell">
+                            {purchase.itemNames?.length
+                              ? purchase.itemNames.join(", ")
+                              : "-"}
+                          </div>
                         </td>
 
                         <td>
                           {Number(
-                            purchase.quantity
+                            purchase.totalQuantity
                           ).toLocaleString()}
                         </td>
 
@@ -1272,7 +1384,7 @@ export default function Purchase() {
                 </h2>
 
                 <p>
-                  Enter the requested item and
+                  Enter the requested items and
                   supplier information.
                 </p>
               </div>
@@ -1319,56 +1431,6 @@ export default function Purchase() {
               </label>
 
               <label>
-                Item
-
-                <select
-                  name="itemId"
-                  value={formData.itemId}
-                  onChange={handleFormChange}
-                  disabled={saving}
-                >
-                  <option value="">
-                    Select item
-                  </option>
-
-                  {items.map((item) => (
-                    <option
-                      key={item.id}
-                      value={item.id}
-                    >
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Order Date
-
-                <input
-                  type="date"
-                  name="orderDate"
-                  value={formData.orderDate}
-                  onChange={handleFormChange}
-                  disabled={saving}
-                />
-              </label>
-
-              <label>
-                Expected Date
-
-                <input
-                  type="date"
-                  name="expectedDate"
-                  value={
-                    formData.expectedDate
-                  }
-                  onChange={handleFormChange}
-                  disabled={saving}
-                />
-              </label>
-
-              <label>
                 Warehouse
 
                 <select
@@ -1397,47 +1459,176 @@ export default function Purchase() {
               </label>
 
               <label>
-                Quantity
+                Order Date
 
                 <input
-                  type="number"
-                  min="1"
-                  name="quantity"
-                  value={formData.quantity}
+                  type="date"
+                  name="orderDate"
+                  value={formData.orderDate}
                   onChange={handleFormChange}
-                  placeholder="500"
                   disabled={saving}
                 />
               </label>
 
-              <label className="purchase-full-field">
-                Unit Cost
+              <label>
+                Expected Date
 
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="unitCost"
-                  value={formData.unitCost}
+                  type="date"
+                  name="expectedDate"
+                  value={
+                    formData.expectedDate
+                  }
                   onChange={handleFormChange}
-                  placeholder="0.00"
                   disabled={saving}
                 />
               </label>
             </div>
 
+            <section className="purchase-items-section">
+              <div className="purchase-items-header">
+                <div>
+                  <h3>Items & Quantities</h3>
+                  <p>
+                    Add one or more items to this
+                    purchase order.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="purchase-add-item-button"
+                  onClick={addPurchaseItem}
+                  disabled={saving}
+                >
+                  <FiPlus />
+                  Add Item
+                </button>
+              </div>
+
+              <div className="purchase-items-list">
+                {formData.items.map(
+                  (purchaseItem, itemIndex) => (
+                    <div
+                      key={itemIndex}
+                      className="purchase-item-row"
+                    >
+                      <label>
+                        Item
+
+                        <select
+                          value={
+                            purchaseItem.itemId
+                          }
+                          onChange={(event) =>
+                            handlePurchaseItemChange(
+                              itemIndex,
+                              "itemId",
+                              event.target.value
+                            )
+                          }
+                          disabled={saving}
+                        >
+                          <option value="">
+                            Select item
+                          </option>
+
+                          {items.map((item) => (
+                            <option
+                              key={item.id}
+                              value={item.id}
+                            >
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        Quantity
+
+                        <input
+                          type="number"
+                          min="1"
+                          value={
+                            purchaseItem.quantity
+                          }
+                          onChange={(event) =>
+                            handlePurchaseItemChange(
+                              itemIndex,
+                              "quantity",
+                              event.target.value
+                            )
+                          }
+                          placeholder="500"
+                          disabled={saving}
+                        />
+                      </label>
+
+                      <label>
+                        Unit Cost
+
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={
+                            purchaseItem.unitCost
+                          }
+                          onChange={(event) =>
+                            handlePurchaseItemChange(
+                              itemIndex,
+                              "unitCost",
+                              event.target.value
+                            )
+                          }
+                          placeholder="0.00"
+                          disabled={saving}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        className="purchase-remove-item-button"
+                        onClick={() =>
+                          removePurchaseItem(
+                            itemIndex
+                          )
+                        }
+                        disabled={
+                          saving ||
+                          formData.items.length ===
+                            1
+                        }
+                        aria-label="Remove item"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  )
+                )}
+              </div>
+            </section>
+
             <div className="purchase-total-preview">
               Estimated Total:
 
               <strong>
-                {(
-                  Number(
-                    formData.quantity || 0
-                  ) *
-                  Number(
-                    formData.unitCost || 0
+                {formData.items
+                  .reduce(
+                    (total, purchaseItem) =>
+                      total +
+                      Number(
+                        purchaseItem.quantity ||
+                          0
+                      ) *
+                        Number(
+                          purchaseItem.unitCost ||
+                            0
+                        ),
+                    0
                   )
-                ).toLocaleString()}{" "}
+                  .toLocaleString()}{" "}
                 EGP
               </strong>
             </div>
@@ -1519,22 +1710,27 @@ export default function Purchase() {
                 </strong>
               </div>
 
-              <div>
-                <span>Item</span>
+              <div className="receive-summary-items">
+                <span>Items</span>
 
                 <strong>
-                  {
-                    receivingPurchase.itemName
-                  }
+                  {receivingPurchase.items
+                    .map(
+                      (purchaseItem) =>
+                        `${purchaseItem.name} (${Number(
+                          purchaseItem.quantity
+                        ).toLocaleString()})`
+                    )
+                    .join(", ")}
                 </strong>
               </div>
 
               <div>
-                <span>Quantity</span>
+                <span>Total Quantity</span>
 
                 <strong>
                   {Number(
-                    receivingPurchase.quantity
+                    receivingPurchase.totalQuantity
                   ).toLocaleString()}
                 </strong>
               </div>

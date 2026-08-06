@@ -25,6 +25,18 @@ export default function EventTable({
     searchValue.trim().toLowerCase();
 
   const filteredRows = useMemo(() => {
+    const now = new Date();
+
+    const todayDate = [
+      now.getFullYear(),
+      String(
+        now.getMonth() + 1
+      ).padStart(2, "0"),
+      String(
+        now.getDate()
+      ).padStart(2, "0"),
+    ].join("-");
+
     return events.filter((event) => {
       const matchesSearch =
         normalizedSearch === "" ||
@@ -52,9 +64,14 @@ export default function EventTable({
           "All Branches" ||
         event.branch === selectedBranch;
 
+      const isTodayOrFuture =
+        event.rawDate &&
+        event.rawDate >= todayDate;
+
       return (
         matchesSearch &&
-        matchesBranch
+        matchesBranch &&
+        isTodayOrFuture
       );
     });
   }, [
@@ -242,8 +259,8 @@ export default function EventTable({
                   colSpan="8"
                   className="dashboard-empty-table"
                 >
-                  No events match your
-                  search.
+                  No upcoming events match
+                  your search.
                 </td>
               </tr>
             )}
@@ -254,10 +271,10 @@ export default function EventTable({
       <div className="dashboard-table-pagination">
         <p>
           Showing {filteredRows.length} of{" "}
-          {events.length} events
+          {filteredRows.length} events
         </p>
 
-        {events.length > 0 && (
+        {filteredRows.length > 0 && (
           <div>
             <button type="button" disabled>
               ‹
