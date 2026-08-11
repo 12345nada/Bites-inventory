@@ -37,7 +37,8 @@ const DISPATCH_FIELDS = `
     item:items (
       id,
       item_code,
-      name
+      name,
+      item_type
     )
   )
 `;
@@ -70,6 +71,8 @@ const mapDispatchFromDatabase = (dispatch) => ({
       name: dispatchItem.item?.name || "",
       itemCode:
         dispatchItem.item?.item_code || "",
+      itemType:
+        dispatchItem.item?.item_type || "Reusable",
       quantity: Number(
         dispatchItem.quantity || 0
       ),
@@ -197,6 +200,7 @@ export async function getWarehouseItems(
         item_code,
         name,
         unit,
+        item_type,
         is_active
       )
     `)
@@ -216,6 +220,7 @@ export async function getWarehouseItems(
       itemCode: row.item?.item_code || "",
       name: row.item?.name || "",
       unit: row.item?.unit || "",
+      itemType: row.item?.item_type || "Reusable",
       availableQuantity: Number(
         row.available_quantity || 0
       ),

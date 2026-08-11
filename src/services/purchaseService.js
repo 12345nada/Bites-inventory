@@ -398,6 +398,66 @@ export async function receivePurchase(
   const inventoryChanges = [];
 
   try {
+    const {
+      data: warehouse,
+      error: warehouseError,
+    } = await supabase
+      .from("warehouses")
+      .select("id, name, total_capacity")
+      .eq("id", purchase.warehouseId)
+      .single();
+
+    if (warehouseError) {
+      throw warehouseError;
+    }
+
+    const {
+      data: warehouseInventory,
+      error: warehouseInventoryError,
+    } = await supabase
+      .from("warehouse_inventory")
+      .select(
+        "available_quantity, reserved_quantity, damaged_quantity"
+      )
+      .eq("warehouse_id", purchase.warehouseId);
+
+    if (warehouseInventoryError) {
+      throw warehouseInventoryError;
+    }
+
+    const currentUsedCapacity = (
+      warehouseInventory || []
+    ).reduce(
+      (total, row) =>
+        total +
+        Number(row.available_quantity || 0) +
+        Number(row.reserved_quantity || 0) +
+        Number(row.damaged_quantity || 0),
+      0
+    );
+
+    const incomingQuantity = (
+      purchase.items || []
+    ).reduce(
+      (total, purchaseItem) =>
+        total + Number(purchaseItem.quantity || 0),
+      0
+    );
+
+    const totalCapacity =
+      Number(warehouse.total_capacity || 0);
+
+    const availableCapacity = Math.max(
+      0,
+      totalCapacity - currentUsedCapacity
+    );
+
+    if (incomingQuantity > availableCapacity) {
+      throw new Error(
+        `${warehouse.name} does not have enough available capacity. Only ${availableCapacity.toLocaleString()} items can be received.`
+      );
+    }
+
     for (
       const purchaseItem of
       purchase.items

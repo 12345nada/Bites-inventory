@@ -34,6 +34,7 @@ const emptyForm = {
   name: "",
   categoryId: "",
   unit: "Piece",
+  itemType: "Reusable",
   purchaseCost: "",
   supplierId: "",
   warehouseId: "",
@@ -133,7 +134,7 @@ export default function Items() {
         supabase
           .from("items")
           .select(
-            "id, item_code, name, category_id, unit, purchase_cost, primary_supplier_id, is_active"
+            "id, item_code, name, category_id, unit, item_type, purchase_cost, primary_supplier_id, is_active"
           )
           .eq("is_active", true)
           .order("created_at", { ascending: false }),
@@ -151,7 +152,7 @@ export default function Items() {
 
         supabase
           .from("warehouses")
-          .select("id, name, branch")
+          .select("id, name, branch, total_capacity")
           .order("name"),
 
         supabase
@@ -768,6 +769,7 @@ export default function Items() {
       name: item.name ?? "",
       categoryId: item.categoryId ? String(item.categoryId) : "",
       unit: item.unit ?? "Piece",
+      itemType: item.itemType ?? "Reusable",
       purchaseCost: item.purchaseCost ?? "",
       supplierId: item.supplierId ? String(item.supplierId) : "",
       warehouseId: item.warehouseId ? String(item.warehouseId) : "",
@@ -864,6 +866,89 @@ console.log(
     }
   };
 
+  const validateWarehouseCapacity = async () => {
+    const warehouseId = Number(formData.warehouseId);
+    const newAvailableQuantity = Number(formData.quantity || 0);
+
+    const { data: warehouse, error: warehouseError } = await supabase
+      .from("warehouses")
+      .select("id, name, total_capacity")
+      .eq("id", warehouseId)
+      .single();
+
+    if (warehouseError) {
+      throw warehouseError;
+    }
+
+    const { data: inventoryRows, error: inventoryError } = await supabase
+      .from("warehouse_inventory")
+      .select(
+        "id, available_quantity, reserved_quantity, damaged_quantity"
+      )
+      .eq("warehouse_id", warehouseId);
+
+    if (inventoryError) {
+      throw inventoryError;
+    }
+
+    const currentUsedCapacity = (inventoryRows || []).reduce(
+      (total, row) =>
+        total +
+        Number(row.available_quantity || 0) +
+        Number(row.reserved_quantity || 0) +
+        Number(row.damaged_quantity || 0),
+      0
+    );
+
+    let quantityToAdd = newAvailableQuantity;
+
+    if (editingItemId && editingInventoryId) {
+      const { data: currentInventory, error: currentInventoryError } =
+        await supabase
+          .from("warehouse_inventory")
+          .select(
+            "id, warehouse_id, available_quantity, reserved_quantity, damaged_quantity"
+          )
+          .eq("id", editingInventoryId)
+          .single();
+
+      if (currentInventoryError) {
+        throw currentInventoryError;
+      }
+
+      if (
+        Number(currentInventory.warehouse_id) === warehouseId
+      ) {
+        quantityToAdd =
+          newAvailableQuantity -
+          Number(currentInventory.available_quantity || 0);
+      } else {
+        quantityToAdd =
+          newAvailableQuantity +
+          Number(currentInventory.reserved_quantity || 0) +
+          Number(currentInventory.damaged_quantity || 0);
+      }
+    }
+
+    const totalCapacity = Number(warehouse.total_capacity || 0);
+    const availableCapacity = Math.max(
+      0,
+      totalCapacity - currentUsedCapacity
+    );
+
+    if (quantityToAdd > availableCapacity) {
+      await showAlert({
+        title: "Warehouse Capacity Exceeded",
+        message: `${warehouse.name} does not have enough available capacity. Only ${availableCapacity.toLocaleString()} items can be added.`,
+        type: "warning",
+      });
+
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSaveItem = async (event) => {
     event.preventDefault();
 
@@ -889,6 +974,7 @@ console.log(
       "name",
       "categoryId",
       "unit",
+      "itemType",
       "purchaseCost",
       "supplierId",
       "warehouseId",
@@ -933,6 +1019,24 @@ console.log(
       return;
     }
 
+    try {
+      const hasWarehouseCapacity =
+        await validateWarehouseCapacity();
+
+      if (!hasWarehouseCapacity) {
+        return;
+      }
+    } catch (error) {
+      console.error("Warehouse capacity validation error:", error);
+
+      showAlert({
+        message:
+          error.message ||
+          "Unable to validate warehouse capacity.",
+      });
+      return;
+    }
+
     setSaving(true);
 
     let createdItemId = null;
@@ -947,6 +1051,7 @@ console.log(
             name: formData.name.trim(),
             category_id: Number(formData.categoryId),
             unit: formData.unit,
+            item_type: formData.itemType,
             purchase_cost: Number(formData.purchaseCost),
             primary_supplier_id: Number(formData.supplierId),
           })
@@ -988,6 +1093,7 @@ console.log(
             name: formData.name.trim(),
             category_id: Number(formData.categoryId),
             unit: formData.unit,
+            item_type: formData.itemType,
             purchase_cost: Number(formData.purchaseCost),
             primary_supplier_id: Number(formData.supplierId),
             is_active: true,
@@ -1487,6 +1593,19 @@ console.log(
                     <option value="Dozen">Dozen</option>
                     <option value="Kilogram">Kilogram</option>
                     <option value="Liter">Liter</option>
+                  </select>
+                </label>
+
+                <label>
+                  Item Type
+                  <select
+                    name="itemType"
+                    value={formData.itemType}
+                    onChange={handleFormChange}
+                    disabled={saving}
+                  >
+                    <option value="Reusable">Reusable</option>
+                    <option value="Consumable">Consumable</option>
                   </select>
                 </label>
 

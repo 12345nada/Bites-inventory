@@ -1795,11 +1795,6 @@ export default function Settings() {
                     <strong>
                       All Permissions
                     </strong>
-
-                    <span>
-                      Turn all permissions
-                      on or off
-                    </span>
                   </div>
 
                   <label className="permission-switch">
@@ -2076,7 +2071,7 @@ export default function Settings() {
                     value={
                       userForm.fullName
                     }
-                    placeholder="Ahmed Samy"
+                    placeholder="Nada Lotfallah"
                     onChange={
                       handleUserFormChange
                     }
@@ -2093,7 +2088,7 @@ export default function Settings() {
                     value={
                       userForm.username
                     }
-                    placeholder="ahmed.samy"
+                    placeholder="nada.lotfallah"
                     onChange={
                       handleUserFormChange
                     }
