@@ -433,6 +433,12 @@ export default function Dispatch() {
         driverId:
           selectedEvent?.driver_id ||
           currentData.driverId,
+        date:
+          selectedEvent?.event_date ||
+          currentData.date,
+        time:
+          selectedEvent?.departure_time ||
+          currentData.time,
       }));
 
       return;

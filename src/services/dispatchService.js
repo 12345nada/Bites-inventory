@@ -126,6 +126,8 @@ export async function getDispatchPageData() {
         event_code,
         event_type,
         client,
+        event_date,
+        departure_time,
         location,
         area,
         driver_id,
