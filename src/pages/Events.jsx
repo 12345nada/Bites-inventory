@@ -10,6 +10,7 @@ import { useDialog } from "../context/DialogContext";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
+import { supabase } from "../lib/supabase";
 
 import {
   createEvent,
@@ -130,6 +131,37 @@ function Events() {
 
   useEffect(() => {
     loadPageData();
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("events-realtime-status")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "events",
+        },
+        async () => {
+          try {
+            const eventsData =
+              await getEvents();
+
+            setEvents(eventsData);
+          } catch (error) {
+            console.error(
+              "Error refreshing events after realtime update:",
+              error
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
@@ -490,6 +522,83 @@ function Events() {
     setOpenActionId(eventId);
   };
 
+  const handleCancelEvent = async (
+    event
+  ) => {
+    if (!canEdit) {
+      await showAlert({
+        title: "Permission Denied",
+        message:
+          "You do not have permission to cancel events.",
+        type: "warning",
+      });
+
+      return;
+    }
+
+    if (event.status === "Cancelled") {
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      message:
+        "Are you sure you want to cancel this event?",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const updatedEvent =
+        await updateEvent(
+          event.id,
+          {
+            name: event.name,
+            client: event.client,
+            date: event.date,
+            departureTime:
+              event.departureTime,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            location: event.location,
+            area: event.area,
+            branch: event.branch,
+            driverId:
+              event.driverId || "",
+            waiterIds:
+              event.waiterIds || [],
+            hasDrinks:
+              Boolean(event.hasDrinks),
+            status: "Cancelled",
+          }
+        );
+
+      setEvents((currentEvents) =>
+        currentEvents.map(
+          (currentEvent) =>
+            currentEvent.id ===
+            event.id
+              ? updatedEvent
+              : currentEvent
+        )
+      );
+
+      setOpenActionId(null);
+    } catch (error) {
+      console.error(
+        "Error cancelling event:",
+        error
+      );
+
+      showAlert({
+        message:
+          error.message ||
+          "Could not cancel event.",
+      });
+    }
+  };
+
   const handleDeleteEvent = async (
     eventId
   ) => {
@@ -678,7 +787,6 @@ function Events() {
       "area",
       "branch",
       "driverId",
-      "status",
     ];
 
     const hasEmptyField =
@@ -706,31 +814,6 @@ function Events() {
       showAlert({
         message:
           "Please select at least one waiter.",
-      });
-
-      return false;
-    }
-
-    const now = new Date();
-
-    const localToday = [
-      now.getFullYear(),
-      String(
-        now.getMonth() + 1
-      ).padStart(2, "0"),
-      String(
-        now.getDate()
-      ).padStart(2, "0"),
-    ].join("-");
-
-    if (
-      formData.status ===
-        "In Progress" &&
-      formData.date > localToday
-    ) {
-      showAlert({
-        message:
-          "Future events cannot be marked as In Progress.",
       });
 
       return false;
@@ -866,20 +949,6 @@ function Events() {
             title="Upcoming Events"
             number={upcomingEvents}
             description="Next 7 days"
-          />
-
-          <StatCard
-            icon={<FiCheckCircle />}
-            title="Confirmed Events"
-            number={
-              events.filter(
-                (event) =>
-                  event.status ===
-                  "Confirmed"
-              ).length
-            }
-            description="Confirmed"
-            descriptionClass="green"
           />
 
           <StatCard
@@ -1163,6 +1232,22 @@ function Events() {
                                     <FiEdit2 />
                                     Edit
                                   </button>
+
+                                  {event.status !==
+                                    "Cancelled" && (
+                                    <button
+                                      type="button"
+                                      className="event-cancel-action"
+                                      onClick={() =>
+                                        handleCancelEvent(
+                                          event
+                                        )
+                                      }
+                                    >
+                                      <FiX />
+                                      Cancel
+                                    </button>
+                                  )}
 
                                   <button
                                     type="button"
@@ -1661,37 +1746,6 @@ function Events() {
 
                   <span className="event-drinks-slider" />
                 </span>
-              </label>
-
-              <label className="event-modal-full-field">
-                Status
-
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleFormChange}
-                  disabled={saving}
-                >
-                  <option value="Upcoming">
-                    Upcoming
-                  </option>
-
-                  <option value="In Progress">
-                    In Progress
-                  </option>
-
-                  <option value="Confirmed">
-                    Confirmed
-                  </option>
-
-                  <option value="Completed">
-                    Completed
-                  </option>
-
-                  <option value="Cancelled">
-                    Cancelled
-                  </option>
-                </select>
               </label>
             </div>
 

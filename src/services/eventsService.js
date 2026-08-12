@@ -32,6 +32,39 @@ const EVENT_FIELDS = `
   )
 `;
 
+const getAutomaticEventStatus = ({
+  date,
+  startTime,
+  endTime,
+  status,
+}) => {
+  if (status === "Cancelled") {
+    return "Cancelled";
+  }
+
+  if (!date || !startTime || !endTime) {
+    return "Upcoming";
+  }
+
+  const now = new Date();
+  const startDateTime = new Date(
+    `${date}T${startTime}`
+  );
+  const endDateTime = new Date(
+    `${date}T${endTime}`
+  );
+
+  if (now < startDateTime) {
+    return "Upcoming";
+  }
+
+  if (now <= endDateTime) {
+    return "In Progress";
+  }
+
+  return "Completed";
+};
+
 export const mapEventFromDatabase = (event) => {
   const assignedWaiters =
     event.event_waiters || [];
@@ -67,7 +100,12 @@ export const mapEventFromDatabase = (event) => {
     hasDrinks: Boolean(
       event.has_drinks
     ),
-    status: event.status || "Upcoming",
+    status: getAutomaticEventStatus({
+      date: event.event_date,
+      startTime: event.start_time,
+      endTime: event.end_time,
+      status: event.status,
+    }),
     createdAt: event.created_at,
     updatedAt: event.updated_at,
   };
@@ -97,7 +135,12 @@ const createEventPayload = (
   has_drinks: Boolean(
     eventData.hasDrinks
   ),
-  status: eventData.status,
+  status: getAutomaticEventStatus({
+    date: eventData.date,
+    startTime: eventData.startTime,
+    endTime: eventData.endTime,
+    status: eventData.status,
+  }),
 });
 
 const createEventWaitersPayload = (

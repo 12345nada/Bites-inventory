@@ -86,7 +86,7 @@ body  {
 .events-stats  {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -954,6 +954,8 @@ body  {
   opacity: 0.6;
 }
 
+
+
 .event-modal-actions  {
   margin-top: 24px;
   display: flex;
@@ -1314,6 +1316,14 @@ body  {
 .event-action-menu button:hover  {
   background: #fff7f1;
 }
+.event-cancel-action  {
+  color: #b76500 !important;
+}
+
+.event-cancel-action:hover  {
+  background: #fff7ec !important;
+}
+
 .event-delete-action  {
   color: #d62d20 !important;
 }
