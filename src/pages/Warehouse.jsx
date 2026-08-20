@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import "../styles/mobile-sidebar-offcanvas.css";
 
 import { useAuth } from "../context/AuthContext";
@@ -41,6 +43,7 @@ const emptyForm = {
 };
 
 export default function Warehouse() {
+  const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -147,7 +150,7 @@ export default function Warehouse() {
 
       showAlert({
         message: error.message ||
-          "Could not load warehouses.",
+          t("warehousePage.errors.couldNotLoad"),
       });
     } finally {
       setLoading(false);
@@ -232,7 +235,7 @@ export default function Warehouse() {
   const openAddModal = () => {
     if (!canAdd) {
       showAlert({
-        message: "You do not have permission to add warehouses.",
+        message: t("warehousePage.errors.noAddPermission"),
       });
       return;
     }
@@ -246,7 +249,7 @@ export default function Warehouse() {
   const openEditModal = (warehouse) => {
     if (!canEdit) {
       showAlert({
-        message: "You do not have permission to edit warehouses.",
+        message: t("warehousePage.errors.noEditPermission"),
       });
       return;
     }
@@ -292,7 +295,7 @@ export default function Warehouse() {
 
     if (hasEmptyField) {
       showAlert({
-        message: "Please complete all warehouse fields.",
+        message: t("warehousePage.errors.completeAllFields"),
       });
 
       return false;
@@ -307,7 +310,7 @@ export default function Warehouse() {
       capacity <= 0
     ) {
       showAlert({
-        message: "Total capacity must be greater than zero.",
+        message: t("warehousePage.errors.capacityGreaterThanZero"),
       });
 
       return false;
@@ -329,7 +332,7 @@ export default function Warehouse() {
           )
       ) {
         showAlert({
-        message: "Total capacity cannot be less than the current used capacity.",
+        message: t("warehousePage.errors.capacityBelowUsed"),
       });
 
         return false;
@@ -351,10 +354,10 @@ export default function Warehouse() {
 
     if (!requiredPermission) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("warehousePage.errors.permissionDenied"),
         message: editingWarehouseId
-          ? "You do not have permission to edit warehouses."
-          : "You do not have permission to add warehouses.",
+          ? t("warehousePage.errors.noEditPermission")
+          : t("warehousePage.errors.noAddPermission"),
         type: "warning",
       });
 
@@ -408,12 +411,12 @@ export default function Warehouse() {
 
       if (error.code === "23505") {
         showAlert({
-        message: "A warehouse with this name already exists.",
+        message: t("warehousePage.errors.nameExists"),
       });
       } else {
         showAlert({
         message: error.message ||
-            "Could not save warehouse.",
+            t("warehousePage.errors.couldNotSave"),
       });
       }
     } finally {
@@ -426,7 +429,7 @@ export default function Warehouse() {
   ) => {
     if (!canDelete) {
       showAlert({
-        message: "You do not have permission to delete warehouses.",
+        message: t("warehousePage.errors.noDeletePermission"),
       });
       return;
     }
@@ -441,7 +444,7 @@ export default function Warehouse() {
       Number(warehouse.usedCapacity) > 0
     ) {
       showAlert({
-        message: "You cannot delete a warehouse that contains inventory.",
+        message: t("warehousePage.errors.containsInventory"),
       });
 
       setOpenActionId(null);
@@ -449,7 +452,7 @@ export default function Warehouse() {
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this warehouse?",
+      message: t("warehousePage.confirm.deleteWarehouse"),
     });
 
     if (!confirmed) {
@@ -477,12 +480,12 @@ export default function Warehouse() {
 
       if (error.code === "23503") {
         showAlert({
-        message: "This warehouse cannot be deleted because it is connected to events, purchases, dispatches, or company settings.",
+        message: t("warehousePage.errors.connectedRecords"),
       });
       } else {
         showAlert({
         message: error.message ||
-            "Could not delete warehouse.",
+            t("warehousePage.errors.couldNotDelete"),
       });
       }
     }
@@ -582,10 +585,10 @@ export default function Warehouse() {
 
         <section className="warehouse-title-section">
           <div>
-            <h1>Warehouse</h1>
+            <h1>{t("warehousePage.title")}</h1>
 
             <p>
-              Manage all your warehouses
+              {t("warehousePage.subtitle")}
             </p>
           </div>
 
@@ -595,16 +598,16 @@ export default function Warehouse() {
             onClick={openAddModal}
           >
             <FiPlus />
-            <span>Add New Warehouse</span>
+            <span>{t("warehousePage.addNewWarehouse")}</span>
           </button>
         </section>
 
         <section className="warehouse-table-card">
           <div className="warehouse-table-toolbar">
             <div>
-              <h3>All Warehouses</h3>
+              <h3>{t("warehousePage.allWarehouses")}</h3>
               <p>
-                View warehouse capacity and usage
+                {t("warehousePage.tableSubtitle")}
               </p>
             </div>
 
@@ -614,7 +617,7 @@ export default function Warehouse() {
 
                 <input
                   type="text"
-                  placeholder="Search warehouses..."
+                  placeholder={t("warehousePage.searchPlaceholder")}
                   value={searchValue}
                   onChange={(event) =>
                     setSearchValue(
@@ -633,15 +636,15 @@ export default function Warehouse() {
                 }
               >
                 <option value="All Branches">
-                  All Branches
+                  {t("warehousePage.allBranches")}
                 </option>
 
                 <option value="Cairo">
-                  Cairo
+                  {t("branches.cairo")}
                 </option>
 
                 <option value="Alex">
-                  Alex
+                  {t("branches.alex")}
                 </option>
               </select>
             </div>
@@ -652,13 +655,13 @@ export default function Warehouse() {
               <thead>
                 <tr>
 
-                  <th>Warehouse Name</th>
-                  <th>Branch</th>
-                  <th>Location</th>
-                  <th>Total Capacity</th>
-                  <th>Available Capacity</th>
-                  <th>Usage</th>
-                  <th>Actions</th>
+                  <th>{t("warehousePage.table.warehouseName")}</th>
+                  <th>{t("warehousePage.table.branch")}</th>
+                  <th>{t("warehousePage.table.location")}</th>
+                  <th>{t("warehousePage.table.totalCapacity")}</th>
+                  <th>{t("warehousePage.table.availableCapacity")}</th>
+                  <th>{t("warehousePage.table.usage")}</th>
+                  <th>{t("warehousePage.table.actions")}</th>
                 </tr>
               </thead>
 
@@ -669,7 +672,7 @@ export default function Warehouse() {
                       colSpan="7"
                       className="warehouse-empty-state"
                     >
-                      Loading warehouses...
+                      {t("warehousePage.loading")}
                     </td>
                   </tr>
                 ) : filteredWarehouses.length >
@@ -723,12 +726,12 @@ export default function Warehouse() {
                             {Number(
                               warehouse.capacity
                             ).toLocaleString()}{" "}
-                            Items
+                            {t("warehousePage.items")}
                           </td>
 
                           <td className="warehouse-available-value">
                             {availableCapacity.toLocaleString()}{" "}
-                            Items
+                            {t("warehousePage.items")}
                           </td>
 
                           <td>
@@ -737,7 +740,7 @@ export default function Warehouse() {
                                 {Number(
                                   warehouse.usedCapacity
                                 ).toLocaleString()}{" "}
-                                used (
+                                {t("warehousePage.used")} (
                                 {usagePercentage}%)
                               </span>
 
@@ -756,7 +759,7 @@ export default function Warehouse() {
                               <button
                                 type="button"
                                 className="warehouse-edit-button"
-                                aria-label={`Edit ${warehouse.name}`}
+                                aria-label={t("warehousePage.aria.editWarehouse", { name: warehouse.name })}
                                 onClick={() =>
                                   openEditModal(
                                     warehouse
@@ -770,7 +773,7 @@ export default function Warehouse() {
                                 <button
                                   type="button"
                                   className="warehouse-more-button"
-                                  aria-label={`More actions for ${warehouse.name}`}
+                                  aria-label={t("warehousePage.aria.moreActions", { name: warehouse.name })}
                                   onClick={(event) =>
                                     toggleActionMenu(
                                       event,
@@ -799,7 +802,7 @@ export default function Warehouse() {
                                       }
                                     >
                                       <FiEdit2 />
-                                      Edit
+                                      {t("warehousePage.actions.edit")}
                                     </button>
 
                                     <button
@@ -812,7 +815,7 @@ export default function Warehouse() {
                                       }
                                     >
                                       <FiTrash2 />
-                                      Delete
+                                      {t("warehousePage.actions.delete")}
                                     </button>
                                   </div>
                                 )}
@@ -829,8 +832,7 @@ export default function Warehouse() {
                       colSpan="7"
                       className="warehouse-empty-state"
                     >
-                      No warehouses match your
-                      search.
+                      {t("warehousePage.noResults")}
                     </td>
                   </tr>
                 )}
@@ -840,7 +842,7 @@ export default function Warehouse() {
 
           <div className="warehouse-pagination">
             <p>
-              Showing{" "}
+              {t("warehousePage.pagination.showing")}{" "}
               {filteredWarehouses.length === 0
                 ? 0
                 : (currentPage - 1) *
@@ -852,8 +854,8 @@ export default function Warehouse() {
                   warehousesPerPage,
                 filteredWarehouses.length
               )}{" "}
-              of{" "}
-              {filteredWarehouses.length} warehouses
+              {t("warehousePage.pagination.of")}{" "}
+              {filteredWarehouses.length} {t("warehousePage.pagination.warehouses")}
             </p>
 
             <div>
@@ -931,20 +933,19 @@ export default function Warehouse() {
               <div>
                 <h2>
                   {editingWarehouseId
-                    ? "Edit Warehouse"
-                    : "Add New Warehouse"}
+                    ? t("warehousePage.modal.editWarehouse")
+                    : t("warehousePage.modal.addWarehouse")}
                 </h2>
 
                 <p>
-                  Enter the warehouse
-                  information.
+                  {t("warehousePage.modal.description")}
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={closeModal}
-                aria-label="Close form"
+                aria-label={t("warehousePage.modal.closeForm")}
                 disabled={saving}
               >
                 <FiX />
@@ -953,20 +954,20 @@ export default function Warehouse() {
 
             <div className="warehouse-modal-grid">
               <label>
-                Warehouse Name
+                {t("warehousePage.modal.warehouseName")}
 
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleFormChange}
-                  placeholder="Cairo Warehouse"
+                  placeholder={t("warehousePage.modal.namePlaceholder")}
                   disabled={saving}
                 />
               </label>
 
               <label>
-                Branch
+                {t("warehousePage.modal.branch")}
 
                 <select
                   name="branch"
@@ -975,30 +976,30 @@ export default function Warehouse() {
                   disabled={saving}
                 >
                   <option value="Cairo">
-                    Cairo
+                    {t("branches.cairo")}
                   </option>
 
                   <option value="Alex">
-                    Alex
+                    {t("branches.alex")}
                   </option>
                 </select>
               </label>
 
               <label className="warehouse-full-field">
-                Location
+                {t("warehousePage.modal.location")}
 
                 <input
                   type="text"
                   name="location"
                   value={formData.location}
                   onChange={handleFormChange}
-                  placeholder="New Cairo, Cairo"
+                  placeholder={t("warehousePage.modal.locationPlaceholder")}
                   disabled={saving}
                 />
               </label>
 
               <label className="warehouse-full-field">
-                Total Capacity
+                {t("warehousePage.modal.totalCapacity")}
 
                 <input
                   type="number"
@@ -1013,9 +1014,7 @@ export default function Warehouse() {
             </div>
 
             <div className="warehouse-modal-note">
-              Used and available capacity are
-              calculated automatically from
-              inventory.
+              {t("warehousePage.modal.capacityNote")}
             </div>
 
             <div className="warehouse-modal-actions">
@@ -1025,7 +1024,7 @@ export default function Warehouse() {
                 onClick={closeModal}
                 disabled={saving}
               >
-                Cancel
+                {t("warehousePage.modal.cancel")}
               </button>
 
               <button
@@ -1034,10 +1033,10 @@ export default function Warehouse() {
                 disabled={saving}
               >
                 {saving
-                  ? "Saving..."
+                  ? t("warehousePage.modal.saving")
                   : editingWarehouseId
-                    ? "Save Changes"
-                    : "Save Warehouse"}
+                    ? t("warehousePage.modal.saveChanges")
+                    : t("warehousePage.modal.saveWarehouse")}
               </button>
             </div>
           </form>

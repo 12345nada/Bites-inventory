@@ -6,6 +6,7 @@ import {
 
 
 import { useDialog } from "../context/DialogContext";
+import { useTranslation } from "react-i18next";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
@@ -19,6 +20,7 @@ import {
   createRole,
   createSystemUser,
   deleteRole,
+  deleteSystemUser,
   getSettingsData,
   resetUserPassword,
   saveGeneralSettings,
@@ -28,6 +30,7 @@ import {
 import {
   createDriver,
   createWaiter,
+  getStaff,
 } from "../services/staffService";
 
 import {
@@ -66,6 +69,9 @@ const driverEmptyForm = {
   carNumber: "",
   carType: "Van",
   status: "Active",
+  eventRate: "",
+  staffRole: "Driver",
+  reportsToId: "",
   documents: {
     nationalIdImage: null,
     licenseImage: null,
@@ -76,6 +82,9 @@ const waiterEmptyForm = {
   phone: "",
   nationalId: "",
   status: "Active",
+  eventRate: "",
+  staffRole: "Waiter",
+  reportsToId: "",
   documents: {
     personalPhoto: null,
     nationalIdImage: null,
@@ -93,6 +102,7 @@ const waiterEmptyForm = {
 
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -273,6 +283,34 @@ export default function Settings() {
     waiterEmptyForm
   );
 
+  const [
+    staffDirectory,
+    setStaffDirectory,
+  ] = useState({
+    drivers: [],
+    waiters: [],
+  });
+
+  const headDrivers = useMemo(
+    () =>
+      staffDirectory.drivers.filter(
+        (driver) =>
+          driver.staffRole ===
+          "Head Driver"
+      ),
+    [staffDirectory.drivers]
+  );
+
+  const headWaiters = useMemo(
+    () =>
+      staffDirectory.waiters.filter(
+        (waiter) =>
+          waiter.staffRole ===
+          "Head Waiter"
+      ),
+    [staffDirectory.waiters]
+  );
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -351,7 +389,7 @@ export default function Settings() {
 
       showAlert({
         message: error.message ||
-          "Could not load settings.",
+          t("settingsPage.errors.couldNotLoad"),
       });
     } finally {
       setLoading(false);
@@ -459,7 +497,7 @@ export default function Settings() {
   ) => {
     if (!canEditUsersRoles) {
       showAlert({
-        message: "You do not have permission to edit permissions.",
+        message: t("settingsPage.errors.noEditPermissions"),
       });
       return;
     }
@@ -487,7 +525,7 @@ export default function Settings() {
       if (!canEditUsersRoles) {
         showAlert({
           message:
-            "You do not have permission to edit permissions.",
+            t("settingsPage.errors.noEditPermissions"),
         });
         return;
       }
@@ -520,14 +558,14 @@ export default function Settings() {
   const savePermissions = async () => {
     if (!canEditUsersRoles) {
       showAlert({
-        message: "You do not have permission to edit permissions.",
+        message: t("settingsPage.errors.noEditPermissions"),
       });
       return;
     }
 
     if (!selectedRoleId) {
       showAlert({
-        message: "Please select a role.",
+        message: t("settingsPage.errors.selectRole"),
       });
       return;
     }
@@ -564,7 +602,7 @@ export default function Settings() {
       );
 
       showAlert({
-        message: "Permissions saved successfully.",
+        message: t("settingsPage.success.permissionsSaved"),
       });
     } catch (error) {
       console.error(
@@ -574,7 +612,7 @@ export default function Settings() {
 
       showAlert({
         message: error.message ||
-          "Could not save permissions.",
+          t("settingsPage.errors.couldNotSavePermissions"),
       });
     } finally {
       setSaving(false);
@@ -586,7 +624,7 @@ export default function Settings() {
   ) => {
     if (!canAddUsersRoles) {
       showAlert({
-        message: "You do not have permission to add roles.",
+        message: t("settingsPage.errors.noAddRoles"),
       });
       return;
     }
@@ -595,7 +633,7 @@ export default function Settings() {
 
     if (!roleForm.name.trim()) {
       showAlert({
-        message: "Please enter the role name.",
+        message: t("settingsPage.errors.enterRoleName"),
       });
 
       return;
@@ -623,19 +661,19 @@ export default function Settings() {
     } catch (error) {
       showAlert({
         message: error.code === "23505"
-          ? "This role name already exists."
+          ? t("settingsPage.errors.roleExists")
           : error.message ||
-              "Could not create role.",
+              t("settingsPage.errors.couldNotCreateRole"),
       });
     } finally {
       setSaving(false);
     }
   };
 
-  const openUserModal = () => {
+  const openUserModal = async () => {
     if (!canAddUsersRoles) {
       showAlert({
-        message: "You do not have permission to add users.",
+        message: t("settingsPage.errors.noAddUsers"),
       });
       return;
     }
@@ -665,6 +703,23 @@ export default function Settings() {
     );
 
     setShowUserModal(true);
+
+    try {
+      const staffData =
+        await getStaff();
+
+      setStaffDirectory({
+        drivers:
+          staffData.drivers || [],
+        waiters:
+          staffData.waiters || [],
+      });
+    } catch (error) {
+      console.error(
+        "Could not load staff hierarchy:",
+        error
+      );
+    }
   };
 
   const closeUserModal = () => {
@@ -847,7 +902,7 @@ export default function Settings() {
   ) => {
     if (!canAddUsersRoles) {
       showAlert({
-        message: "You do not have permission to add users.",
+        message: t("settingsPage.errors.noAddUsers"),
       });
       return;
     }
@@ -872,7 +927,7 @@ export default function Settings() {
       !userForm.branch
     ) {
       showAlert({
-        message: "Please complete all user fields.",
+        message: t("settingsPage.errors.completeUserFields"),
       });
 
       return;
@@ -884,7 +939,7 @@ export default function Settings() {
       )
     ) {
       showAlert({
-        message: "Username must be 3-30 characters and contain only lowercase letters, numbers, dots, underscores or hyphens.",
+        message: t("settingsPage.errors.usernameRules"),
       });
 
       return;
@@ -895,7 +950,7 @@ export default function Settings() {
       userForm.password.length < 6
     ) {
       showAlert({
-        message: "Password must contain at least 6 characters.",
+        message: t("settingsPage.errors.passwordLength"),
       });
 
       return;
@@ -906,7 +961,7 @@ export default function Settings() {
       userForm.confirmPassword
     ) {
       showAlert({
-        message: "Passwords do not match.",
+        message: t("settingsPage.errors.passwordMismatch"),
       });
 
       return;
@@ -921,7 +976,7 @@ export default function Settings() {
 
     if (!selectedUserRole) {
       showAlert({
-        message: "The selected role is no longer available. Please close the form and select the role again.",
+        message: t("settingsPage.errors.roleUnavailable"),
       });
 
       return;
@@ -934,12 +989,13 @@ export default function Settings() {
         !driverForm.nationalId.trim() ||
         !driverForm.licenseNumber.trim() ||
         !driverForm.licenseExpiryDate ||
-        !driverForm.carNumber.trim()
+        !driverForm.carNumber.trim() ||
+        Number(driverForm.eventRate) < 0
       )
     ) {
       showAlert({
         message:
-          "Please complete the driver information.",
+          t("settingsPage.errors.completeDriver"),
       });
 
       return;
@@ -949,12 +1005,13 @@ export default function Settings() {
       isWaiterRole &&
       (
         !waiterForm.phone.trim() ||
-        !waiterForm.nationalId.trim()
+        !waiterForm.nationalId.trim() ||
+        Number(waiterForm.eventRate) < 0
       )
     ) {
       showAlert({
         message:
-          "Please complete the waiter information.",
+          t("settingsPage.errors.completeWaiter"),
       });
 
       return;
@@ -969,7 +1026,7 @@ export default function Settings() {
 
       if (!Number.isInteger(currentRoleId)) {
         showAlert({
-        message: "The selected role has an invalid ID.",
+        message: t("settingsPage.errors.invalidRoleId"),
       });
         return;
       }
@@ -1001,6 +1058,7 @@ export default function Settings() {
         await createDriver({
           ...driverForm,
           fullName,
+          branch: userForm.branch,
         });
       }
 
@@ -1008,6 +1066,7 @@ export default function Settings() {
         await createWaiter({
           ...waiterForm,
           fullName,
+          branch: userForm.branch,
         });
       }
 
@@ -1036,7 +1095,7 @@ export default function Settings() {
       setShowUserModal(false);
 
       showAlert({
-        message: "User created successfully.",
+        message: t("settingsPage.success.userCreated"),
       });
     } catch (error) {
       console.error(
@@ -1046,7 +1105,101 @@ export default function Settings() {
 
       showAlert({
         message: error.message ||
-          "Could not create user.",
+          t("settingsPage.errors.couldNotCreateUser"),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeEmployee = async (
+    employeeId
+  ) => {
+    if (!canDeleteUsersRoles) {
+      showAlert({
+        message:
+          "You do not have permission to delete users.",
+      });
+      return;
+    }
+
+    const employee = employees.find(
+      (currentEmployee) =>
+        String(currentEmployee.id) ===
+        String(employeeId)
+    );
+
+    if (!employee) {
+      showAlert({
+        message: "User not found.",
+      });
+      return;
+    }
+
+    if (
+      String(user?.id || "") ===
+      String(employeeId)
+    ) {
+      showAlert({
+        message:
+          "You cannot delete your own account.",
+      });
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      message: `Are you sure you want to delete ${employee.name}? This action cannot be undone.`,
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await deleteSystemUser(
+        employeeId
+      );
+
+      const remainingEmployees =
+        employees.filter(
+          (currentEmployee) =>
+            String(currentEmployee.id) !==
+            String(employeeId)
+        );
+
+      setEmployees(
+        remainingEmployees
+      );
+
+      if (
+        String(selectedEmployeeId) ===
+        String(employeeId)
+      ) {
+        const nextEmployee =
+          remainingEmployees[0] || null;
+
+        setSelectedEmployeeId(
+          nextEmployee?.id || ""
+        );
+
+        setSelectedRoleId(
+          nextEmployee?.roleId ||
+            roles[0]?.id ||
+            ""
+        );
+      }
+
+      showAlert({
+        message:
+          "User deleted successfully.",
+      });
+    } catch (error) {
+      showAlert({
+        message:
+          error.message ||
+          "Could not delete user.",
       });
     } finally {
       setSaving(false);
@@ -1058,7 +1211,7 @@ export default function Settings() {
   ) => {
     if (!canDeleteUsersRoles) {
       showAlert({
-        message: "You do not have permission to delete roles.",
+        message: t("settingsPage.errors.noDeleteRoles"),
       });
       return;
     }
@@ -1073,14 +1226,14 @@ export default function Settings() {
       role?.name === "Administrator"
     ) {
       showAlert({
-        message: "The Administrator role cannot be deleted.",
+        message: t("settingsPage.errors.adminCannotDelete"),
       });
 
       return;
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this role?",
+      message: t("settingsPage.confirm.deleteRole"),
     });
 
     if (!confirmed) {
@@ -1112,7 +1265,7 @@ export default function Settings() {
         message: error.code === "ROLE_IN_USE"
           ? error.message
           : error.message ||
-              "Could not delete role.",
+              t("settingsPage.errors.couldNotDeleteRole"),
       });
     }
   };
@@ -1124,7 +1277,7 @@ export default function Settings() {
     ) => {
     if (!canEditUsersRoles) {
       showAlert({
-        message: "You do not have permission to assign roles.",
+        message: t("settingsPage.errors.noAssignRoles"),
       });
       return;
     }
@@ -1151,7 +1304,7 @@ export default function Settings() {
       } catch (error) {
         showAlert({
         message: error.message ||
-            "Could not assign the role.",
+            t("settingsPage.errors.couldNotAssignRole"),
       });
       }
     };
@@ -1163,7 +1316,7 @@ export default function Settings() {
     if (!canEditUsersRoles) {
       showAlert({
         message:
-          "You do not have permission to reset user passwords.",
+          t("settingsPage.errors.noResetPassword"),
       });
       return;
     }
@@ -1197,7 +1350,7 @@ export default function Settings() {
       if (!resetPasswordUser?.id) {
         showAlert({
           message:
-            "Please select a user.",
+            t("settingsPage.errors.selectUser"),
         });
         return;
       }
@@ -1208,7 +1361,7 @@ export default function Settings() {
       ) {
         showAlert({
           message:
-            "Password must contain at least 6 characters.",
+            t("settingsPage.errors.passwordLength"),
         });
         return;
       }
@@ -1219,7 +1372,7 @@ export default function Settings() {
       ) {
         showAlert({
           message:
-            "Passwords do not match.",
+            t("settingsPage.errors.passwordMismatch"),
         });
         return;
       }
@@ -1258,13 +1411,13 @@ export default function Settings() {
 
         showAlert({
           message:
-            "Password reset successfully.",
+            t("settingsPage.success.passwordReset"),
         });
       } catch (error) {
         showAlert({
           message:
             error.message ||
-            "Could not reset password.",
+            t("settingsPage.errors.couldNotResetPassword"),
         });
       } finally {
         setSaving(false);
@@ -1301,7 +1454,7 @@ export default function Settings() {
         !generalSettings.companyEmail.trim()
       ) {
         showAlert({
-        message: "Please enter the company name and email.",
+        message: t("settingsPage.errors.companyRequired"),
       });
 
         return;
@@ -1320,12 +1473,12 @@ export default function Settings() {
         );
 
         showAlert({
-        message: "General settings saved.",
+        message: t("settingsPage.success.generalSaved"),
       });
       } catch (error) {
         showAlert({
         message: error.message ||
-            "Could not save general settings.",
+            t("settingsPage.errors.couldNotSaveGeneral"),
       });
       } finally {
         setSaving(false);
@@ -1346,12 +1499,9 @@ export default function Settings() {
 
         <section className="settings-title-section">
           <div>
-            <h1>Settings</h1>
+            <h1>{t("settingsPage.title")}</h1>
 
-            <p>
-              Manage general settings
-              and user permissions
-            </p>
+            <p>{t("settingsPage.subtitle")}</p>
           </div>
         </section>
 
@@ -1369,7 +1519,7 @@ export default function Settings() {
                   setActiveTab("general")
                 }
               >
-                General Settings
+                {t("settingsPage.tabs.general")}
               </button>
             )}
 
@@ -1389,21 +1539,21 @@ export default function Settings() {
                   )
                 }
               >
-                Permissions & User Rights
+                {t("settingsPage.tabs.permissions")}
               </button>
             )}
           </div>
 
           {loading ? (
             <div className="settings-loading-state">
-              Loading settings...
+              {t("settingsPage.loading")}
             </div>
           ) : activeTab === "general" ||
             !isAdmin ? (
             <div className="general-settings-panel">
               <div className="general-settings-grid">
                 <label>
-                  Company Name
+                  {t("settingsPage.general.companyName")}
 
                   <input
                     name="companyName"
@@ -1418,7 +1568,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Phone
+                  {t("settingsPage.general.phone")}
 
                   <input
                     name="phone"
@@ -1433,7 +1583,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Default Warehouse
+                  {t("settingsPage.general.defaultWarehouse")}
 
                   <select
                     name="defaultWarehouseId"
@@ -1446,7 +1596,7 @@ export default function Settings() {
                     disabled={saving || !canEditSettings}
                   >
                     <option value="">
-                      Select warehouse
+                      {t("settingsPage.general.selectWarehouse")}
                     </option>
 
                     {warehouses.map(
@@ -1469,7 +1619,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Currency
+                  {t("settingsPage.general.currency")}
 
                   <select
                     name="currency"
@@ -1492,7 +1642,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Date Format
+                  {t("settingsPage.general.dateFormat")}
 
                   <select
                     name="dateFormat"
@@ -1527,8 +1677,8 @@ export default function Settings() {
                   <FiSave />
 
                   {saving
-                    ? "Saving..."
-                    : "Save Changes"}
+                    ? t("settingsPage.common.saving")
+                    : t("settingsPage.common.saveChanges")}
                 </button>
               </div>
             </div>
@@ -1537,11 +1687,9 @@ export default function Settings() {
               <aside className="permission-column employee-column">
                 <div className="permission-column-header">
                   <div>
-                    <h3>Employees</h3>
+                    <h3>{t("settingsPage.permissions.employees")}</h3>
 
-                    <p>
-                      Select an employee
-                    </p>
+                    <p>{t("settingsPage.permissions.selectEmployee")}</p>
                   </div>
 
                   <FiUser />
@@ -1556,7 +1704,7 @@ export default function Settings() {
                   }
                 >
                   <FiPlus />
-                  Add New User
+                  {t("settingsPage.userModal.title")}
                 </button>
 
                 <div className="permission-search-box">
@@ -1564,7 +1712,7 @@ export default function Settings() {
 
                   <input
                     type="text"
-                    placeholder="Search employees..."
+                    placeholder={t("settingsPage.permissions.searchEmployees")}
                     value={searchValue}
                     onChange={(event) =>
                       setSearchValue(
@@ -1577,35 +1725,58 @@ export default function Settings() {
                 <div className="permission-list">
                   {filteredEmployees.map(
                     (employee) => (
-                      <button
-                        type="button"
-                        key={employee.id}
-                        className={
+                      <div
+                        className={`employee-list-row ${
                           String(
                             selectedEmployeeId
                           ) ===
                           String(employee.id)
                             ? "selected"
                             : ""
-                        }
-                        onClick={() => {
-                          setSelectedEmployeeId(
-                            employee.id
-                          );
-
-                          setSelectedRoleId(
-                            employee.roleId
-                          );
-                        }}
+                        }`}
+                        key={employee.id}
                       >
-                        <strong>
-                          {employee.name}
-                        </strong>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedEmployeeId(
+                              employee.id
+                            );
 
-                        <span>
-                          @{employee.username}
-                        </span>
-                      </button>
+                            setSelectedRoleId(
+                              employee.roleId
+                            );
+                          }}
+                        >
+                          <strong>
+                            {employee.name}
+                          </strong>
+
+                          <span>
+                            @{employee.username}
+                          </span>
+                        </button>
+
+                        {canDeleteUsersRoles &&
+                          String(user?.id || "") !==
+                            String(employee.id) && (
+                            <button
+                              type="button"
+                              className="delete-user-button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                removeEmployee(
+                                  employee.id
+                                );
+                              }}
+                              disabled={saving}
+                              aria-label={`Delete ${employee.name}`}
+                              title={`Delete ${employee.name}`}
+                            >
+                              <FiTrash2 />
+                            </button>
+                          )}
+                      </div>
                     )
                   )}
                 </div>
@@ -1614,11 +1785,9 @@ export default function Settings() {
               <aside className="permission-column roles-column">
                 <div className="permission-column-header">
                   <div>
-                    <h3>Roles</h3>
+                    <h3>{t("settingsPage.permissions.roles")}</h3>
 
-                    <p>
-                      Choose a role
-                    </p>
+                    <p>{t("settingsPage.permissions.chooseRole")}</p>
                   </div>
 
                   <FiShield />
@@ -1629,7 +1798,7 @@ export default function Settings() {
 
                   <input
                     type="text"
-                    placeholder="Search roles..."
+                    placeholder={t("settingsPage.permissions.searchRoles")}
                     value={searchValue}
                     onChange={(event) =>
                       setSearchValue(
@@ -1701,7 +1870,7 @@ export default function Settings() {
                       !canAddUsersRoles
                     ) {
                       showAlert({
-        message: "You do not have permission to add roles.",
+        message: t("settingsPage.errors.noAddRoles"),
       });
                       return;
                     }
@@ -1715,7 +1884,7 @@ export default function Settings() {
                   }
                 >
                   <FiPlus />
-                  Add New Role
+                  {t("settingsPage.roleModal.title")}
                 </button>
               </aside>
 
@@ -1723,16 +1892,16 @@ export default function Settings() {
                 <div className="permissions-panel-header">
                   <div>
                     <h2>
-                      Manage user passwords and account access
+                      {t("settingsPage.permissions.manageAccess")}
                     </h2>
 
                     <p>
                       {selectedEmployee
                         ? `${selectedEmployee.name} is assigned to ${
                             selectedRole?.name ||
-                            "No Role"
+                            t("settingsPage.permissions.noRole")
                           }`
-                        : "Select an employee or role"}
+                        : t("settingsPage.permissions.selectEmployeeOrRole")}
                     </p>
                   </div>
 
@@ -1755,7 +1924,7 @@ export default function Settings() {
                         }
                       >
                         <option value="">
-                          Select role
+                          {t("settingsPage.permissions.selectRole")}
                         </option>
 
                         {roles.map(
@@ -1784,7 +1953,7 @@ export default function Settings() {
                         }
                       >
                         <FiKey />
-                        Reset Password
+                        {t("settingsPage.resetPassword.title")}
                       </button>
                     </div>
                   )}
@@ -1793,7 +1962,7 @@ export default function Settings() {
                 <div className="permissions-master-toggle">
                   <div>
                     <strong>
-                      All Permissions
+                      {t("settingsPage.permissions.allPermissions")}
                     </strong>
                   </div>
 
@@ -1810,7 +1979,7 @@ export default function Settings() {
                         saving ||
                         !canEditUsersRoles
                       }
-                      aria-label="Toggle all permissions"
+                      aria-label={t("settingsPage.permissions.toggleAll")}
                     />
 
                     <span />
@@ -1819,11 +1988,11 @@ export default function Settings() {
 
                 <div className="permission-table">
                   <div className="permission-table-header">
-                    <span>Module</span>
-                    <span>View</span>
-                    <span>Add</span>
-                    <span>Edit</span>
-                    <span>Delete</span>
+                    <span>{t("settingsPage.permissions.module")}</span>
+                    <span>{t("settingsPage.permissions.view")}</span>
+                    <span>{t("settingsPage.permissions.add")}</span>
+                    <span>{t("settingsPage.permissions.edit")}</span>
+                    <span>{t("settingsPage.permissions.delete")}</span>
                   </div>
 
                   {modules.map(
@@ -1833,7 +2002,7 @@ export default function Settings() {
                         key={moduleName}
                       >
                         <strong>
-                          {moduleName}
+                          {t(`settingsPage.modules.${moduleName}`, { defaultValue: moduleName })}
                         </strong>
 
                         {actions.map(
@@ -1875,11 +2044,11 @@ export default function Settings() {
 
                 <div className="permissions-footer">
                   <span>
-                    Selected role:{" "}
+                    {t("settingsPage.permissions.selectedRole")}:{" "}
 
                     <strong>
                       {selectedRole?.name ||
-                        "None"}
+                        t("settingsPage.permissions.none")}
                     </strong>
                   </span>
 
@@ -1899,7 +2068,7 @@ export default function Settings() {
 
                     {saving
                       ? "Saving..."
-                      : "Save Permissions"}
+                      : t("settingsPage.permissions.savePermissions")}
                   </button>
                 </div>
               </section>
@@ -1925,11 +2094,9 @@ export default function Settings() {
           >
             <div className="settings-role-modal-header">
               <div>
-                <h2>Add New Role</h2>
+                <h2>{t("settingsPage.roleModal.title")}</h2>
 
-                <p>
-                  Create a new job title.
-                </p>
+                <p>{t("settingsPage.roleModal.subtitle")}</p>
               </div>
 
               <button
@@ -1944,12 +2111,12 @@ export default function Settings() {
             </div>
 
             <label>
-              Role Name
+              {t("settingsPage.roleModal.roleName")}
 
               <input
                 name="name"
                 value={roleForm.name}
-                placeholder="Inventory Supervisor"
+                placeholder={t("settingsPage.roleModal.rolePlaceholder")}
                 onChange={(event) =>
                   setRoleForm(
                     (currentData) => ({
@@ -1965,14 +2132,14 @@ export default function Settings() {
             </label>
 
             <label>
-              Description
+              {t("settingsPage.roleModal.description")}
 
               <textarea
                 name="description"
                 value={
                   roleForm.description
                 }
-                placeholder="Describe the role"
+                placeholder={t("settingsPage.roleModal.descriptionPlaceholder")}
                 onChange={(event) =>
                   setRoleForm(
                     (currentData) => ({
@@ -1997,7 +2164,7 @@ export default function Settings() {
                 }
                 disabled={saving}
               >
-                Cancel
+                {t("settingsPage.common.cancel")}
               </button>
 
               <button
@@ -2006,8 +2173,8 @@ export default function Settings() {
                 disabled={saving}
               >
                 {saving
-                  ? "Creating..."
-                  : "Create Role"}
+                  ? t("settingsPage.common.creating")
+                  : t("settingsPage.roleModal.create")}
               </button>
             </div>
           </form>
@@ -2028,12 +2195,9 @@ export default function Settings() {
           >
             <div className="settings-role-modal-header">
               <div>
-                <h2>Add New User</h2>
+                <h2>{t("settingsPage.userModal.title")}</h2>
 
-                <p>
-                  Create login details
-                  and assign a role.
-                </p>
+                <p>{t("settingsPage.userModal.subtitle")}</p>
               </div>
 
               <button
@@ -2052,7 +2216,7 @@ export default function Settings() {
 
                 <div>
                   <h3>
-                    Account Information
+                    {t("settingsPage.userModal.accountInfo")}
                   </h3>
 
                   <p>
@@ -2064,14 +2228,14 @@ export default function Settings() {
 
               <div className="settings-user-grid">
                 <label>
-                  Full Name
+                  {t("settingsPage.userModal.fullName")}
 
                   <input
                     name="fullName"
                     value={
                       userForm.fullName
                     }
-                    placeholder="Nada Lotfallah"
+                    placeholder={t("settingsPage.userModal.fullNamePlaceholder")}
                     onChange={
                       handleUserFormChange
                     }
@@ -2080,7 +2244,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Username
+                  {t("settingsPage.userModal.username")}
 
                   <input
                     type="text"
@@ -2088,7 +2252,7 @@ export default function Settings() {
                     value={
                       userForm.username
                     }
-                    placeholder="nada.lotfallah"
+                    placeholder={t("settingsPage.userModal.usernamePlaceholder")}
                     onChange={
                       handleUserFormChange
                     }
@@ -2098,7 +2262,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                   Password
+                   {t("settingsPage.userModal.password")}
 
                   <input
                     type="password"
@@ -2106,7 +2270,7 @@ export default function Settings() {
                     value={
                       userForm.password
                     }
-                    placeholder="Minimum 6 characters"
+                    placeholder={t("settingsPage.userModal.passwordPlaceholder")}
                     onChange={
                       handleUserFormChange
                     }
@@ -2115,7 +2279,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Confirm Password
+                  {t("settingsPage.userModal.confirmPassword")}
 
                   <input
                     type="password"
@@ -2123,7 +2287,7 @@ export default function Settings() {
                     value={
                       userForm.confirmPassword
                     }
-                    placeholder="Repeat password"
+                    placeholder={t("settingsPage.userModal.repeatPassword")}
                     onChange={
                       handleUserFormChange
                     }
@@ -2132,7 +2296,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Role
+                  {t("settingsPage.userModal.role")}
 
                   <select
                     name="roleId"
@@ -2162,7 +2326,7 @@ export default function Settings() {
                 </label>
 
                 <label>
-                  Branch
+                  {t("settingsPage.userModal.branch")}
 
                   <select
                     name="branch"
@@ -2201,7 +2365,7 @@ export default function Settings() {
 
                   <div>
                     <h3>
-                      Driver Information
+                      {t("settingsPage.staff.driverInfo")}
                     </h3>
 
                     <p>
@@ -2214,7 +2378,7 @@ export default function Settings() {
 
                 <div className="staff-form-grid">
                   <label>
-                    Phone Number
+                    {t("settingsPage.general.phone")} Number
 
                     <input
                       name="phone"
@@ -2344,6 +2508,97 @@ export default function Settings() {
                       </option>
                     </select>
                   </label>
+
+                  <label>
+                    Event Rate (EGP)
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      name="eventRate"
+                      value={
+                        driverForm.eventRate
+                      }
+                      onChange={
+                        handleDriverChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    Driver Role
+
+                    <select
+                      name="staffRole"
+                      value={
+                        driverForm.staffRole
+                      }
+                      onChange={(event) => {
+                        handleDriverChange(
+                          event
+                        );
+
+                        if (
+                          event.target.value ===
+                          "Head Driver"
+                        ) {
+                          setDriverForm(
+                            (current) => ({
+                              ...current,
+                              staffRole:
+                                "Head Driver",
+                              reportsToId: "",
+                            })
+                          );
+                        }
+                      }}
+                      disabled={saving}
+                    >
+                      <option value="Driver">
+                        Driver
+                      </option>
+                      <option value="Head Driver">
+                        Head Driver
+                      </option>
+                    </select>
+                  </label>
+
+                  {driverForm.staffRole ===
+                    "Driver" && (
+                    <label>
+                      Reports To
+
+                      <select
+                        name="reportsToId"
+                        value={
+                          driverForm.reportsToId
+                        }
+                        onChange={
+                          handleDriverChange
+                        }
+                        disabled={saving}
+                      >
+                        <option value="">
+                          No Head Driver
+                        </option>
+
+                        {headDrivers.map(
+                          (driver) => (
+                            <option
+                              key={driver.id}
+                              value={driver.id}
+                            >
+                              {
+                                driver.fullName
+                              }
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </label>
+                  )}
                 </div>
 
                 <div className="staff-documents-section">
@@ -2419,7 +2674,7 @@ export default function Settings() {
 
                   <div>
                     <h3>
-                      Waiter Information
+                      {t("settingsPage.staff.waiterInfo")}
                     </h3>
 
                     <p>
@@ -2431,7 +2686,7 @@ export default function Settings() {
 
                 <div className="staff-form-grid">
                   <label>
-                    Phone Number
+                    {t("settingsPage.general.phone")} Number
 
                     <input
                       name="phone"
@@ -2484,6 +2739,97 @@ export default function Settings() {
                       </option>
                     </select>
                   </label>
+
+                  <label>
+                    Event Rate (EGP)
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      name="eventRate"
+                      value={
+                        waiterForm.eventRate
+                      }
+                      onChange={
+                        handleWaiterChange
+                      }
+                      disabled={saving}
+                    />
+                  </label>
+
+                  <label>
+                    Waiter Role
+
+                    <select
+                      name="staffRole"
+                      value={
+                        waiterForm.staffRole
+                      }
+                      onChange={(event) => {
+                        handleWaiterChange(
+                          event
+                        );
+
+                        if (
+                          event.target.value ===
+                          "Head Waiter"
+                        ) {
+                          setWaiterForm(
+                            (current) => ({
+                              ...current,
+                              staffRole:
+                                "Head Waiter",
+                              reportsToId: "",
+                            })
+                          );
+                        }
+                      }}
+                      disabled={saving}
+                    >
+                      <option value="Waiter">
+                        Waiter
+                      </option>
+                      <option value="Head Waiter">
+                        Head Waiter
+                      </option>
+                    </select>
+                  </label>
+
+                  {waiterForm.staffRole ===
+                    "Waiter" && (
+                    <label>
+                      Reports To
+
+                      <select
+                        name="reportsToId"
+                        value={
+                          waiterForm.reportsToId
+                        }
+                        onChange={
+                          handleWaiterChange
+                        }
+                        disabled={saving}
+                      >
+                        <option value="">
+                          No Head Waiter
+                        </option>
+
+                        {headWaiters.map(
+                          (waiter) => (
+                            <option
+                              key={waiter.id}
+                              value={waiter.id}
+                            >
+                              {
+                                waiter.fullName
+                              }
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </label>
+                  )}
                 </div>
 
                 <div className="staff-documents-section">
@@ -2688,7 +3034,7 @@ export default function Settings() {
                 onClick={closeUserModal}
                 disabled={saving}
               >
-                Cancel
+                {t("settingsPage.common.cancel")}
               </button>
 
               <button
@@ -2724,7 +3070,7 @@ export default function Settings() {
           >
             <div className="settings-role-modal-header">
               <div>
-                <h2>Reset Password</h2>
+                <h2>{t("settingsPage.resetPassword.title")}</h2>
                 <p>
                   Create a new password
                   for{" "}
@@ -2805,7 +3151,7 @@ export default function Settings() {
                 }
                 disabled={saving}
               >
-                Cancel
+                {t("settingsPage.common.cancel")}
               </button>
 
               <button

@@ -549,6 +549,39 @@ export async function deleteRole(
   return true;
 }
 
+export async function deleteSystemUser(
+  userId
+) {
+  const { data, error } =
+    await supabase.functions.invoke(
+      "delete-user",
+      {
+        body: {
+          userId,
+        },
+      }
+    );
+
+  if (error) {
+    const message =
+      await getFunctionErrorMessage(
+        error,
+        "Could not delete user."
+      );
+
+    throw new Error(message);
+  }
+
+  if (!data?.success) {
+    throw new Error(
+      data?.error ||
+        "Could not delete user."
+    );
+  }
+
+  return true;
+}
+
 export async function resetUserPassword(
   userId,
   newPassword

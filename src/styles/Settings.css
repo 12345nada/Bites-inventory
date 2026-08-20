@@ -283,6 +283,76 @@
   align-items: center;
 }
 
+.employee-list-row {
+  width: 100%;
+  margin-bottom: 6px;
+
+  display: grid;
+  grid-template-columns: 1fr 28px;
+  align-items: center;
+
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+}
+
+.employee-list-row.selected {
+  border-color: #efcdb7;
+  background: #fff2e7;
+}
+
+.employee-list-row > button:first-child {
+  min-width: 0;
+  padding: 10px;
+
+  border: none;
+  background: transparent;
+
+  text-align: left;
+  cursor: pointer;
+}
+
+.employee-list-row strong,
+.employee-list-row span {
+  display: block;
+}
+
+.employee-list-row strong {
+  color: #2e2824;
+  font-size: 9px;
+}
+
+.employee-list-row span {
+  margin-top: 2px;
+  color: #8b8179;
+  font-size: 7px;
+}
+
+.delete-user-button {
+  width: 26px;
+  height: 26px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  background: transparent;
+
+  color: #d62d20;
+  cursor: pointer;
+}
+
+.delete-user-button:hover:not(:disabled) {
+  border-radius: 6px;
+  background: #fff0ee;
+}
+
+.delete-user-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .role-list-row > button:first-child {
   padding: 10px;
 
@@ -432,26 +502,27 @@
 
   -webkit-overflow-scrolling: touch;
 }
+.permission-table {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
 
 .permission-table-header,
 .permission-table-row {
-  min-width: 560px;
+  width: 100%;
+  min-width: 0;
 
   display: grid;
 
   grid-template-columns:
-    minmax(160px, 1.5fr)
-    repeat(
-      4,
-      minmax(70px, 0.6fr)
-    );
+    minmax(110px, 1.4fr)
+    repeat(4, minmax(45px, 0.6fr));
 
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 
-  padding: 10px 12px;
+  padding: 10px 8px;
 }
-
 .permission-table-header {
   background: #fff3e8;
 
@@ -1305,3 +1376,7 @@
     width: 100%;
   }
 }
+html[dir="rtl"] .settings-main {
+  margin: 14px 0 14px 14px;
+}
+

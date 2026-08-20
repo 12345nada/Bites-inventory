@@ -3,6 +3,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../context/AuthContext";
 
@@ -64,6 +65,7 @@ const createEmptyForm = () => ({
 });
 
 export default function Dispatch() {
+  const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -80,9 +82,6 @@ export default function Dispatch() {
     useState([]);
 
   const [warehouses, setWarehouses] =
-    useState([]);
-
-  const [drivers, setDrivers] =
     useState([]);
 
   const [itemOptions, setItemOptions] =
@@ -207,7 +206,6 @@ export default function Dispatch() {
       setDispatches(data.dispatches);
       setEvents(data.events);
       setWarehouses(data.warehouses);
-      setDrivers(data.drivers);
     } catch (error) {
       console.error(
         "Error loading dispatches:",
@@ -216,7 +214,7 @@ export default function Dispatch() {
 
       showAlert({
         message: error.message ||
-          "Could not load dispatches.",
+          t("dispatchPage.errors.couldNotLoad"),
       });
     } finally {
       setLoading(false);
@@ -248,7 +246,7 @@ export default function Dispatch() {
 
       showAlert({
         message: error.message ||
-          "Could not load warehouse items.",
+          t("dispatchPage.errors.couldNotLoadWarehouseItems"),
       });
     } finally {
       setLoadingItems(false);
@@ -506,7 +504,7 @@ export default function Dispatch() {
   const openAddModal = () => {
     if (!canAdd) {
       showAlert({
-        message: "You do not have permission to add dispatches.",
+        message: t("dispatchPage.errors.noAddPermission"),
       });
       return;
     }
@@ -523,7 +521,7 @@ export default function Dispatch() {
   ) => {
     if (!canEdit) {
       showAlert({
-        message: "You do not have permission to edit dispatches.",
+        message: t("dispatchPage.errors.noEditPermission"),
       });
       return;
     }
@@ -589,7 +587,7 @@ export default function Dispatch() {
 
     if (hasEmptyField) {
       showAlert({
-        message: "Please complete all dispatch fields.",
+        message: t("dispatchPage.errors.completeAllFields"),
       });
       return null;
     }
@@ -604,7 +602,7 @@ export default function Dispatch() {
 
     if (validItems.length === 0) {
       showAlert({
-        message: "Please add at least one item with a valid quantity.",
+        message: t("dispatchPage.errors.addAtLeastOneItem"),
       });
       return null;
     }
@@ -621,7 +619,7 @@ export default function Dispatch() {
 
     if (hasDuplicateItems) {
       showAlert({
-        message: "The same item cannot be added more than once.",
+        message: t("dispatchPage.errors.duplicateItem"),
       });
       return null;
     }
@@ -644,7 +642,7 @@ export default function Dispatch() {
 
     if (hasInvalidQuantity) {
       showAlert({
-        message: "One or more quantities exceed the available stock.",
+        message: t("dispatchPage.errors.exceedsStock"),
       });
       return null;
     }
@@ -667,10 +665,10 @@ export default function Dispatch() {
 
     if (!requiredPermission) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("dispatchPage.errors.permissionDenied"),
         message: editingDispatchId
-          ? "You do not have permission to edit dispatches."
-          : "You do not have permission to add dispatches.",
+          ? t("dispatchPage.errors.noEditPermission")
+          : t("dispatchPage.errors.noAddPermission"),
         type: "warning",
       });
 
@@ -730,7 +728,7 @@ export default function Dispatch() {
 
       showAlert({
         message: error.message ||
-          "Could not save dispatch.",
+          t("dispatchPage.errors.couldNotSave"),
       });
     } finally {
       setSaving(false);
@@ -767,7 +765,7 @@ export default function Dispatch() {
 
       showAlert({
         message: error.message ||
-          "Could not update dispatch status.",
+          t("dispatchPage.errors.couldNotUpdateStatus"),
       });
     }
   };
@@ -777,16 +775,16 @@ export default function Dispatch() {
   ) => {
     if (!canEdit) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("dispatchPage.errors.permissionDenied"),
         message:
-          "You do not have permission to edit dispatches.",
+          t("dispatchPage.errors.noEditPermission"),
         type: "warning",
       });
 
       return;
     }
     const confirmed = await showConfirm({
-      message: "Are you sure you want to cancel this dispatch?",
+      message: t("dispatchPage.confirm.cancelDispatch"),
     });
 
     if (!confirmed) {
@@ -804,13 +802,13 @@ export default function Dispatch() {
   ) => {
     if (!canDelete) {
       showAlert({
-        message: "You do not have permission to delete dispatches.",
+        message: t("dispatchPage.errors.noDeletePermission"),
       });
       return;
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this dispatch?",
+      message: t("dispatchPage.confirm.deleteDispatch"),
     });
 
     if (!confirmed) {
@@ -837,12 +835,12 @@ export default function Dispatch() {
 
       if (error.code === "23503") {
         showAlert({
-        message: "This dispatch cannot be deleted because it is connected to a return.",
+        message: t("dispatchPage.errors.connectedReturn"),
       });
       } else {
         showAlert({
         message: error.message ||
-            "Could not delete dispatch.",
+            t("dispatchPage.errors.couldNotDelete"),
       });
       }
     }
@@ -906,10 +904,10 @@ export default function Dispatch() {
 
         <section className="dispatch-title-section">
           <div>
-            <h1>Dispatch</h1>
+            <h1>{t("dispatchPage.title")}</h1>
 
             <p>
-              Manage event dispatch operations
+              {t("dispatchPage.subtitle")}
             </p>
           </div>
 
@@ -919,7 +917,7 @@ export default function Dispatch() {
             onClick={openAddModal}
           >
             <FiPlus />
-            Add New Dispatch
+            {t("dispatchPage.addNewDispatch")}
           </button>
         </section>
 
@@ -939,7 +937,7 @@ export default function Dispatch() {
                     setActiveTab(tab)
                   }
                 >
-                  {tab}
+                  {t(`dispatchPage.tabs.${tab}`)}
                 </button>
               ))}
             </div>
@@ -950,7 +948,7 @@ export default function Dispatch() {
 
                 <input
                   type="text"
-                  placeholder="Search dispatches..."
+                  placeholder={t("dispatchPage.searchPlaceholder")}
                   value={searchValue}
                   onChange={(event) =>
                     setSearchValue(
@@ -967,15 +965,15 @@ export default function Dispatch() {
               <thead>
                 <tr>
 
-                  <th>Dispatch ID</th>
-                  <th>Event Reference</th>
-                  <th>From Warehouse</th>
-                  <th>Destination</th>
-                  <th>Driver</th>
-                  <th>Date & Time</th>
-                  <th>Items</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{t("dispatchPage.table.dispatchId")}</th>
+                  <th>{t("dispatchPage.table.eventReference")}</th>
+                  <th>{t("dispatchPage.table.fromWarehouse")}</th>
+                  <th>{t("dispatchPage.table.destination")}</th>
+                  <th>{t("dispatchPage.table.driver")}</th>
+                  <th>{t("dispatchPage.table.dateTime")}</th>
+                  <th>{t("dispatchPage.table.items")}</th>
+                  <th>{t("dispatchPage.table.status")}</th>
+                  <th>{t("dispatchPage.table.actions")}</th>
                 </tr>
               </thead>
 
@@ -986,7 +984,7 @@ export default function Dispatch() {
                       colSpan="9"
                       className="dispatch-empty-state"
                     >
-                      Loading dispatches...
+                      {t("dispatchPage.loading")}
                     </td>
                   </tr>
                 ) : filteredDispatches.length >
@@ -1063,14 +1061,14 @@ export default function Dispatch() {
                                 dispatch.items
                                   .length
                               }{" "}
-                              item types
+                              {t("dispatchPage.itemTypes")}
                             </strong>
 
                             <span>
                               {getTotalQuantity(
                                 dispatch
                               ).toLocaleString()}{" "}
-                              total qty
+                              {t("dispatchPage.totalQty")}
                             </span>
                           </div>
                         </td>
@@ -1081,9 +1079,7 @@ export default function Dispatch() {
                               dispatch.status
                             )}`}
                           >
-                            {
-                              dispatch.status
-                            }
+                            {t(`dispatchPage.statuses.${dispatch.status}`)}
                           </span>
                         </td>
 
@@ -1145,7 +1141,7 @@ export default function Dispatch() {
                                       }
                                     >
                                       <FiPlay />
-                                      Start Dispatch
+                                      {t("dispatchPage.actions.startDispatch")}
                                     </button>
                                   )}
 
@@ -1161,7 +1157,7 @@ export default function Dispatch() {
                                       }
                                     >
                                       <FiCheckCircle />
-                                      Mark Delivered
+                                      {t("dispatchPage.actions.markDelivered")}
                                     </button>
                                   )}
 
@@ -1178,7 +1174,7 @@ export default function Dispatch() {
                                       }
                                     >
                                       <FiEdit2 />
-                                      Edit
+                                      {t("dispatchPage.actions.edit")}
                                     </button>
                                   )}
 
@@ -1196,7 +1192,7 @@ export default function Dispatch() {
                                         }
                                       >
                                         <FiX />
-                                        Cancel
+                                        {t("dispatchPage.actions.cancel")}
                                       </button>
                                     )}
 
@@ -1210,7 +1206,7 @@ export default function Dispatch() {
                                     }
                                   >
                                     <FiTrash2 />
-                                    Delete
+                                    {t("dispatchPage.actions.delete")}
                                   </button>
                                 </div>
                               )}
@@ -1226,8 +1222,7 @@ export default function Dispatch() {
                       colSpan="9"
                       className="dispatch-empty-state"
                     >
-                      No dispatches match your
-                      search.
+                      {t("dispatchPage.noResults")}
                     </td>
                   </tr>
                 )}
@@ -1237,10 +1232,10 @@ export default function Dispatch() {
 
           <div className="dispatch-pagination">
             <p>
-              Showing{" "}
-              {firstVisibleDispatch} to{" "}
-              {lastVisibleDispatch} of{" "}
-              {filteredDispatches.length} dispatches
+              {t("dispatchPage.pagination.showing")}{" "}
+              {firstVisibleDispatch} {t("dispatchPage.pagination.to")}{" "}
+              {lastVisibleDispatch} {t("dispatchPage.pagination.of")}{" "}
+              {filteredDispatches.length} {t("dispatchPage.pagination.dispatches")}
             </p>
 
             {filteredDispatches.length > 0 && (
@@ -1259,7 +1254,7 @@ export default function Dispatch() {
                   disabled={
                     currentPage === 1
                   }
-                  aria-label="Previous page"
+                  aria-label={t("dispatchPage.pagination.previousPage")}
                 >
                    ‹
                 </button>
@@ -1316,7 +1311,7 @@ export default function Dispatch() {
                     currentPage ===
                     totalPages
                   }
-                  aria-label="Next page"
+                  aria-label={t("dispatchPage.pagination.nextPage")}
                 >
                    ›
                 </button>
@@ -1342,12 +1337,12 @@ export default function Dispatch() {
               <div>
                 <h2>
                   {editingDispatchId
-                    ? "Edit Dispatch"
-                    : "Add New Dispatch"}
+                    ? t("dispatchPage.modal.editDispatch")
+                    : t("dispatchPage.modal.addDispatch")}
                 </h2>
 
                 <p>
-                  Enter event, destination and item information.
+                  {t("dispatchPage.modal.description")}
                 </p>
               </div>
 
@@ -1362,7 +1357,7 @@ export default function Dispatch() {
 
             <div className="dispatch-modal-grid">
               <label>
-                Event Reference
+                {t("dispatchPage.modal.eventReference")}
 
                 <select
                   name="eventId"
@@ -1371,7 +1366,7 @@ export default function Dispatch() {
                   disabled={saving}
                 >
                   <option value="">
-                    Select event
+                    {t("dispatchPage.modal.selectEvent")}
                   </option>
 
                   {events.map((event) => (
@@ -1387,7 +1382,7 @@ export default function Dispatch() {
               </label>
 
               <label>
-                From Warehouse
+                {t("dispatchPage.modal.fromWarehouse")}
 
                 <select
                   name="warehouseId"
@@ -1398,7 +1393,7 @@ export default function Dispatch() {
                   disabled={saving}
                 >
                   <option value="">
-                    Select warehouse
+                    {t("dispatchPage.modal.selectWarehouse")}
                   </option>
 
                   {warehouses.map(
@@ -1415,7 +1410,7 @@ export default function Dispatch() {
               </label>
 
               <label>
-                Destination / Venue
+                {t("dispatchPage.modal.destinationVenue")}
 
                 <input
                   type="text"
@@ -1429,7 +1424,7 @@ export default function Dispatch() {
               </label>
 
               <label>
-                Area
+                {t("dispatchPage.modal.area")}
 
                 <input
                   type="text"
@@ -1440,35 +1435,10 @@ export default function Dispatch() {
                 />
               </label>
 
-              <label>
-                Driver
-
-                <select
-                  name="driverId"
-                  value={formData.driverId}
-                  onChange={handleFormChange}
-                  disabled={saving}
-                >
-                  <option value="">
-                    Select driver
-                  </option>
-
-                  {drivers.map((driver) => (
-                    <option
-                      key={driver.id}
-                      value={driver.id}
-                    >
-                      {driver.full_name}
-                      {driver.staff_code
-                        ? ` (${driver.staff_code})`
-                        : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              
 
               <label>
-                Dispatch Date
+                {t("dispatchPage.modal.dispatchDate")}
 
                 <input
                   type="date"
@@ -1480,7 +1450,7 @@ export default function Dispatch() {
               </label>
 
               <label className="dispatch-full-field">
-                Dispatch Time
+                {t("dispatchPage.modal.dispatchTime")}
 
                 <input
                   type="time"
@@ -1496,11 +1466,11 @@ export default function Dispatch() {
               <div className="dispatch-items-heading">
                 <div>
                   <h3>
-                    Items & Quantities
+                    {t("dispatchPage.modal.itemsQuantities")}
                   </h3>
 
                   <p>
-                    Add the items leaving the selected warehouse.
+                    {t("dispatchPage.modal.itemsHelp")}
                   </p>
                 </div>
 
@@ -1513,7 +1483,7 @@ export default function Dispatch() {
                   }
                 >
                   <FiPlus />
-                  Add Item
+                  {t("dispatchPage.modal.addItem")}
                 </button>
               </div>
 
@@ -1525,7 +1495,7 @@ export default function Dispatch() {
                       key={itemIndex}
                     >
                       <label>
-                        Item
+                        {t("dispatchPage.modal.item")}
 
                         <select
                           value={item.itemId}
@@ -1544,8 +1514,8 @@ export default function Dispatch() {
                         >
                           <option value="">
                             {loadingItems
-                              ? "Loading items..."
-                              : "Select item"}
+                              ? t("dispatchPage.modal.loadingItems")
+                              : t("dispatchPage.modal.selectItem")}
                           </option>
 
                           {itemOptions.map(
@@ -1565,7 +1535,7 @@ export default function Dispatch() {
                                 {
                                   itemOption.availableQuantity
                                 }{" "}
-                                available)
+                                {t("dispatchPage.available")})
                               </option>
                             )
                           )}
@@ -1573,7 +1543,7 @@ export default function Dispatch() {
                       </label>
 
                       <label>
-                        Quantity
+                        {t("dispatchPage.modal.quantity")}
 
                         <input
                           type="number"
@@ -1610,7 +1580,7 @@ export default function Dispatch() {
             </div>
 
             <div className="dispatch-status-note">
-              New dispatches start automatically with the Prepared status.
+              {t("dispatchPage.modal.preparedNote")}
             </div>
 
             <div className="dispatch-modal-actions">
@@ -1620,7 +1590,7 @@ export default function Dispatch() {
                 onClick={closeModal}
                 disabled={saving}
               >
-                Cancel
+                {t("dispatchPage.actions.cancel")}
               </button>
 
               <button
@@ -1629,10 +1599,10 @@ export default function Dispatch() {
                 disabled={saving}
               >
                 {saving
-                  ? "Saving..."
+                  ? t("dispatchPage.actions.saving")
                   : editingDispatchId
-                    ? "Save Changes"
-                    : "Save Dispatch"}
+                    ? t("dispatchPage.actions.saveChanges")
+                    : t("dispatchPage.actions.saveDispatch")}
               </button>
             </div>
           </form>

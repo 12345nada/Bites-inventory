@@ -5,9 +5,13 @@ import {
   useState,
 } from "react";
 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 import { useDialog } from "../context/DialogContext";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 import { supabase } from "../lib/supabase";
@@ -17,6 +21,7 @@ import {
   getActiveDrivers,
   getActiveWaiters,
   getEvents,
+  getEventDetailsSheet,
   removeEvent,
   updateEvent,
 } from "../services/eventsService";
@@ -34,6 +39,9 @@ import {
   FiXCircle,
   FiEdit2,
   FiMoreVertical,
+  FiFileText,
+  FiDownload,
+  FiChevronDown,
   FiX,
   FiTrash2,
 } from "react-icons/fi";
@@ -63,6 +71,51 @@ const emptyForm = {
 };
 
 function Events() {
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language?.startsWith("ar");
+
+  const ui = (english, arabic) =>
+    isArabic ? arabic : english;
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      Confirmed: "مؤكد",
+      "In Progress": "قيد التنفيذ",
+      Upcoming: "قادمة",
+      Completed: "مكتملة",
+      Cancelled: "ملغاة",
+    };
+
+    return isArabic
+      ? labels[status] || status
+      : status;
+  };
+
+  const getBranchLabel = (branch) => {
+    const labels = {
+      Cairo: "القاهرة",
+      Alex: "الإسكندرية",
+    };
+
+    return isArabic
+      ? labels[branch] || branch
+      : branch;
+  };
+
+  const getTabLabel = (tab) => {
+    const labels = {
+      "All Events": "كل الفعاليات",
+      Upcoming: "القادمة",
+      "In Progress": "قيد التنفيذ",
+      Completed: "المكتملة",
+      Cancelled: "الملغاة",
+    };
+
+    return isArabic
+      ? labels[tab] || tab
+      : tab;
+  };
+
   const { showAlert, showConfirm } = useDialog();
   const { hasPermission } = useAuth();
 
@@ -126,11 +179,58 @@ function Events() {
     left: 0,
   });
 
+  const [
+    eventDetailsSheet,
+    setEventDetailsSheet,
+  ] = useState(null);
+
+  const [
+    loadingEventDetailsSheet,
+    setLoadingEventDetailsSheet,
+  ] = useState(false);
+
+  const [
+    isEventDetailsExportOpen,
+    setIsEventDetailsExportOpen,
+  ] = useState(false);
+
+  const eventDetailsExportRef =
+    useRef(null);
+
   const [formData, setFormData] =
     useState(emptyForm);
 
   useEffect(() => {
     loadPageData();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideExportClick = (
+      event
+    ) => {
+      if (
+        eventDetailsExportRef.current &&
+        !eventDetailsExportRef.current.contains(
+          event.target
+        )
+      ) {
+        setIsEventDetailsExportOpen(
+          false
+        );
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      handleOutsideExportClick
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideExportClick
+      );
+    };
   }, []);
 
   useEffect(() => {
@@ -390,6 +490,24 @@ function Events() {
     [events]
   );
 
+  const branchDrivers = useMemo(
+    () =>
+      drivers.filter(
+        (driver) =>
+          driver.branch === formData.branch
+      ),
+    [drivers, formData.branch]
+  );
+
+  const branchWaiters = useMemo(
+    () =>
+      waiters.filter(
+        (waiter) =>
+          waiter.branch === formData.branch
+      ),
+    [waiters, formData.branch]
+  );
+
   const todayDate = new Date()
     .toISOString()
     .slice(0, 10);
@@ -436,7 +554,7 @@ function Events() {
     );
 
     return date.toLocaleDateString(
-      "en-GB",
+      isArabic ? "ar-EG" : "en-GB",
       {
         day: "2-digit",
         month: "long",
@@ -462,7 +580,7 @@ function Events() {
     );
 
     return date.toLocaleTimeString(
-      "en-US",
+      isArabic ? "ar-EG" : "en-US",
       {
         hour: "2-digit",
         minute: "2-digit",
@@ -486,7 +604,7 @@ function Events() {
         .getBoundingClientRect();
 
     const menuWidth = 125;
-    const menuHeight = 76;
+    const menuHeight = 110;
     const gap = 10;
 
     const availableSpaceBelow =
@@ -520,6 +638,576 @@ function Events() {
     });
 
     setOpenActionId(eventId);
+  };
+
+  const openEventDetailsSheet = async (
+    event
+  ) => {
+    try {
+      setOpenActionId(null);
+      setLoadingEventDetailsSheet(true);
+
+      const details =
+        await getEventDetailsSheet(
+          event.id
+        );
+
+      setEventDetailsSheet(details);
+    } catch (error) {
+      console.error(
+        "Error loading event details sheet:",
+        error
+      );
+
+      showAlert({
+        message:
+          error.message ||
+          "Could not load event details sheet.",
+      });
+    } finally {
+      setLoadingEventDetailsSheet(false);
+    }
+  };
+
+  const closeEventDetailsSheet = () => {
+    if (loadingEventDetailsSheet) {
+      return;
+    }
+
+    setIsEventDetailsExportOpen(false);
+    setEventDetailsSheet(null);
+  };
+
+  const exportEventDetailsPdf = async () => {
+    if (!eventDetailsSheet) {
+      return;
+    }
+
+    const details =
+      eventDetailsSheet;
+
+    const document = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    });
+
+    document.setTextColor(
+      113,
+      48,
+      6
+    );
+    document.setFontSize(20);
+    document.text(
+      "bites",
+      14,
+      14
+    );
+
+    document.setTextColor(
+      33,
+      27,
+      23
+    );
+    document.setFontSize(17);
+    document.text(
+      "Event Details Sheet",
+      14,
+      23
+    );
+
+    document.setFontSize(8);
+    document.setTextColor(
+      108,
+      97,
+      89
+    );
+    document.text(
+      "Complete event, staff and payment details",
+      14,
+      29
+    );
+
+    autoTable(document, {
+      startY: 34,
+      theme: "grid",
+      body: [
+        [
+          "Event Code",
+          details.eventCode || "-",
+          "Event Name",
+          details.eventName || "-",
+        ],
+        [
+          "Client",
+          details.client || "-",
+          "Date",
+          formatDate(details.date),
+        ],
+        [
+          "Branch",
+          details.branch || "-",
+          "Location",
+          `${details.location || "-"}${
+            details.area
+              ? ` - ${details.area}`
+              : ""
+          }`,
+        ],
+        [
+          "Start Time",
+          formatTime(
+            details.startTime
+          ),
+          "End Time",
+          formatTime(details.endTime),
+        ],
+        [
+          "Status",
+          details.status || "-",
+          "Drinks Included",
+          details.hasDrinks
+            ? "Yes"
+            : "No",
+        ],
+      ],
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        lineColor: [
+          234,
+          219,
+          208,
+        ],
+        lineWidth: 0.2,
+      },
+      columnStyles: {
+        0: {
+          fontStyle: "bold",
+          fillColor: [
+            255,
+            248,
+            242,
+          ],
+        },
+        2: {
+          fontStyle: "bold",
+          fillColor: [
+            255,
+            248,
+            242,
+          ],
+        },
+      },
+      margin: {
+        left: 14,
+        right: 14,
+      },
+    });
+
+    const waitersTitleY =
+      (document.lastAutoTable
+        ?.finalY || 34) + 8;
+
+    document.setTextColor(
+      33,
+      27,
+      23
+    );
+    document.setFontSize(12);
+    document.text(
+      `Waiters — ${Number(
+        details.waiterTotal || 0
+      ).toLocaleString(
+        "en-US"
+      )} EGP`,
+      14,
+      waitersTitleY
+    );
+
+    autoTable(document, {
+      startY:
+        waitersTitleY + 3,
+      head: [[
+        "Name",
+        "Role",
+        "Reports To",
+        "Attendance",
+        "Event Rate",
+        "Payable",
+      ]],
+      body:
+        details.waiters.length > 0
+          ? details.waiters.map(
+              (waiter) => [
+                waiter.name || "-",
+                waiter.role || "-",
+                waiter.reportsTo ||
+                  "-",
+                waiter.attendance ||
+                  "Assigned",
+                `${Number(
+                  waiter.eventRate ||
+                    0
+                ).toLocaleString(
+                  "en-US"
+                )} EGP`,
+                `${Number(
+                  waiter.payableAmount ||
+                    0
+                ).toLocaleString(
+                  "en-US"
+                )} EGP`,
+              ]
+            )
+          : [[
+              "No waiters assigned",
+              "",
+              "",
+              "",
+              "",
+              "",
+            ]],
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 2,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fillColor: [
+          113,
+          48,
+          6,
+        ],
+        textColor: [
+          255,
+          255,
+          255,
+        ],
+      },
+      alternateRowStyles: {
+        fillColor: [
+          255,
+          248,
+          242,
+        ],
+      },
+      margin: {
+        left: 14,
+        right: 14,
+      },
+    });
+
+    const driverTitleY =
+      (document.lastAutoTable
+        ?.finalY ||
+        waitersTitleY) + 8;
+
+    document.setFontSize(12);
+    document.setTextColor(
+      33,
+      27,
+      23
+    );
+    document.text(
+      `Driver — ${Number(
+        details.driverTotal || 0
+      ).toLocaleString(
+        "en-US"
+      )} EGP`,
+      14,
+      driverTitleY
+    );
+
+    autoTable(document, {
+      startY:
+        driverTitleY + 3,
+      head: [[
+        "Name",
+        "Role",
+        "Reports To",
+        "Payment To",
+        "Event Amount",
+      ]],
+      body: details.driver
+        ? [[
+            details.driver.name ||
+              "-",
+            details.driver.role ||
+              "-",
+            details.driver
+              .reportsTo || "-",
+            details.driver
+              .paymentTo || "-",
+            `${Number(
+              details.driver
+                .eventAmount || 0
+            ).toLocaleString(
+              "en-US"
+            )} EGP`,
+          ]]
+        : [[
+            "No driver assigned",
+            "",
+            "",
+            "",
+            "",
+          ]],
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 2,
+      },
+      headStyles: {
+        fillColor: [
+          113,
+          48,
+          6,
+        ],
+        textColor: [
+          255,
+          255,
+          255,
+        ],
+      },
+      alternateRowStyles: {
+        fillColor: [
+          255,
+          248,
+          242,
+        ],
+      },
+      margin: {
+        left: 14,
+        right: 14,
+      },
+    });
+
+    const totalsY =
+      (document.lastAutoTable
+        ?.finalY ||
+        driverTitleY) + 10;
+
+    document.setFontSize(9);
+    document.setTextColor(
+      80,
+      72,
+      66
+    );
+
+    document.text(
+      `Waiters Total: ${Number(
+        details.waiterTotal || 0
+      ).toLocaleString(
+        "en-US"
+      )} EGP`,
+      14,
+      totalsY
+    );
+
+    document.text(
+      `Driver Total: ${Number(
+        details.driverTotal || 0
+      ).toLocaleString(
+        "en-US"
+      )} EGP`,
+      90,
+      totalsY
+    );
+
+    document.setFontSize(11);
+    document.setTextColor(
+      113,
+      48,
+      6
+    );
+    document.text(
+      `Total Event Staff Cost: ${Number(
+        details.totalStaffCost ||
+          0
+      ).toLocaleString(
+        "en-US"
+      )} EGP`,
+      166,
+      totalsY
+    );
+
+    
+    document.save(
+      `${details.eventCode}-event-details-sheet.pdf`
+    );
+  };
+
+  const exportEventDetailsExcel = async () => {
+    if (!eventDetailsSheet) {
+      return;
+    }
+
+    const details =
+      eventDetailsSheet;
+
+    const rows = [
+      [
+        "Event Details Sheet",
+      ],
+      [],
+      [
+        "Event Code",
+        details.eventCode,
+        "Event Name",
+        details.eventName,
+      ],
+      [
+        "Client",
+        details.client,
+        "Date",
+        formatDate(details.date),
+      ],
+      [
+        "Branch",
+        details.branch,
+        "Location",
+        `${details.location || ""}${
+          details.area
+            ? ` - ${details.area}`
+            : ""
+        }`,
+      ],
+      [
+        "Start Time",
+        formatTime(
+          details.startTime
+        ),
+        "End Time",
+        formatTime(details.endTime),
+      ],
+      [
+        "Status",
+        details.status,
+        "Drinks Included",
+        details.hasDrinks
+          ? "Yes"
+          : "No",
+      ],
+      [],
+      ["Waiters"],
+      [
+        "Name",
+        "Role",
+        "Reports To",
+        "Attendance",
+        "Event Rate",
+        "Payable Amount",
+      ],
+      ...details.waiters.map(
+        (waiter) => [
+          waiter.name,
+          waiter.role,
+          waiter.reportsTo || "-",
+          waiter.attendance,
+          Number(
+            waiter.eventRate || 0
+          ),
+          Number(
+            waiter.payableAmount ||
+              0
+          ),
+        ]
+      ),
+      [],
+      [
+        "Waiters Total",
+        Number(
+          details.waiterTotal || 0
+        ),
+      ],
+      [],
+      ["Driver"],
+      [
+        "Name",
+        "Role",
+        "Reports To",
+        "Payment To",
+        "Event Amount",
+      ],
+      details.driver
+        ? [
+            details.driver.name,
+            details.driver.role,
+            details.driver
+              .reportsTo || "-",
+            details.driver
+              .paymentTo || "-",
+            Number(
+              details.driver
+                .eventAmount || 0
+            ),
+          ]
+        : [
+            "No driver assigned",
+            "",
+            "",
+            "",
+            0,
+          ],
+      [],
+      [
+        "Driver Total",
+        Number(
+          details.driverTotal || 0
+        ),
+      ],
+      [
+        "Total Event Staff Cost",
+        Number(
+          details.totalStaffCost ||
+            0
+        ),
+      ],
+      
+    ];
+
+    const worksheet =
+      XLSX.utils.aoa_to_sheet(
+        rows
+      );
+
+    worksheet["!cols"] = [
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 18 },
+      { wch: 18 },
+    ];
+
+    const workbook =
+      XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Event Details"
+    );
+
+    XLSX.writeFile(
+      workbook,
+      `${details.eventCode}-event-details-sheet.xlsx`
+    );
+  };
+
+  const handleEventDetailsExport = async (
+    type
+  ) => {
+    setIsEventDetailsExportOpen(
+      false
+    );
+
+    if (type === "pdf") {
+      await exportEventDetailsPdf();
+      return;
+    }
+
+    await exportEventDetailsExcel();
   };
 
   const handleCancelEvent = async (
@@ -701,10 +1389,21 @@ function Events() {
       value,
     } = event.target;
 
-    setFormData((currentData) => ({
-      ...currentData,
-      [name]: value,
-    }));
+    setFormData((currentData) => {
+      if (name === "branch") {
+        return {
+          ...currentData,
+          branch: value,
+          driverId: "",
+          waiterIds: [],
+        };
+      }
+
+      return {
+        ...currentData,
+        [name]: value,
+      };
+    });
   };
 
   const openAddModal = async () => {
@@ -915,8 +1614,8 @@ function Events() {
 
         <section className="events-title-section">
           <div>
-            <h1>Events</h1>
-            <p>Manage all your events</p>
+            <h1>{ui("Events", "الفعاليات")}</h1>
+            <p>{ui("Manage all your events", "إدارة جميع الفعاليات")}</p>
           </div>
 
           <button
@@ -925,35 +1624,35 @@ function Events() {
             onClick={openAddModal}
           >
             <FiPlus />
-            <span>Add New Event</span>
+            <span>{ui("Add New Event", "إضافة فعالية جديدة")}</span>
           </button>
         </section>
 
         <section className="events-stats">
           <StatCard
             icon={<FiCalendar />}
-            title="Total Events"
+            title={ui("Total Events", "إجمالي الفعاليات")}
             number={totalActiveEvents}
-            description="All events"
+            description={ui("All events", "جميع الفعاليات")}
           />
 
           <StatCard
             icon={<FiCheckCircle />}
-            title="Today's Events"
+            title={ui("Today's Events", "فعاليات اليوم")}
             number={todayEvents}
-            description="Events today"
+            description={ui("Events today", "فعاليات اليوم")}
           />
 
           <StatCard
             icon={<FiCalendar />}
-            title="Upcoming Events"
+            title={ui("Upcoming Events", "الفعاليات القادمة")}
             number={upcomingEvents}
-            description="Next 7 days"
+            description={ui("Next 7 days", "خلال 7 أيام القادمة")}
           />
 
           <StatCard
             icon={<FiFlag />}
-            title="Completed Events"
+            title={ui("Completed Events", "الفعاليات المكتملة")}
             number={
               events.filter(
                 (event) =>
@@ -961,13 +1660,13 @@ function Events() {
                   "Completed"
               ).length
             }
-            description="Completed"
+            description={ui("Completed", "مكتملة")}
             descriptionClass="orange"
           />
 
           <StatCard
             icon={<FiXCircle />}
-            title="Cancelled Events"
+            title={ui("Cancelled Events", "الفعاليات الملغاة")}
             number={
               events.filter(
                 (event) =>
@@ -975,7 +1674,7 @@ function Events() {
                   "Cancelled"
               ).length
             }
-            description="Cancelled"
+            description={ui("Cancelled", "ملغاة")}
             descriptionClass="red"
           />
         </section>
@@ -985,7 +1684,7 @@ function Events() {
             <div className="events-tabs">
               {tabs.map((tab) => (
                 <button
-                  key={tab}
+                  key={getTabLabel(tab)}
                   type="button"
                   className={
                     activeTab === tab
@@ -996,7 +1695,7 @@ function Events() {
                     setActiveTab(tab)
                   }
                 >
-                  {tab}
+                  {getTabLabel(tab)}
                 </button>
               ))}
             </div>
@@ -1007,7 +1706,7 @@ function Events() {
 
                 <input
                   type="text"
-                  placeholder="Search events..."
+                  placeholder={ui("Search events...", "ابحث في الفعاليات...")}
                   value={searchValue}
                   onChange={(event) =>
                     setSearchValue(
@@ -1026,10 +1725,10 @@ function Events() {
                       event.target.value
                     )
                   }
-                  aria-label="Filter events by branch"
+                  aria-label={ui("Filter events by branch", "تصفية الفعاليات حسب الفرع")}
                 >
                   <option value="All Branches">
-                    All Branches
+                    {ui("All Branches", "جميع الفروع")}
                   </option>
 
                   {branches.map((branch) => (
@@ -1037,7 +1736,7 @@ function Events() {
                       key={branch}
                       value={branch}
                     >
-                      {branch}
+                      {getBranchLabel(branch)}
                     </option>
                   ))}
                 </select>
@@ -1052,19 +1751,19 @@ function Events() {
                   <th>
                     <input
                       type="checkbox"
-                      aria-label="Select all events"
+                      aria-label={ui("Select all events", "تحديد كل الفعاليات")}
                     />
                   </th>
 
-                  <th>Event Type</th>
-                  <th>Client</th>
-                  <th>Date</th>
-                  <th>Location</th>
-                  <th>Branch</th>
-                  <th># of Waiters</th>
-                  <th>Driver</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{ui("Event Type", "نوع الفعالية")}</th>
+                  <th>{ui("Client", "العميل")}</th>
+                  <th>{ui("Date", "التاريخ")}</th>
+                  <th>{ui("Location", "الموقع")}</th>
+                  <th>{ui("Branch", "الفرع")}</th>
+                  <th>{ui("# of Waiters", "عدد النادلين")}</th>
+                  <th>{ui("Driver", "السائق")}</th>
+                  <th>{ui("Status", "الحالة")}</th>
+                  <th>{ui("Actions", "الإجراءات")}</th>
                 </tr>
               </thead>
 
@@ -1075,7 +1774,7 @@ function Events() {
                       colSpan="10"
                       className="events-empty-state"
                     >
-                      Loading events...
+                      {ui("Loading events...", "جاري تحميل الفعاليات...")}
                     </td>
                   </tr>
                 ) : filteredEvents.length >
@@ -1124,7 +1823,7 @@ function Events() {
 
                             <span>
                               <strong>
-                                Start:
+                                {ui("Start:", "البداية:")}
                               </strong>{" "}
                               {formatTime(
                                 event.startTime
@@ -1133,7 +1832,7 @@ function Events() {
 
                             <span>
                               <strong>
-                                End:
+                                {ui("End:", "النهاية:")}
                               </strong>{" "}
                               {formatTime(
                                 event.endTime
@@ -1157,7 +1856,7 @@ function Events() {
                         </td>
 
                         <td>
-                          {event.branch}
+                          {getBranchLabel(event.branch)}
                         </td>
 
                         <td>
@@ -1175,7 +1874,7 @@ function Events() {
                               event.status
                             )}`}
                           >
-                            {event.status}
+                            {getStatusLabel(event.status)}
                           </span>
                         </td>
 
@@ -1230,7 +1929,19 @@ function Events() {
                                     }
                                   >
                                     <FiEdit2 />
-                                    Edit
+                                    {ui("Edit", "تعديل")}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openEventDetailsSheet(
+                                        event
+                                      )
+                                    }
+                                  >
+                                    <FiFileText />
+                                    {ui("Event Details Sheet", "تفاصيل الفعالية")}
                                   </button>
 
                                   {event.status !==
@@ -1245,7 +1956,7 @@ function Events() {
                                       }
                                     >
                                       <FiX />
-                                      Cancel
+                                      {ui("Cancel", "إلغاء")}
                                     </button>
                                   )}
 
@@ -1259,7 +1970,7 @@ function Events() {
                                     }
                                   >
                                     <FiTrash2 />
-                                    Delete
+                                    {ui("Delete", "حذف")}
                                   </button>
                                 </div>
                               )}
@@ -1275,8 +1986,7 @@ function Events() {
                       colSpan="10"
                       className="events-empty-state"
                     >
-                      No events match your search or
-                      selected filters.
+                      {ui("No events match your search or selected filters.", "لا توجد فعاليات تطابق البحث أو عوامل التصفية المحددة.")}
                     </td>
                   </tr>
                 )}
@@ -1286,9 +1996,9 @@ function Events() {
 
           <div className="events-pagination">
             <p>
-              Showing{" "}
+              {ui("Showing", "عرض")}{" "}
               {paginatedEvents.length} of{" "}
-              {filteredEvents.length} events
+              {filteredEvents.length} {ui("events", "فعالية")}
             </p>
 
             {filteredEvents.length > 0 && (
@@ -1307,7 +2017,7 @@ function Events() {
                   disabled={
                     currentPage === 1
                   }
-                  aria-label="Previous page"
+                  aria-label={ui("Previous page", "الصفحة السابقة")}
                 >
                   ‹
                 </button>
@@ -1364,7 +2074,7 @@ function Events() {
                     currentPage ===
                     totalPages
                   }
-                  aria-label="Next page"
+                  aria-label={ui("Next page", "الصفحة التالية")}
                 >
                   ›
                 </button>
@@ -1373,6 +2083,396 @@ function Events() {
           </div>
         </section>
       </main>
+
+      {(eventDetailsSheet ||
+        loadingEventDetailsSheet) && (
+        <div
+          className="event-modal-overlay"
+          onMouseDown={
+            closeEventDetailsSheet
+          }
+        >
+          <div
+            className="event-modal event-details-sheet-modal"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            {loadingEventDetailsSheet ? (
+              <div className="event-details-sheet-loading">
+                {ui("Loading event details...", "جاري تحميل تفاصيل الفعالية...")}
+              </div>
+            ) : (
+              <>
+                <div className="event-modal-header event-details-sheet-header">
+                  <div>
+                    <h2>
+                      {ui("Event Details Sheet", "تفاصيل الفعالية")}
+                    </h2>
+                    <p>
+                      {ui("Complete event, staff and payment details", "تفاصيل الفعالية والموظفين والمدفوعات")}
+                    </p>
+                  </div>
+
+                  <div className="event-details-sheet-header-actions">
+                    <div
+                      className="event-details-export-wrapper"
+                      ref={
+                        eventDetailsExportRef
+                      }
+                    >
+                      <button
+                        type="button"
+                        className="event-details-export-main-button"
+                        onClick={() =>
+                          setIsEventDetailsExportOpen(
+                            (current) =>
+                              !current
+                          )
+                        }
+                        aria-haspopup="menu"
+                        aria-expanded={
+                          isEventDetailsExportOpen
+                        }
+                      >
+                        <FiDownload />
+                        {ui("Export", "تصدير")}
+                        <FiChevronDown
+                          className={
+                            isEventDetailsExportOpen
+                              ? "open"
+                              : ""
+                          }
+                        />
+                      </button>
+
+                      {isEventDetailsExportOpen && (
+                        <div
+                          className="event-details-export-menu"
+                          role="menu"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() =>
+                              handleEventDetailsExport(
+                                "pdf"
+                              )
+                            }
+                          >
+                            {ui("Export as PDF", "تصدير PDF")}
+                          </button>
+
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() =>
+                              handleEventDetailsExport(
+                                "excel"
+                              )
+                            }
+                          >
+                            {ui("Export as Excel", "تصدير Excel")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="event-modal-close"
+                      onClick={
+                        closeEventDetailsSheet
+                      }
+                    >
+                      <FiX />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="event-details-info-grid">
+                  <div>
+                    <span>{ui("Event Code", "كود الفعالية")}</span>
+                    <strong>
+                      {eventDetailsSheet.eventCode}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{ui("Event Name", "اسم الفعالية")}</span>
+                    <strong>
+                      {eventDetailsSheet.eventName}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{ui("Client", "العميل")}</span>
+                    <strong>
+                      {eventDetailsSheet.client ||
+                        "-"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{ui("Date", "التاريخ")}</span>
+                    <strong>
+                      {formatDate(
+                        eventDetailsSheet.date
+                      )}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{ui("Branch", "الفرع")}</span>
+                    <strong>
+                      {getBranchLabel(eventDetailsSheet.branch) ||
+                        "-"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{ui("Location", "الموقع")}</span>
+                    <strong>
+                      {eventDetailsSheet.location}
+                      {eventDetailsSheet.area
+                        ? ` - ${eventDetailsSheet.area}`
+                        : ""}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{ui("Start Time", "وقت البداية")}</span>
+                    <strong>
+                      {formatTime(
+                        eventDetailsSheet.startTime
+                      )}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{ui("End Time", "وقت النهاية")}</span>
+                    <strong>
+                      {formatTime(
+                        eventDetailsSheet.endTime
+                      )}
+                    </strong>
+                  </div>
+                </div>
+
+                <section className="event-details-sheet-section">
+                  <div className="event-details-sheet-section-header">
+                    <div>
+                      <h3>{ui("Waiters", "النادلون")}</h3>
+                      <p>
+                        {ui("Assigned waiters and saved event rates.", "النادلون المعيّنون وأسعار الفعالية المحفوظة.")}
+                      </p>
+                    </div>
+
+                    <strong>
+                      {Number(
+                        eventDetailsSheet.waiterTotal ||
+                          0
+                      ).toLocaleString(
+                        "en-US"
+                      )}{" "}
+                      EGP
+                    </strong>
+                  </div>
+
+                  <div className="event-details-sheet-table-wrapper">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>{ui("Name", "الاسم")}</th>
+                          <th>{ui("Role", "الدور")}</th>
+                          <th>{ui("Reports To", "يتبع")}</th>
+                          <th>{ui("Attendance", "الحضور")}</th>
+                          <th>{ui("Event Rate", "سعر الفعالية")}</th>
+                          <th>{ui("Payable", "المستحق")}</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {eventDetailsSheet.waiters
+                          .length > 0 ? (
+                          eventDetailsSheet.waiters.map(
+                            (waiter) => (
+                              <tr
+                                key={`sheet-waiter-${waiter.id}`}
+                              >
+                                <td>
+                                  {waiter.name}
+                                </td>
+                                <td>
+                                  {waiter.role}
+                                </td>
+                                <td>
+                                  {waiter.reportsTo ||
+                                    "-"}
+                                </td>
+                                <td>
+                                  {waiter.attendance}
+                                </td>
+                                <td>
+                                  {Number(
+                                    waiter.eventRate ||
+                                      0
+                                  ).toLocaleString(
+                                    "en-US"
+                                  )}{" "}
+                                  EGP
+                                </td>
+                                <td>
+                                  {Number(
+                                    waiter.payableAmount ||
+                                      0
+                                  ).toLocaleString(
+                                    "en-US"
+                                  )}{" "}
+                                  EGP
+                                </td>
+                              </tr>
+                            )
+                          )
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan="6"
+                              className="event-details-sheet-empty"
+                            >
+                              {ui("No waiters assigned to this event.", "لا يوجد نادلون معيّنون لهذه الفعالية.")}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="event-details-sheet-section">
+                  <div className="event-details-sheet-section-header">
+                    <div>
+                      <h3>{ui("Driver", "السائق")}</h3>
+                      <p>
+                        {ui("Driver assignment and event payment.", "تعيين السائق ومدفوعات الفعالية.")}
+                      </p>
+                    </div>
+
+                    <strong>
+                      {Number(
+                        eventDetailsSheet.driverTotal ||
+                          0
+                      ).toLocaleString(
+                        "en-US"
+                      )}{" "}
+                      EGP
+                    </strong>
+                  </div>
+
+                  <div className="event-details-sheet-table-wrapper">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>{ui("Name", "الاسم")}</th>
+                          <th>{ui("Role", "الدور")}</th>
+                          <th>{ui("Reports To", "يتبع")}</th>
+                          <th>{ui("Payment To", "الدفع إلى")}</th>
+                          <th>{ui("Event Amount", "مبلغ الفعالية")}</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {eventDetailsSheet.driver ? (
+                          <tr>
+                            <td>
+                              {
+                                eventDetailsSheet
+                                  .driver.name
+                              }
+                            </td>
+                            <td>
+                              {
+                                eventDetailsSheet
+                                  .driver.role
+                              }
+                            </td>
+                            <td>
+                              {eventDetailsSheet
+                                .driver.reportsTo ||
+                                "-"}
+                            </td>
+                            <td>
+                              {eventDetailsSheet
+                                .driver.paymentTo ||
+                                "-"}
+                            </td>
+                            <td>
+                              {Number(
+                                eventDetailsSheet
+                                  .driver.eventAmount ||
+                                  0
+                              ).toLocaleString(
+                                "en-US"
+                              )}{" "}
+                              EGP
+                            </td>
+                          </tr>
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan="5"
+                              className="event-details-sheet-empty"
+                            >
+                              No driver assigned
+                              to this event.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <div className="event-details-sheet-totals">
+                  <div>
+                    <span>{ui("Waiters Total", "إجمالي النادلين")}</span>
+                    <strong>
+                      {Number(
+                        eventDetailsSheet.waiterTotal ||
+                          0
+                      ).toLocaleString(
+                        "en-US"
+                      )}{" "}
+                      EGP
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>{ui("Driver Total", "إجمالي السائق")}</span>
+                    <strong>
+                      {Number(
+                        eventDetailsSheet.driverTotal ||
+                          0
+                      ).toLocaleString(
+                        "en-US"
+                      )}{" "}
+                      EGP
+                    </strong>
+                  </div>
+
+                  <div className="event-details-sheet-grand-total">
+                    <span>
+                      {ui("Total Event Staff Cost", "إجمالي تكلفة طاقم الفعالية")}
+                    </span>
+                    <strong>
+                      {Number(
+                        eventDetailsSheet.totalStaffCost ||
+                          0
+                      ).toLocaleString(
+                        "en-US"
+                      )}{" "}
+                      EGP
+                    </strong>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {showEventModal && (
         <div
@@ -1391,14 +2491,14 @@ function Events() {
               <div>
                 <h2>
                   {editingEventId
-                    ? "Edit Event"
-                    : "Add New Event"}
+                    ? ui("Edit Event", "تعديل الفعالية")
+                    : ui("Add New Event", "إضافة فعالية جديدة")}
                 </h2>
 
                 <p>
                   {editingEventId
-                    ? "Update the event details."
-                    : "Enter the new event details."}
+                    ? ui("Update the event details.", "حدّث تفاصيل الفعالية.")
+                    : ui("Enter the new event details.", "أدخل تفاصيل الفعالية الجديدة.")}
                 </p>
               </div>
 
@@ -1406,7 +2506,7 @@ function Events() {
                 type="button"
                 className="event-modal-close"
                 onClick={closeModal}
-                aria-label="Close event form"
+                aria-label={ui("Close event form", "إغلاق نموذج الفعالية")}
                 disabled={saving}
               >
                 <FiX />
@@ -1415,33 +2515,33 @@ function Events() {
 
             <div className="event-modal-grid">
               <label>
-                Event Type
+                {ui("Event Type", "نوع الفعالية")}
 
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleFormChange}
-                  placeholder="Family Wedding"
+                  placeholder={ui("Family Wedding", "حفل زفاف")}
                   disabled={saving}
                 />
               </label>
 
               <label>
-                Client
+                {ui("Client", "العميل")}
 
                 <input
                   type="text"
                   name="client"
                   value={formData.client}
                   onChange={handleFormChange}
-                  placeholder="Client name"
+                  placeholder={ui("Client name", "اسم العميل")}
                   disabled={saving}
                 />
               </label>
 
               <label className="event-modal-full-field">
-                Date
+                {ui("Date", "التاريخ")}
 
                 <input
                   type="date"
@@ -1454,7 +2554,7 @@ function Events() {
 
               <div className="event-modal-times">
                 <label>
-                  Departure Time
+                  {ui("Departure Time", "وقت التحرك")}
 
                   <input
                     type="time"
@@ -1468,7 +2568,7 @@ function Events() {
                 </label>
 
                 <label>
-                  Event Start Time
+                  {ui("Event Start Time", "وقت بداية الفعالية")}
 
                   <input
                     type="time"
@@ -1480,7 +2580,7 @@ function Events() {
                 </label>
 
                 <label>
-                  Event End Time
+                  {ui("Event End Time", "وقت نهاية الفعالية")}
 
                   <input
                     type="time"
@@ -1493,33 +2593,33 @@ function Events() {
               </div>
 
               <label>
-                Location
+                {ui("Location", "الموقع")}
 
                 <input
                   type="text"
                   name="location"
                   value={formData.location}
                   onChange={handleFormChange}
-                  placeholder="Villa 45"
+                  placeholder={ui("Villa 45", "فيلا 45")}
                   disabled={saving}
                 />
               </label>
 
               <label>
-                Area
+                {ui("Area", "المنطقة")}
 
                 <input
                   type="text"
                   name="area"
                   value={formData.area}
                   onChange={handleFormChange}
-                  placeholder="New Cairo"
+                  placeholder={ui("New Cairo", "القاهرة الجديدة")}
                   disabled={saving}
                 />
               </label>
 
               <label>
-                Branch
+                {ui("Branch", "الفرع")}
 
                 <select
                   name="branch"
@@ -1528,17 +2628,17 @@ function Events() {
                   disabled={saving}
                 >
                   <option value="Cairo">
-                    Cairo
+                    {getBranchLabel("Cairo")}
                   </option>
 
                   <option value="Alex">
-                    Alex
+                    {getBranchLabel("Alex")}
                   </option>
                 </select>
               </label>
 
               <label>
-                Driver
+                {ui("Driver", "السائق")}
 
                 <select
                   name="driverId"
@@ -1547,17 +2647,23 @@ function Events() {
                   disabled={saving}
                 >
                   <option value="">
-                    Select driver
+                    {ui("Select driver", "اختر السائق")}
                   </option>
 
-                  {drivers.map((driver) => (
+                  {branchDrivers.map((driver) => (
                     <option
                       key={driver.id}
                       value={driver.id}
                     >
                       {driver.full_name}
+                      {driver.staff_role
+                        ? ` - ${driver.staff_role}`
+                        : ""}
+                      {driver.reports_to_name
+                        ? ` (under ${driver.reports_to_name})`
+                        : ""}
                       {driver.staff_code
-                        ? ` (${driver.staff_code})`
+                        ? ` [${driver.staff_code}]`
                         : ""}
                     </option>
                   ))}
@@ -1569,7 +2675,7 @@ function Events() {
                 ref={waitersFieldRef}
               >
                 <span className="event-field-label">
-                  Waiters
+                  {ui("Waiters", "النادلون")}
                 </span>
 
                 <button
@@ -1608,7 +2714,7 @@ function Events() {
                               className="event-waiter-chip"
                             >
                               {waiter?.full_name ||
-                                "Waiter"}
+                                ui("Waiter", "نادل")}
 
                               <span
                                 role="button"
@@ -1645,7 +2751,7 @@ function Events() {
                       )
                     ) : (
                       <span className="event-waiters-placeholder">
-                        Select waiters
+                        {ui("Select waiters", "اختر النادلين")}
                       </span>
                     )}
                   </span>
@@ -1657,8 +2763,8 @@ function Events() {
 
                 {showWaitersDropdown && (
                   <div className="event-waiters-dropdown">
-                    {waiters.length > 0 ? (
-                      waiters.map((waiter) => {
+                    {branchWaiters.length > 0 ? (
+                      branchWaiters.map((waiter) => {
                         const isSelected =
                           formData.waiterIds.some(
                             (id) =>
@@ -1686,40 +2792,59 @@ function Events() {
                                 {waiter.full_name}
                               </strong>
 
-                              {waiter.staff_code && (
-                                <small>
-                                  {waiter.staff_code}
-                                </small>
-                              )}
+                              <small>
+                                {waiter.staff_role ||
+                                  ui("Waiter", "نادل")}
+                                {waiter.reports_to_name
+                                  ? ` • under ${waiter.reports_to_name}`
+                                  : ""}
+                                {waiter.event_rate !==
+                                undefined
+                                  ? ` • ${Number(
+                                      waiter.event_rate ||
+                                        0
+                                    ).toLocaleString(
+                                      "en-US"
+                                    )} EGP/event`
+                                  : ""}
+                                {waiter.staff_code
+                                  ? ` • ${waiter.staff_code}`
+                                  : ""}
+                              </small>
                             </span>
                           </label>
                         );
                       })
                     ) : (
                       <p className="event-no-waiters">
-                        No active waiters found.
+                        {ui("No active waiters found.", "لا يوجد نادلون نشطون.")}
                       </p>
                     )}
                   </div>
                 )}
 
                 <small className="event-waiters-count">
-                  {formData.waiterIds.length} waiter
-                  {formData.waiterIds.length === 1
-                    ? ""
-                    : "s"}{" "}
-                  selected
+                  {ui(
+                    `${formData.waiterIds.length} waiter${
+                      formData.waiterIds.length === 1 ? "" : "s"
+                    } selected`,
+                    `تم اختيار ${formData.waiterIds.length} نادل`
+                  )}
+                </small>
+
+                <small className="event-waiters-count">
+                  {ui("Head waiter payment is grouped automatically with the assigned team.", "يتم تجميع مستحقات رئيس النادلين تلقائيًا مع الفريق المعيّن.")}
                 </small>
               </div>
 
               <label className="event-drinks-field event-modal-full-field">
                 <span className="event-drinks-copy">
                   <strong>
-                    Drinks Included
+                    {ui("Drinks Included", "تشمل مشروبات")}
                   </strong>
 
                   <small>
-                    Enable this when the event includes drinks.
+                    {ui("Enable this when the event includes drinks.", "فعّل هذا الخيار عندما تشمل الفعالية مشروبات.")}
                   </small>
                 </span>
 
@@ -1741,7 +2866,7 @@ function Events() {
                       )
                     }
                     disabled={saving}
-                    aria-label="Drinks included"
+                    aria-label={ui("Drinks included", "تشمل مشروبات")}
                   />
 
                   <span className="event-drinks-slider" />
@@ -1756,7 +2881,7 @@ function Events() {
                 onClick={closeModal}
                 disabled={saving}
               >
-                Cancel
+                {ui("Cancel", "إلغاء")}
               </button>
 
               <button
@@ -1765,10 +2890,10 @@ function Events() {
                 disabled={saving}
               >
                 {saving
-                  ? "Saving..."
+                  ? ui("Saving...", "جاري الحفظ...")
                   : editingEventId
-                    ? "Save Changes"
-                    : "Save Event"}
+                    ? ui("Save Changes", "حفظ التعديلات")
+                    : ui("Save Event", "حفظ الفعالية")}
               </button>
             </div>
           </form>

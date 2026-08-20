@@ -16,6 +16,10 @@ import {
 } from "react-router-dom";
 
 import {
+  useTranslation,
+} from "react-i18next";
+
+import {
   supabase,
 } from "../../lib/supabase";
 
@@ -46,7 +50,9 @@ const allowedAvatarTypes = [
 ];
 
 const formatNotificationTime = (
-  createdAt
+  createdAt,
+  t,
+  language
 ) => {
   if (!createdAt) {
     return "";
@@ -65,48 +71,123 @@ const formatNotificationTime = (
   );
 
   if (seconds < 60) {
-    return "Just now";
+    return t("topbar.justNow");
   }
 
   const minutes =
     Math.floor(seconds / 60);
 
   if (minutes < 60) {
-    return `${minutes} min ago`;
+    return t(
+      "topbar.minutesAgo",
+      { count: minutes }
+    );
   }
 
   const hours =
     Math.floor(minutes / 60);
 
   if (hours < 24) {
-    return `${hours} ${
-      hours === 1
-        ? "hour"
-        : "hours"
-    } ago`;
+    return t(
+      "topbar.hoursAgo",
+      { count: hours }
+    );
   }
 
   const days =
     Math.floor(hours / 24);
 
   if (days < 7) {
-    return `${days} ${
-      days === 1
-        ? "day"
-        : "days"
-    } ago`;
+    return t(
+      "topbar.daysAgo",
+      { count: days }
+    );
   }
 
   return new Date(
     createdAt
   ).toLocaleDateString(
-    "en-GB",
+    language === "ar"
+      ? "ar-EG"
+      : "en-GB",
     {
       day: "2-digit",
       month: "short",
       year: "numeric",
     }
   );
+};
+
+
+const translateNotificationContent = (
+  notification,
+  t,
+  language
+) => {
+  const title =
+    notification?.title || "";
+  const message =
+    notification?.message || "";
+
+  if (language !== "ar") {
+    return { title, message };
+  }
+
+  const translatedTitle =
+    title === "Upcoming Event"
+      ? t("topbar.notificationContent.upcomingEvent")
+      : title === "Low Stock Alert"
+        ? t("topbar.notificationContent.lowStockAlert")
+        : title;
+
+  const lowStockMatch = message.match(
+    /^(.+?) is low in (.+?)\. Available:\s*([\d.]+),\s*Minimum:\s*([\d.]+)\.?$/
+  );
+
+  if (lowStockMatch) {
+    return {
+      title: translatedTitle,
+      message: t(
+        "topbar.notificationContent.lowStockMessage",
+        {
+          item: lowStockMatch[1],
+          warehouse:
+            lowStockMatch[2] === "Alex Warehouse"
+              ? t("warehouses.alex_warehouse")
+              : lowStockMatch[2] === "Cairo Warehouse"
+                ? t("warehouses.cairo_warehouse")
+                : lowStockMatch[2],
+          available: lowStockMatch[3],
+          minimum: lowStockMatch[4],
+        }
+      ),
+    };
+  }
+
+  const upcomingEventMatch =
+    message.match(
+      /^(.+?) is departing at (.+?) to (.+?)\.?$/
+    );
+
+  if (upcomingEventMatch) {
+    return {
+      title: translatedTitle,
+      message: t(
+        "topbar.notificationContent.upcomingEventMessage",
+        {
+          event: upcomingEventMatch[1],
+          time: upcomingEventMatch[2],
+          destination:
+            upcomingEventMatch[3],
+        }
+      ),
+    };
+  }
+
+  return {
+    title: translatedTitle,
+    message,
+  };
 };
 
 const getAvatarExtension = (
@@ -146,6 +227,11 @@ export default function Topbar({
 }) {
   const navigate =
     useNavigate();
+
+  const {
+    t,
+    i18n,
+  } = useTranslation();
 
   const {
     user,
@@ -342,7 +428,7 @@ export default function Topbar({
         )
       ) {
         alert(
-          "Please choose a JPG, PNG or WEBP image."
+          t("topbar.chooseValidImage")
         );
         return;
       }
@@ -352,7 +438,7 @@ export default function Topbar({
         MAX_AVATAR_SIZE
       ) {
         alert(
-          "The profile image must be 5 MB or smaller."
+          t("topbar.imageTooLarge")
         );
         return;
       }
@@ -425,7 +511,7 @@ export default function Topbar({
 
         alert(
           error.message ||
-            "Could not upload the profile image."
+            t("topbar.couldNotUploadImage")
         );
       } finally {
         setUploadingAvatar(false);
@@ -521,7 +607,7 @@ export default function Topbar({
 
         <input
           type="text"
-          placeholder="search anything..."
+          placeholder={t("topbar.searchAnything")}
           value={searchValue}
           onChange={(event) =>
             onSearchChange?.(
@@ -545,7 +631,7 @@ export default function Topbar({
                   !current
               )
             }
-            aria-label="Open notifications"
+            aria-label={t("topbar.openNotifications")}
             aria-expanded={
               showNotifications
             }
@@ -562,11 +648,14 @@ export default function Topbar({
               <div className="dashboard-notification-header">
                 <div>
                   <h4>
-                    Notifications
+                    {t("topbar.notifications")}
                   </h4>
 
                   <small>
-                    {unreadCount} new
+                    {t(
+                      "topbar.newNotifications",
+                      { count: unreadCount }
+                    )}
                   </small>
                 </div>
 
@@ -584,8 +673,8 @@ export default function Topbar({
                     <FiCheck />
 
                     {markingAll
-                      ? "Saving..."
-                      : "Mark all read"}
+                      ? t("topbar.saving")
+                      : t("topbar.markAllRead")}
                   </button>
                 )}
               </div>
@@ -593,14 +682,22 @@ export default function Topbar({
               <div className="dashboard-notification-list">
                 {loading ? (
                   <div className="notification-empty-state">
-                    Loading notifications...
+                    {t("topbar.loadingNotifications")}
                   </div>
                 ) : notifications.length >
                   0 ? (
                   notifications.map(
                     (
                       notification
-                    ) => (
+                    ) => {
+                      const translatedNotification =
+                        translateNotificationContent(
+                          notification,
+                          t,
+                          i18n.language
+                        );
+
+                      return (
                       <button
                         type="button"
                         key={
@@ -620,19 +717,21 @@ export default function Topbar({
                         <div className="notification-item-content">
                           <strong>
                             {
-                              notification.title
+                              translatedNotification.title
                             }
                           </strong>
 
                           <p>
                             {
-                              notification.message
+                              translatedNotification.message
                             }
                           </p>
 
                           <small>
                             {formatNotificationTime(
-                              notification.createdAt
+                              notification.createdAt,
+                              t,
+                              i18n.language
                             )}
                           </small>
                         </div>
@@ -641,11 +740,12 @@ export default function Topbar({
                           <span className="notification-unread-indicator" />
                         )}
                       </button>
-                    )
+                      );
+                    }
                   )
                 ) : (
                   <div className="notification-empty-state">
-                    No notifications yet.
+                    {t("topbar.noNotifications")}
                   </div>
                 )}
               </div>
@@ -676,8 +776,8 @@ export default function Topbar({
           disabled={
             uploadingAvatar
           }
-          aria-label="Change profile image"
-          title="Change profile image"
+          aria-label={t("topbar.changeProfileImage")}
+          title={t("topbar.changeProfileImage")}
         >
           {profile?.avatar_url ? (
             <img
@@ -686,7 +786,7 @@ export default function Topbar({
               }
               alt={
                 profile.full_name ||
-                "Profile"
+                t("topbar.profile")
               }
             />
           ) : (

@@ -27,6 +27,10 @@ import {
 } from "react-icons/fi";
 
 import {
+  useTranslation,
+} from "react-i18next";
+
+import {
   useAuth,
 } from "../../context/AuthContext";
 
@@ -80,6 +84,10 @@ export default function Sidebar({
 
   const location =
     useLocation();
+
+  const {
+    t,
+  } = useTranslation();
 
   const {
     profile,
@@ -152,11 +160,13 @@ export default function Sidebar({
 
     const confirmed =
       await showConfirm({
-        title: "Logout",
+        title: t("sidebar.logout"),
         message:
-          "Are you sure you want to logout?",
-        confirmText: "Logout",
-        cancelText: "Cancel",
+          t("sidebar.logoutConfirm"),
+        confirmText:
+          t("sidebar.logout"),
+        cancelText:
+          t("sidebar.cancel"),
         type: "warning",
       });
 
@@ -187,10 +197,11 @@ export default function Sidebar({
       );
     } catch (error) {
       await showAlert({
-        title: "Logout Failed",
+        title:
+          t("sidebar.logoutFailed"),
         message:
           error.message ||
-          "Could not logout.",
+          t("sidebar.couldNotLogout"),
         type: "error",
       });
     } finally {
@@ -281,8 +292,8 @@ export default function Sidebar({
         }
         aria-label={
           isSidebarOpen
-            ? "Close sidebar"
-            : "Open sidebar"
+            ? t("sidebar.closeSidebar")
+            : t("sidebar.openSidebar")
         }
         aria-expanded={
           isSidebarOpen
@@ -305,7 +316,9 @@ export default function Sidebar({
         onClick={
           closeSidebar
         }
-        aria-label="Close sidebar"
+        aria-label={
+          t("sidebar.closeSidebar")
+        }
       />
 
       <aside
@@ -336,7 +349,11 @@ export default function Sidebar({
 
           <nav
             className="sidebar-nav"
-            aria-label="Dashboard navigation"
+            aria-label={
+              t(
+                "sidebar.dashboardNavigation"
+              )
+            }
           >
             <ul className="dashboard-menu">
               {visibleMenuItems.map(
@@ -378,9 +395,9 @@ export default function Sidebar({
                         </span>
 
                         <span className="dashboard-menu-text">
-                          {
-                            item.title
-                          }
+                          {t(
+                            `sidebar.${item.pageName}`
+                          )}
                         </span>
                       </button>
                     </li>
@@ -407,8 +424,12 @@ export default function Sidebar({
 
                 <span>
                   {signingOut
-                    ? "Logging out..."
-                    : "Logout"}
+                    ? t(
+                        "sidebar.loggingOut"
+                      )
+                    : t(
+                        "sidebar.logout"
+                      )}
                 </span>
               </button>
             </div>
@@ -427,7 +448,9 @@ export default function Sidebar({
                   !current
               )
             }
-            aria-label="Open user menu"
+            aria-label={
+              t("sidebar.openUserMenu")
+            }
             aria-expanded={
               isUserMenuOpen
             }
@@ -441,7 +464,7 @@ export default function Sidebar({
                   }
                   alt={
                     profile.full_name ||
-                    "Profile"
+                    t("sidebar.profile")
                   }
                 />
               ) : (
@@ -456,12 +479,12 @@ export default function Sidebar({
             <div className="dashboard-user-info">
               <strong>
                 {profile?.full_name ||
-                  "User"}
+                  t("sidebar.user")}
               </strong>
 
               <small className="dashboard-user-role">
                 {profile?.roles?.name ||
-                  "No Role"}
+                  t("sidebar.noRole")}
               </small>
 
               <small className="dashboard-user-username">

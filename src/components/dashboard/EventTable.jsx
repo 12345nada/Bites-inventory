@@ -10,12 +10,21 @@ import {
   FiSearch,
 } from "react-icons/fi";
 
+import {
+  useTranslation,
+} from "react-i18next";
+
 export default function EventTable({
   events = [],
   loading = false,
   searchValue = "",
   onSearchChange,
 }) {
+  const {
+    t,
+    i18n,
+  } = useTranslation();
+
   const [
     selectedBranch,
     setSelectedBranch,
@@ -95,10 +104,65 @@ export default function EventTable({
       .toLowerCase()
       .replace(/\s+/g, "-");
 
+  const getStatusLabel = (status) =>
+    t(
+      `eventTable.statuses.${String(
+        status
+      )
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`,
+      {
+        defaultValue: status,
+      }
+    );
+
+  const getBranchLabel = (branch) =>
+    t(
+      `branches.${String(branch)
+        .trim()
+        .toLowerCase()}`,
+      {
+        defaultValue: branch,
+      }
+    );
+
+  const formatEventDate = (
+    dateValue
+  ) => {
+    if (!dateValue) {
+      return "";
+    }
+
+    const date =
+      new Date(dateValue);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return dateValue;
+    }
+
+    return date.toLocaleDateString(
+      i18n.language === "ar"
+        ? "ar-EG"
+        : "en-GB",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }
+    );
+  };
+
   return (
     <div className="table-card">
       <div className="table-header">
-        <h2>Event List</h2>
+        <h2>
+          {t("eventTable.eventList")}
+        </h2>
 
         <div className="dashboard-event-filters">
           <div className="dashboard-event-search">
@@ -106,7 +170,9 @@ export default function EventTable({
 
             <input
               type="text"
-              placeholder="Search events..."
+              placeholder={t(
+                "eventTable.searchEvents"
+              )}
               value={searchValue}
               onChange={(event) =>
                 onSearchChange?.(
@@ -126,7 +192,9 @@ export default function EventTable({
               }
             >
               <option value="All Branches">
-                All Branches
+                {t(
+                  "eventTable.allBranches"
+                )}
               </option>
 
               {branches.map((branch) => (
@@ -134,7 +202,9 @@ export default function EventTable({
                   key={branch}
                   value={branch}
                 >
-                  {branch}
+                  {getBranchLabel(
+                    branch
+                  )}
                 </option>
               ))}
             </select>
@@ -145,7 +215,9 @@ export default function EventTable({
           <button
             type="button"
             className="dashboard-list-button"
-            aria-label="Change table view"
+            aria-label={t(
+              "eventTable.changeTableView"
+            )}
           >
             <FiList />
           </button>
@@ -157,15 +229,52 @@ export default function EventTable({
           <thead>
             <tr>
               <th className="event-type-header">
-                Event Type
+                {t(
+                  "eventTable.eventType"
+                )}
               </th>
-              <th>Client</th>
-              <th>Date</th>
-              <th>Location</th>
-              <th>Branch</th>
-              <th># of Waiters</th>
-              <th>Driver</th>
-              <th>Status</th>
+
+              <th>
+                {t(
+                  "eventTable.client"
+                )}
+              </th>
+
+              <th>
+                {t(
+                  "eventTable.date"
+                )}
+              </th>
+
+              <th>
+                {t(
+                  "eventTable.location"
+                )}
+              </th>
+
+              <th>
+                {t(
+                  "eventTable.branch"
+                )}
+              </th>
+
+              <th>
+                {t(
+                  "eventTable.numberOfWaiters"
+                )}
+              </th>
+
+              <th>
+                {t(
+                  "eventTable.driver"
+                )}
+              </th>
+
+              <th>
+                {t(
+                  "eventTable.status"
+                )}
+              </th>
             </tr>
           </thead>
 
@@ -176,7 +285,9 @@ export default function EventTable({
                   colSpan="8"
                   className="dashboard-empty-table"
                 >
-                  Loading events...
+                  {t(
+                    "eventTable.loadingEvents"
+                  )}
                 </td>
               </tr>
             ) : filteredRows.length > 0 ? (
@@ -191,28 +302,40 @@ export default function EventTable({
 
                         <div>
                           <strong>
-                            {event.eventType}
+                            {
+                              event.eventType
+                            }
                           </strong>
 
                           <span>
-                            {event.eventCode}
+                            {
+                              event.eventCode
+                            }
                           </span>
                         </div>
                       </div>
                     </td>
 
                     <td>
-                      {event.client}
+                      {
+                        event.client
+                      }
                     </td>
 
                     <td>
                       <div className="dashboard-two-lines">
                         <span>
-                          {event.date}
+                          {formatEventDate(
+                            event.rawDate ||
+                              event.date
+                          )}
                         </span>
 
                         <span>
-                          {event.time || ""}
+                          {
+                            event.time ||
+                            ""
+                          }
                         </span>
                       </div>
                     </td>
@@ -220,25 +343,36 @@ export default function EventTable({
                     <td>
                       <div className="dashboard-two-lines">
                         <span>
-                          {event.location}
+                          {
+                            event.location
+                          }
                         </span>
 
                         <span>
-                          {event.area || ""}
+                          {
+                            event.area ||
+                            ""
+                          }
                         </span>
                       </div>
                     </td>
 
                     <td>
-                      {event.branch}
+                      {getBranchLabel(
+                        event.branch
+                      )}
                     </td>
 
                     <td>
-                      {event.waiters}
+                      {
+                        event.waiters
+                      }
                     </td>
 
                     <td>
-                      {event.driver}
+                      {
+                        event.driver
+                      }
                     </td>
 
                     <td>
@@ -247,7 +381,9 @@ export default function EventTable({
                           event.status
                         )}`}
                       >
-                        {event.status}
+                        {getStatusLabel(
+                          event.status
+                        )}
                       </span>
                     </td>
                   </tr>
@@ -259,8 +395,9 @@ export default function EventTable({
                   colSpan="8"
                   className="dashboard-empty-table"
                 >
-                  No upcoming events match
-                  your search.
+                  {t(
+                    "eventTable.noUpcomingEvents"
+                  )}
                 </td>
               </tr>
             )}
@@ -270,13 +407,23 @@ export default function EventTable({
 
       <div className="dashboard-table-pagination">
         <p>
-          Showing {filteredRows.length} of{" "}
-          {filteredRows.length} events
+          {t(
+            "eventTable.showingEvents",
+            {
+              shown:
+                filteredRows.length,
+              total:
+                filteredRows.length,
+            }
+          )}
         </p>
 
         {filteredRows.length > 0 && (
           <div>
-            <button type="button" disabled>
+            <button
+              type="button"
+              disabled
+            >
               ‹
             </button>
 
@@ -287,7 +434,10 @@ export default function EventTable({
               1
             </button>
 
-            <button type="button" disabled>
+            <button
+              type="button"
+              disabled
+            >
               ›
             </button>
           </div>

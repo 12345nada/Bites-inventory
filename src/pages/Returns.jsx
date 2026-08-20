@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 
 import { useDialog } from "../context/DialogContext";
@@ -84,6 +85,7 @@ function getTotals(items = []) {
 }
 
 export default function Returns() {
+  const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -234,7 +236,7 @@ export default function Returns() {
 
       showAlert({
         message: error.message ||
-          "Could not load returns.",
+          t("returnsPage.errors.couldNotLoad"),
       });
     } finally {
       setLoading(false);
@@ -380,10 +382,10 @@ export default function Returns() {
 
     if (!requiredPermission) {
       showAlert({
-        title: "Permission Denied",
+        title: t("returnsPage.errors.permissionDenied"),
         message: editingReturnId
-          ? "You do not have permission to edit returns."
-          : "You do not have permission to receive returns.",
+          ? t("returnsPage.errors.noEditPermission")
+          : t("returnsPage.errors.noAddPermission"),
         type: "warning",
       });
 
@@ -485,7 +487,7 @@ export default function Returns() {
       !formData.returnedBy.trim()
     ) {
       showAlert({
-        message: "Please complete the return information.",
+        message: t("returnsPage.errors.completeInfo"),
       });
 
       return false;
@@ -493,7 +495,7 @@ export default function Returns() {
 
     if (formData.items.length === 0) {
       showAlert({
-        message: "The selected dispatch has no items.",
+        message: t("returnsPage.errors.noItems"),
       });
 
       return false;
@@ -533,7 +535,7 @@ export default function Returns() {
 
     if (hasInvalidItem) {
       showAlert({
-        message: "For every item: Returned + Damaged + Missing must equal Sent Quantity.",
+        message: t("returnsPage.errors.quantitiesMustMatch"),
       });
 
       return false;
@@ -549,9 +551,9 @@ export default function Returns() {
 
     if (!canAdd) {
       showAlert({
-        title: "Permission Denied",
+        title: t("returnsPage.errors.permissionDenied"),
         message:
-          "You do not have permission to receive returns.",
+          t("returnsPage.errors.noAddPermission"),
         type: "warning",
       });
 
@@ -614,12 +616,12 @@ export default function Returns() {
 
       if (error.code === "23505") {
         showAlert({
-        message: "A return already exists for this dispatch.",
+        message: t("returnsPage.errors.alreadyExists"),
       });
       } else {
         showAlert({
         message: error.message ||
-            "Could not complete the return.",
+            t("returnsPage.errors.couldNotComplete"),
       });
       }
     } finally {
@@ -632,9 +634,9 @@ export default function Returns() {
   ) => {
     if (!canEdit) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("returnsPage.errors.permissionDenied"),
         message:
-          "You do not have permission to edit returns.",
+          t("returnsPage.errors.noEditPermission"),
         type: "warning",
       });
 
@@ -685,9 +687,9 @@ export default function Returns() {
   ) => {
     if (!canDelete) {
       showAlert({
-        title: "Permission Denied",
+        title: t("returnsPage.errors.permissionDenied"),
         message:
-          "You do not have permission to delete returns.",
+          t("returnsPage.errors.noDeletePermission"),
         type: "warning",
       });
 
@@ -695,7 +697,7 @@ export default function Returns() {
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this return record? Inventory quantities will be reversed.",
+      message: t("returnsPage.confirm.deleteReturn"),
     });
 
     if (!confirmed) {
@@ -729,7 +731,7 @@ export default function Returns() {
 
       showAlert({
         message: error.message ||
-          "Could not delete the return record.",
+          t("returnsPage.errors.couldNotDelete"),
       });
     }
   };
@@ -760,11 +762,10 @@ export default function Returns() {
 
         <section className="returns-title-section">
           <div>
-            <h1>Returns</h1>
+            <h1>{t("returnsPage.title")}</h1>
 
             <p>
-              Record returned, damaged and
-              missing quantities
+              {t("returnsPage.subtitle")}
             </p>
           </div>
 
@@ -774,7 +775,7 @@ export default function Returns() {
             onClick={openAddModal}
           >
             <FiPlus />
-            Receive Return
+            {t("returnsPage.receiveReturn")}
           </button>
         </section>
 
@@ -783,7 +784,7 @@ export default function Returns() {
             <div className="returns-tabs">
               {tabs.map((tab) => (
                 <button
-                  key={tab}
+                  key={t(`returnsPage.tabs.${tab}`)}
                   type="button"
                   className={
                     activeTab === tab
@@ -794,7 +795,7 @@ export default function Returns() {
                     setActiveTab(tab)
                   }
                 >
-                  {tab}
+                  {t(`returnsPage.tabs.${tab}`)}
                 </button>
               ))}
             </div>
@@ -804,7 +805,7 @@ export default function Returns() {
 
               <input
                 type="text"
-                placeholder="Search returns..."
+                placeholder={t("returnsPage.searchPlaceholder")}
                 value={searchValue}
                 onChange={(event) =>
                   setSearchValue(
@@ -820,16 +821,16 @@ export default function Returns() {
               <thead>
                 <tr>
 
-                  <th>Return ID</th>
-                  <th>Event Reference</th>
-                  <th>Warehouse</th>
-                  <th>Return Date</th>
-                  <th>Received By</th>
-                  <th>Total Sent</th>
-                  <th>Returned</th>
-                  <th>Damaged</th>
-                  <th>Missing</th>
-                  <th>Actions</th>
+                  <th>{t("returnsPage.table.returnId")}</th>
+                  <th>{t("returnsPage.table.eventReference")}</th>
+                  <th>{t("returnsPage.table.warehouse")}</th>
+                  <th>{t("returnsPage.table.returnDate")}</th>
+                  <th>{t("returnsPage.table.receivedBy")}</th>
+                  <th>{t("returnsPage.table.totalSent")}</th>
+                  <th>{t("returnsPage.table.returned")}</th>
+                  <th>{t("returnsPage.table.damaged")}</th>
+                  <th>{t("returnsPage.table.missing")}</th>
+                  <th>{t("returnsPage.table.actions")}</th>
                 </tr>
               </thead>
 
@@ -840,7 +841,7 @@ export default function Returns() {
                       colSpan="10"
                       className="returns-empty-state"
                     >
-                      Loading returns...
+                      {t("returnsPage.loading")}
                     </td>
                   </tr>
                 ) : filteredReturns.length >
@@ -930,7 +931,7 @@ export default function Returns() {
                                     returnRecord
                                   )
                                 }
-                                aria-label={`Edit ${returnRecord.returnCode}`}
+                                aria-label={t("returnsPage.aria.edit", { code: returnRecord.returnCode })}
                               >
                                 <FiEdit2 />
                               </button>
@@ -945,7 +946,7 @@ export default function Returns() {
                                       returnRecord.id
                                     )
                                   }
-                                  aria-label={`More actions for ${returnRecord.returnCode}`}
+                                  aria-label={t("returnsPage.aria.moreActions", { code: returnRecord.returnCode })}
                                 >
                                   <FiMoreVertical />
                                 </button>
@@ -969,7 +970,7 @@ export default function Returns() {
                                       }
                                     >
                                       <FiTrash2 />
-                                      Delete
+                                      {t("returnsPage.actions.delete")}
                                     </button>
                                   </div>
                                 )}
@@ -986,8 +987,7 @@ export default function Returns() {
                       colSpan="10"
                       className="returns-empty-state"
                     >
-                      No returns match your
-                      search.
+                      {t("returnsPage.noResults")}
                     </td>
                   </tr>
                 )}
@@ -997,7 +997,7 @@ export default function Returns() {
 
           <div className="returns-pagination">
             <p>
-              Showing{" "}
+              {t("returnsPage.pagination.showing")}{" "}
               {filteredReturns.length === 0
                 ? 0
                 : (currentPage - 1) *
@@ -1009,8 +1009,8 @@ export default function Returns() {
                   returnsPerPage,
                 filteredReturns.length
               )}{" "}
-              of{" "}
-              {filteredReturns.length} returns
+              {t("returnsPage.pagination.of")}{" "}
+              {filteredReturns.length} {t("returnsPage.pagination.returns")}
             </p>
 
             <div>
@@ -1094,14 +1094,14 @@ export default function Returns() {
               <div>
                 <h2>
                   {editingReturnId
-                    ? "Edit Return"
-                    : "Receive Return"}
+                    ? t("returnsPage.modal.editReturn")
+                    : t("returnsPage.modal.receiveReturn")}
                 </h2>
 
                 <p>
                   {editingReturnId
-                    ? "Update returned, damaged and missing quantities."
-                    : "Record returned, damaged and missing quantities."}
+                    ? t("returnsPage.modal.updateDescription")
+                    : t("returnsPage.modal.description")}
                 </p>
               </div>
 
@@ -1116,7 +1116,7 @@ export default function Returns() {
 
             <div className="returns-modal-grid">
               <label>
-                Dispatch Reference
+                {t("returnsPage.modal.dispatchReference")}
 
                 <select
                   value={formData.dispatchId}
@@ -1127,7 +1127,7 @@ export default function Returns() {
                   }
                 >
                   <option value="">
-                    Select delivered dispatch
+                    {t("returnsPage.modal.selectDeliveredDispatch")}
                   </option>
 
                   {editingReturnId &&
@@ -1165,14 +1165,13 @@ export default function Returns() {
                   availableDispatches.length ===
                     0 && (
                   <span className="returns-field-help">
-                    No delivered dispatch is
-                    currently waiting for return.
+                    {t("returnsPage.modal.noDeliveredDispatch")}
                   </span>
                 )}
               </label>
 
               <label>
-                Return Date
+                {t("returnsPage.modal.returnDate")}
 
                 <input
                   type="date"
@@ -1187,14 +1186,14 @@ export default function Returns() {
             {formData.dispatchId && (
               <div className="return-dispatch-info">
                 <div>
-                  <span>Event Reference</span>
+                  <span>{t("returnsPage.modal.eventReference")}</span>
                   <strong>
                     {formData.eventReference}
                   </strong>
                 </div>
 
                 <div>
-                  <span>Return Warehouse</span>
+                  <span>{t("returnsPage.modal.returnWarehouse")}</span>
                   <strong>
                     {formData.warehouse}
                   </strong>
@@ -1202,7 +1201,7 @@ export default function Returns() {
 
                 <div>
                   <span>
-                    Dispatch Reference
+                    {t("returnsPage.modal.dispatchReference")}
                   </span>
                   <strong>
                     {formData.dispatchCode}
@@ -1213,12 +1212,12 @@ export default function Returns() {
 
             <div className="returns-modal-grid returns-receiver-grid">
               <label>
-                Received By
+                {t("returnsPage.modal.receivedBy")}
 
                 <input
                   type="text"
                   name="returnedBy"
-                  placeholder="Employee name"
+                  placeholder={t("returnsPage.modal.employeeName")}
                   value={formData.returnedBy}
                   onChange={handleFormChange}
                   disabled={saving}
@@ -1226,11 +1225,11 @@ export default function Returns() {
               </label>
 
               <label>
-                Notes
+                {t("returnsPage.modal.notes")}
 
                 <textarea
                   name="notes"
-                  placeholder="Optional notes"
+                  placeholder={t("returnsPage.modal.optionalNotes")}
                   value={formData.notes}
                   onChange={handleFormChange}
                   disabled={saving}
@@ -1241,22 +1240,20 @@ export default function Returns() {
             {formData.items.length > 0 && (
               <div className="returned-items-section">
                 <div className="returned-items-heading">
-                  <h3>Returned Items</h3>
+                  <h3>{t("returnsPage.modal.returnedItems")}</h3>
 
                   <p>
-                    Returned + Damaged +
-                    Missing must equal the sent
-                    quantity for every item.
+                    {t("returnsPage.modal.itemsHelp")}
                   </p>
                 </div>
 
                 <div className="returned-items-table">
                   <div className="returned-items-row returned-items-header">
-                    <span>Item</span>
-                    <span>Sent</span>
-                    <span>Returned</span>
-                    <span>Damaged</span>
-                    <span>Missing</span>
+                    <span>{t("returnsPage.modal.item")}</span>
+                    <span>{t("returnsPage.modal.sent")}</span>
+                    <span>{t("returnsPage.modal.returned")}</span>
+                    <span>{t("returnsPage.modal.damaged")}</span>
+                    <span>{t("returnsPage.modal.missing")}</span>
                   </div>
 
                   {formData.items.map(
@@ -1336,7 +1333,7 @@ export default function Returns() {
                       <>
                         <div>
                           <span>
-                            Total Sent
+                            {t("returnsPage.modal.totalSent")}
                           </span>
                           <strong>
                             {
@@ -1346,7 +1343,7 @@ export default function Returns() {
                         </div>
 
                         <div>
-                          <span>Returned</span>
+                          <span>{t("returnsPage.modal.returned")}</span>
                           <strong>
                             {
                               totals.goodReturned
@@ -1356,7 +1353,7 @@ export default function Returns() {
 
                         <div>
                           <span>
-                            Damaged
+                            {t("returnsPage.modal.damaged")}
                           </span>
                           <strong>
                             {
@@ -1367,7 +1364,7 @@ export default function Returns() {
 
                         <div>
                           <span>
-                            Missing
+                            {t("returnsPage.modal.missing")}
                           </span>
                           <strong>
                             {
@@ -1389,7 +1386,7 @@ export default function Returns() {
                 onClick={closeModal}
                 disabled={saving}
               >
-                Cancel
+                {t("returnsPage.actions.cancel")}
               </button>
 
               <button
@@ -1404,10 +1401,10 @@ export default function Returns() {
                 }
               >
                 {saving
-                  ? "Saving..."
+                  ? t("returnsPage.actions.saving")
                   : editingReturnId
-                    ? "Update Return"
-                    : "Complete Return"}
+                    ? t("returnsPage.actions.updateReturn")
+                    : t("returnsPage.actions.completeReturn")}
               </button>
             </div>
           </form>

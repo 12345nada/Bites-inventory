@@ -684,3 +684,269 @@
     width: 100%;
   }
 }
+
+/* Payment section inside Staff */
+.staff-payment-summary {
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #f0ddcf;
+  background: #fffdfb;
+}
+
+.staff-payment-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.staff-payment-summary span,
+.staff-payment-summary small {
+  color: #81766e;
+  font-size: 9px;
+}
+
+.staff-payment-summary strong {
+  color: #713006;
+  font-size: 18px;
+}
+
+.staff-payment-status {
+  display: inline-block;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.staff-payment-status.pending {
+  background: #fff0df;
+  color: #9a560c;
+}
+
+.staff-payment-status.paid {
+  background: #e4eedf;
+  color: #58704d;
+}
+
+.staff-payment-button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: #713006;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.staff-payment-button:disabled {
+  background: #eeeeee;
+  color: #777777;
+  cursor: not-allowed;
+}
+
+
+/* Event payment details */
+.staff-payment-event-button {
+  padding: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.staff-payment-event-button strong {
+  color: #713006;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.staff-payment-event-button span {
+  color: #332e2a;
+  font-size: 8px;
+}
+
+.staff-payment-event-button:hover strong {
+  color: #9a430e;
+}
+
+.staff-event-details-modal {
+  width: min(980px, calc(100% - 40px));
+}
+
+.staff-event-info-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.staff-event-info-grid > div {
+  min-height: 68px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #f0ddcf;
+  border-radius: 10px;
+  background: #fffaf6;
+}
+
+.staff-event-info-grid span {
+  color: #81766e;
+  font-size: 8px;
+}
+
+.staff-event-info-grid strong {
+  color: #2b241f;
+  font-size: 10px;
+}
+
+.staff-event-details-section {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid #f0ddcf;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.staff-event-details-heading {
+  min-height: 62px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: #fffdfb;
+  border-bottom: 1px solid #f0ddcf;
+}
+
+.staff-event-details-heading h3 {
+  margin: 0;
+  color: #211b17;
+  font-size: 12px;
+}
+
+.staff-event-details-heading p {
+  margin: 3px 0 0;
+  color: #81766e;
+  font-size: 8px;
+}
+
+.staff-event-details-heading > strong {
+  min-width: max-content;
+  color: #713006;
+  font-size: 13px;
+}
+
+.staff-event-details-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.staff-event-details-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+}
+
+.staff-event-details-table th,
+.staff-event-details-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-top: 1px solid #f0e8e2;
+  color: #332e2a;
+  font-size: 8px;
+}
+
+.staff-event-details-table thead {
+  background: linear-gradient(
+    90deg,
+    #fffaf6,
+    #fceddf
+  );
+}
+
+.staff-event-details-table th {
+  color: #2d2824;
+  font-weight: 700;
+}
+
+.staff-event-details-empty {
+  height: 64px;
+  text-align: center !important;
+  color: #8f8983 !important;
+}
+
+.staff-event-payment-total {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.staff-event-payment-total > div {
+  min-height: 74px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #f0ddcf;
+  border-radius: 10px;
+  background: #fffaf6;
+}
+
+.staff-event-payment-total span {
+  color: #81766e;
+  font-size: 8px;
+}
+
+.staff-event-payment-total strong {
+  color: #713006;
+  font-size: 14px;
+}
+
+.staff-event-payment-total .grand-total {
+  background: linear-gradient(
+    90deg,
+    #fff4e9,
+    #fbe3ce
+  );
+}
+
+@media (max-width: 900px) {
+  .staff-event-info-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .staff-event-payment-total {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .staff-event-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-event-details-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+html[dir="rtl"] .staff-main {
+  margin: 14px 0 14px 14px;
+}

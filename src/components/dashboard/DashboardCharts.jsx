@@ -18,6 +18,10 @@ import {
   FiBarChart2,
 } from "react-icons/fi";
 
+import {
+  useTranslation,
+} from "react-i18next";
+
 const statusColors = {
   Confirmed: "#4b250f",
   "In Progress": "#ef741b",
@@ -51,7 +55,7 @@ function ChartLegend({
         return (
           <div
             className="legend-row"
-            key={item.name}
+            key={item.key || item.name}
           >
             <span
               className="legend-color"
@@ -111,7 +115,10 @@ function DonutCard({
               >
                 {data.map((item) => (
                   <Cell
-                    key={item.name}
+                    key={
+                      item.key ||
+                      item.name
+                    }
                     fill={item.color}
                   />
                 ))}
@@ -143,23 +150,36 @@ export default function DashboardCharts({
     missing: 0,
   },
 }) {
+  const {
+    t,
+  } = useTranslation();
+
   const eventConditionData = [
     {
-      name: "Data Return",
+      key: "data_return",
+      name: t(
+        "dashboardCharts.dataReturn"
+      ),
       value: Number(
         returnTotals.returned || 0
       ),
       color: "#4b250f",
     },
     {
-      name: "Damage",
+      key: "damage",
+      name: t(
+        "dashboardCharts.damage"
+      ),
       value: Number(
         returnTotals.damaged || 0
       ),
       color: "#ef741b",
     },
     {
-      name: "Missing",
+      key: "missing",
+      name: t(
+        "dashboardCharts.missing"
+      ),
       value: Number(
         returnTotals.missing || 0
       ),
@@ -170,7 +190,12 @@ export default function DashboardCharts({
   const eventStatusData =
     Object.keys(statusColors).map(
       (status) => ({
-        name: status,
+        key: status,
+        name: t(
+          `dashboardCharts.statuses.${status
+            .toLowerCase()
+            .replace(/\s+/g, "_")}`
+        ),
         value: events.filter(
           (event) =>
             event.status === status
@@ -218,20 +243,28 @@ export default function DashboardCharts({
   return (
     <section className="dashboard-charts">
       <DonutCard
-        title="Event Status"
+        title={t(
+          "dashboardCharts.eventStatus"
+        )}
         data={eventConditionData}
         icon={<FiBox />}
       />
 
       <DonutCard
-        title="Event By Status"
+        title={t(
+          "dashboardCharts.eventByStatus"
+        )}
         data={eventStatusData}
         icon={<FiCalendar />}
       />
 
       <div className="chart-card branch-chart-card">
         <div className="chart-card-header">
-          <h3>Event By Branch</h3>
+          <h3>
+            {t(
+              "dashboardCharts.eventByBranch"
+            )}
+          </h3>
 
           <div className="branch-chart-icon">
             <FiBarChart2 />

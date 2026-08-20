@@ -859,3 +859,106 @@ textarea {
     font-size: 10px;
   }
 }
+/* =========================================
+   LANGUAGE SWITCHER
+========================================= */
+
+.language-switcher {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+
+  /* Keep language buttons in the same order */
+  direction: ltr;
+}
+
+.language-switcher button {
+  border: 1px solid #e3d2c5;
+  background: #fffaf6;
+  color: #513c29;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.language-switcher button:hover {
+  background: #f5e9df;
+}
+
+.language-switcher button.active {
+  background: #513c29;
+  color: #ffffff;
+  border-color: #513c29;
+}
+
+
+/* =========================================
+   LOGIN RTL FIX
+   Keep the original login layout unchanged
+========================================= */
+
+html[dir="rtl"] .register-page {
+  direction: ltr;
+}
+
+html[dir="rtl"] .register-content {
+  direction: ltr;
+}
+
+/* Arabic content inside login card only */
+html[dir="rtl"] .login-card {
+  direction: rtl;
+}
+
+/* Headings */
+html[dir="rtl"] .login-card h2,
+html[dir="rtl"] .login-card .subtitle {
+  direction: rtl;
+  text-align: center;
+}
+
+/* Labels */
+html[dir="rtl"] .login-card .input-group {
+  direction: rtl;
+}
+
+html[dir="rtl"] .login-card .input-group label {
+  display: block;
+  text-align: right;
+}
+
+/* Inputs */
+html[dir="rtl"] .login-card input {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Keep username/password values readable */
+html[dir="rtl"] .login-card input:not(:placeholder-shown) {
+  unicode-bidi: plaintext;
+}
+
+/* Account tabs */
+html[dir="rtl"] .login-account-tabs {
+  direction: rtl;
+}
+
+/* Forgot password */
+html[dir="rtl"] .remember-forgot {
+  direction: rtl;
+}
+
+/* Sign in button */
+html[dir="rtl"] .create-btn {
+  direction: rtl;
+}
+
+/* Language switcher should not reverse */
+html[dir="rtl"] .language-switcher {
+  direction: ltr;
+}

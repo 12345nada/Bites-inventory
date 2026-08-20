@@ -1331,3 +1331,7 @@
     width: 100%;
   }
 }
+html[dir="rtl"] .items-main {
+  margin: 14px 0 14px 14px;
+}
+

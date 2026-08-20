@@ -16,6 +16,10 @@ import {
 } from "react-icons/fi";
 
 import {
+  useTranslation,
+} from "react-i18next";
+
+import {
   supabase,
 } from "../lib/supabase";
 
@@ -115,6 +119,11 @@ const getFirstAllowedRoute = (
 const Login = () => {
   const navigate = useNavigate();
 
+  const {
+    t,
+    i18n,
+  } = useTranslation();
+
   const [
     showPassword,
     setShowPassword,
@@ -142,6 +151,12 @@ const Login = () => {
     username: "",
     password: "",
   });
+
+  const changeLanguage = (
+    language
+  ) => {
+    i18n.changeLanguage(language);
+  };
 
   const handleChange = (
     event
@@ -458,17 +473,47 @@ const Login = () => {
 
       <div className="register-content login-content">
         <div className="register-card login-card">
-          <h2>Welcome Back</h2>
+
+          <div className="language-switcher">
+            <button
+              type="button"
+              className={
+                i18n.language === "en"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                changeLanguage("en")
+              }
+            >
+              English
+            </button>
+
+            <button
+              type="button"
+              className={
+                i18n.language === "ar"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                changeLanguage("ar")
+              }
+            >
+              العربية
+            </button>
+          </div>
+
+          <h2>{t("welcomeBack")}</h2>
 
           <p className="subtitle">
-            Please sign in to your
-            account
+            {t("signInSubtitle")}
           </p>
 
           <div
             className="login-account-tabs"
             role="tablist"
-            aria-label="Account type"
+            aria-label={t("accountType")}
           >
             <button
               type="button"
@@ -487,7 +532,7 @@ const Login = () => {
               }}
               disabled={isSubmitting}
             >
-              Admin / Manager
+              {t("adminManager")}
             </button>
 
             <button
@@ -511,14 +556,14 @@ const Login = () => {
               }}
               disabled={isSubmitting}
             >
-              Employee
+              {t("employee")}
             </button>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="input-group">
               <label htmlFor="username">
-                Username
+                {t("username")}
               </label>
 
               <div className="input-wrapper">
@@ -528,7 +573,9 @@ const Login = () => {
                   id="username"
                   type="text"
                   name="username"
-                  placeholder="Enter your username"
+                  placeholder={t(
+                    "usernamePlaceholder"
+                  )}
                   value={formData.username}
                   onChange={handleChange}
                   autoComplete="username"
@@ -540,7 +587,7 @@ const Login = () => {
 
             <div className="input-group">
               <label htmlFor="password">
-                Password
+                {t("password")}
               </label>
 
               <div className="input-wrapper">
@@ -554,7 +601,9 @@ const Login = () => {
                       : "password"
                   }
                   name="password"
-                  placeholder="Enter your password"
+                  placeholder={t(
+                    "passwordPlaceholder"
+                  )}
                   value={
                     formData.password
                   }
@@ -575,8 +624,8 @@ const Login = () => {
                   }
                   aria-label={
                     showPassword
-                      ? "Hide password"
-                      : "Show password"
+                      ? t("hidePassword")
+                      : t("showPassword")
                   }
                   disabled={isSubmitting}
                 >
@@ -595,7 +644,7 @@ const Login = () => {
                 <span />
 
                 <Link to="/forgot-password">
-                  Forgot Password?
+                  {t("forgotPassword")}
                 </Link>
               </div>
             )}
@@ -615,8 +664,8 @@ const Login = () => {
               disabled={isSubmitting}
             >
               {isSubmitting
-                ? "Signing In..."
-                : "Sign In"}
+                ? t("signingIn")
+                : t("signIn")}
 
               {!isSubmitting && (
                 <FiArrowRight />

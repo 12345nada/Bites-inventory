@@ -1887,3 +1887,132 @@ body {
 .table-card thead th.event-type-header {
   transform: translateX(-33px);
 }
+
+/* =========================================
+   SIDEBAR RTL - ARABIC BASE
+   Keeps layout mirrored; active highlight is finalized
+   in mobile-sidebar-offcanvas.css because it loads later.
+   ========================================= */
+
+html[dir="rtl"] .dashboard-sidebar {
+  direction: rtl;
+}
+
+html[dir="rtl"] .dashboard-logo {
+  padding-left: 0;
+  padding-right: 28px;
+  justify-content: flex-start;
+  text-align: right;
+}
+
+html[dir="rtl"] .sidebar-nav,
+html[dir="rtl"] .dashboard-menu {
+  direction: rtl;
+}
+
+html[dir="rtl"] .dashboard-menu-button {
+  direction: rtl;
+  justify-content: flex-start;
+  text-align: right;
+}
+
+html[dir="rtl"] .dashboard-menu-icon {
+  order: 1;
+  margin: 0;
+}
+
+html[dir="rtl"] .dashboard-menu-text {
+  order: 2;
+  flex: 1;
+  margin-left: 0;
+  margin-right: 12px;
+  text-align: right;
+}
+
+html[dir="rtl"] .dashboard-user-wrapper,
+html[dir="rtl"] .dashboard-user {
+  direction: rtl;
+}
+
+html[dir="rtl"] .dashboard-user {
+  flex-direction: row;
+  text-align: right;
+}
+
+html[dir="rtl"] .dashboard-avatar {
+  order: 1;
+  margin: 0;
+}
+
+html[dir="rtl"] .dashboard-user-info {
+  order: 2;
+  flex: 1;
+  text-align: right;
+}
+
+html[dir="rtl"] .user-arrow {
+  order: 3;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+html[dir="rtl"] .dashboard-user-menu,
+html[dir="rtl"] .dashboard-user-logout {
+  direction: rtl;
+  text-align: right;
+}
+
+html[dir="rtl"] .dashboard-user-menu::after {
+  right: auto;
+  left: 19px;
+}
+
+@media (max-width: 1050px) {
+  html[dir="rtl"] .dashboard-logo {
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  html[dir="rtl"] .dashboard-menu {
+    direction: rtl;
+  }
+}
+/* Arabic main content must touch the sidebar */
+html[dir="rtl"] .dashboard-main {
+  margin: 14px 0 14px 14px;
+}
+/* =========================
+   NOTIFICATIONS RTL FIX
+========================= */
+
+html[dir="rtl"] .notification-wrapper {
+  direction: rtl;
+}
+
+html[dir="rtl"] .dashboard-notification-dropdown {
+  right: auto;
+  left: 0;
+}
+
+html[dir="rtl"] .dashboard-notification-header,
+html[dir="rtl"] .dashboard-notification-item {
+  direction: rtl;
+  text-align: right;
+}
+
+html[dir="rtl"] .notification-item-content {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  html[dir="rtl"] .dashboard-notification-dropdown {
+    position: fixed;
+    top: 65px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-width: none;
+  }
+}

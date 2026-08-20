@@ -6,6 +6,7 @@ import {
 
 import "../styles/mobile-sidebar-offcanvas.css";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 
 import { useDialog } from "../context/DialogContext";
@@ -58,6 +59,7 @@ const createEmptyForm = () => ({
 });
 
 export default function Purchase() {
+  const { t, i18n } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -191,7 +193,7 @@ export default function Purchase() {
 
       showAlert({
         message: error.message ||
-          "Could not load purchase orders.",
+          t("purchase.errors.couldNotLoad"),
       });
     } finally {
       setLoading(false);
@@ -398,9 +400,9 @@ export default function Purchase() {
   const openNewPurchaseModal = async () => {
     if (!canAdd) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("purchase.errors.permissionDenied"),
         message:
-          "You do not have permission to add purchases.",
+          t("purchase.errors.noAddPermission"),
         type: "warning",
       });
 
@@ -418,7 +420,7 @@ export default function Purchase() {
   ) => {
     if (!canEdit) {
       showAlert({
-        message: "You do not have permission to edit purchases.",
+        message: t("purchase.errors.noEditPermission"),
       });
       return;
     }
@@ -484,7 +486,7 @@ export default function Purchase() {
     if (hasEmptyField) {
       showAlert({
         message:
-          "Please complete all purchase fields.",
+          t("purchase.errors.completeAllFields"),
       });
 
       return false;
@@ -496,7 +498,7 @@ export default function Purchase() {
     ) {
       showAlert({
         message:
-          "Please add at least one item.",
+          t("purchase.errors.addAtLeastOneItem"),
       });
 
       return false;
@@ -525,7 +527,7 @@ export default function Purchase() {
     if (hasInvalidItem) {
       showAlert({
         message:
-          "Complete every item. Quantity must be greater than zero and unit cost cannot be negative.",
+          t("purchase.errors.invalidItem"),
       });
 
       return false;
@@ -544,7 +546,7 @@ export default function Purchase() {
     ) {
       showAlert({
         message:
-          "The same item cannot be added more than once.",
+          t("purchase.errors.duplicateItem"),
       });
 
       return false;
@@ -556,7 +558,7 @@ export default function Purchase() {
     ) {
       showAlert({
         message:
-          "Expected date cannot be before the order date.",
+          t("purchase.errors.expectedDateBeforeOrder"),
       });
 
       return false;
@@ -577,10 +579,10 @@ export default function Purchase() {
 
     if (!requiredPermission) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("purchase.errors.permissionDenied"),
         message: editingPurchaseId
-          ? "You do not have permission to edit purchases."
-          : "You do not have permission to add purchases.",
+          ? t("purchase.errors.noEditPermission")
+          : t("purchase.errors.noAddPermission"),
         type: "warning",
       });
 
@@ -634,7 +636,7 @@ export default function Purchase() {
 
       showAlert({
         message: error.message ||
-          "Could not save purchase order.",
+          t("purchase.errors.couldNotSave"),
       });
     } finally {
       setSaving(false);
@@ -646,9 +648,9 @@ export default function Purchase() {
   ) => {
     if (!canEdit) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("purchase.errors.permissionDenied"),
         message:
-          "You do not have permission to approve purchases.",
+          t("purchase.errors.noApprovePermission"),
         type: "warning",
       });
 
@@ -676,7 +678,7 @@ export default function Purchase() {
     } catch (error) {
       showAlert({
         message: error.message ||
-          "Could not approve purchase order.",
+          t("purchase.errors.couldNotApprove"),
       });
     }
   };
@@ -684,9 +686,9 @@ export default function Purchase() {
   const openReceiveModal = async (purchase) => {
     if (!canEdit) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("purchase.errors.permissionDenied"),
         message:
-          "You do not have permission to receive purchases.",
+          t("purchase.errors.noReceivePermission"),
         type: "warning",
       });
 
@@ -712,7 +714,7 @@ export default function Purchase() {
   ) => {
     if (!canEdit) {
       showAlert({
-        message: "You do not have permission to receive purchases.",
+        message: t("purchase.errors.noReceivePermission"),
       });
       return;
     }
@@ -752,7 +754,7 @@ export default function Purchase() {
 
       showAlert({
         message: error.message ||
-          "Could not receive purchase items.",
+          t("purchase.errors.couldNotReceive"),
       });
     } finally {
       setSaving(false);
@@ -764,9 +766,9 @@ export default function Purchase() {
   ) => {
     if (!canEdit) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("purchase.errors.permissionDenied"),
         message:
-          "You do not have permission to cancel purchases.",
+          t("purchase.errors.noCancelPermission"),
         type: "warning",
       });
 
@@ -774,7 +776,7 @@ export default function Purchase() {
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to cancel this purchase order?",
+      message: t("purchase.confirm.cancel"),
     });
 
     if (!confirmed) {
@@ -802,7 +804,7 @@ export default function Purchase() {
       .catch((error) => {
         showAlert({
         message: error.message ||
-            "Could not cancel purchase order.",
+            t("purchase.errors.couldNotCancel"),
       });
       });
   };
@@ -812,13 +814,13 @@ export default function Purchase() {
   ) => {
     if (!canDelete) {
       showAlert({
-        message: "You do not have permission to delete purchases.",
+        message: t("purchase.errors.noDeletePermission"),
       });
       return;
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this purchase order?",
+      message: t("purchase.confirm.delete"),
     });
 
     if (!confirmed) {
@@ -840,7 +842,7 @@ export default function Purchase() {
     } catch (error) {
       showAlert({
         message: error.message ||
-          "Could not delete purchase order.",
+          t("purchase.errors.couldNotDelete"),
       });
     }
   };
@@ -902,6 +904,28 @@ export default function Purchase() {
       .toLowerCase()
       .replace(/\s+/g, "-");
 
+
+  const getStatusLabel = (status) =>
+    t(
+      `purchase.statuses.${String(status || "")
+        .trim()
+        .toLowerCase()}`,
+      {
+        defaultValue: status,
+      }
+    );
+
+  const getWarehouseLabel = (warehouseName) =>
+    t(
+      `warehouses.${String(warehouseName || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`,
+      {
+        defaultValue: warehouseName,
+      }
+    );
+
   const formatDate = (dateValue) => {
     if (!dateValue) {
       return "-";
@@ -909,7 +933,11 @@ export default function Purchase() {
 
     return new Date(
       `${dateValue}T00:00:00`
-    ).toLocaleDateString("en-GB", {
+    ).toLocaleDateString(
+      i18n.language === "ar"
+        ? "ar-EG"
+        : "en-GB",
+      {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -928,12 +956,9 @@ export default function Purchase() {
 
         <section className="purchase-title-section">
           <div>
-            <h1>Purchase</h1>
+            <h1>{t("purchase.title")}</h1>
 
-            <p>
-              Manage purchase requests, approvals
-              and received inventory
-            </p>
+            <p>{t("purchase.subtitle")}</p>
           </div>
 
           <button
@@ -943,7 +968,7 @@ export default function Purchase() {
           >
             <FiPlus />
             <span>
-              New Purchase Request
+              {t("purchase.newRequest")}
             </span>
           </button>
         </section>
@@ -951,30 +976,30 @@ export default function Purchase() {
         <section className="purchase-stats">
           <PurchaseStatCard
             icon={<FiBox />}
-            title="Total Purchase Orders"
+            title={t("purchase.stats.totalOrders")}
             value={purchases.length}
-            subtitle="All orders"
+            subtitle={t("purchase.stats.allOrders")}
           />
 
           <PurchaseStatCard
             icon={<FiClock />}
-            title="Pending Approval"
+            title={t("purchase.stats.pendingApproval")}
             value={pendingOrders}
-            subtitle="Purchase requests"
+            subtitle={t("purchase.stats.purchaseRequests")}
           />
 
           <PurchaseStatCard
             icon={<FiCheckCircle />}
-            title="Items Received"
+            title={t("purchase.stats.itemsReceived")}
             value={receivedItems.toLocaleString()}
-            subtitle="Inventory updated"
+            subtitle={t("purchase.stats.inventoryUpdated")}
           />
 
           <PurchaseStatCard
             icon={<FiDollarSign />}
-            title="Total Spent"
+            title={t("purchase.stats.totalSpent")}
             value={totalSpent.toLocaleString()}
-            subtitle="EGP received orders"
+            subtitle={t("purchase.stats.egpReceivedOrders")}
           />
         </section>
 
@@ -984,7 +1009,7 @@ export default function Purchase() {
 
             <input
               type="text"
-              placeholder="Search purchase orders..."
+              placeholder={t("purchase.search")}
               value={searchValue}
               onChange={(event) =>
                 setSearchValue(
@@ -1002,9 +1027,7 @@ export default function Purchase() {
               )
             }
           >
-            <option value="All Warehouses">
-              All Warehouses
-            </option>
+            <option value="All Warehouses">{t("purchase.allWarehouses")}</option>
 
             {warehouses.map(
               (warehouse) => (
@@ -1012,7 +1035,7 @@ export default function Purchase() {
                   key={warehouse.id}
                   value={warehouse.id}
                 >
-                  {warehouse.name}
+                  {getWarehouseLabel(warehouse.name)}
                 </option>
               )
             )}
@@ -1026,25 +1049,15 @@ export default function Purchase() {
               )
             }
           >
-            <option value="All Statuses">
-              All Statuses
-            </option>
+            <option value="All Statuses">{t("purchase.allStatuses")}</option>
 
-            <option value="Pending">
-              Pending
-            </option>
+            <option value="Pending">{t("purchase.statuses.pending")}</option>
 
-            <option value="Approved">
-              Approved
-            </option>
+            <option value="Approved">{t("purchase.statuses.approved")}</option>
 
-            <option value="Received">
-              Received
-            </option>
+            <option value="Received">{t("purchase.statuses.received")}</option>
 
-            <option value="Cancelled">
-              Cancelled
-            </option>
+            <option value="Cancelled">{t("purchase.statuses.cancelled")}</option>
           </select>
         </section>
 
@@ -1054,16 +1067,16 @@ export default function Purchase() {
               <thead>
                 <tr>
 
-                  <th>PO Number</th>
-                  <th>Supplier</th>
-                  <th>Order Date</th>
-                  <th>Expected Date</th>
-                  <th>Warehouse</th>
-                  <th>Items</th>
-                  <th>Total Quantity</th>
-                  <th>Total Amount</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{t("purchase.table.poNumber")}</th>
+                  <th>{t("purchase.table.supplier")}</th>
+                  <th>{t("purchase.table.orderDate")}</th>
+                  <th>{t("purchase.table.expectedDate")}</th>
+                  <th>{t("purchase.table.warehouse")}</th>
+                  <th>{t("purchase.table.items")}</th>
+                  <th>{t("purchase.table.totalQuantity")}</th>
+                  <th>{t("purchase.table.totalAmount")}</th>
+                  <th>{t("purchase.table.status")}</th>
+                  <th>{t("purchase.table.actions")}</th>
                 </tr>
               </thead>
 
@@ -1074,7 +1087,7 @@ export default function Purchase() {
                       colSpan="10"
                       className="purchase-empty-state"
                     >
-                      Loading purchase orders...
+                      {t("purchase.loading")}
                     </td>
                   </tr>
                 ) : filteredPurchases.length >
@@ -1110,7 +1123,7 @@ export default function Purchase() {
                         </td>
 
                         <td>
-                          {purchase.warehouse}
+                          {getWarehouseLabel(purchase.warehouse)}
                         </td>
 
                         <td>
@@ -1140,7 +1153,7 @@ export default function Purchase() {
                               purchase.status
                             )}`}
                           >
-                            {purchase.status}
+                            {getStatusLabel(purchase.status)}
                           </span>
                         </td>
 
@@ -1148,7 +1161,7 @@ export default function Purchase() {
                           <div className="purchase-actions">
                             <button
                               type="button"
-                              aria-label={`Edit ${purchase.poNumber}`}
+                              aria-label={t("purchase.aria.editOrder", { number: purchase.poNumber })}
                               disabled={
                                 purchase.status ===
                                   "Received" ||
@@ -1168,7 +1181,7 @@ export default function Purchase() {
                               <button
                                 type="button"
                                 className="purchase-more-button"
-                                aria-label={`More actions for ${purchase.poNumber}`}
+                                aria-label={t("purchase.aria.moreActions", { number: purchase.poNumber })}
                                 onClick={(event) =>
                                   toggleActionMenu(
                                     event,
@@ -1199,7 +1212,7 @@ export default function Purchase() {
                                       }
                                     >
                                       <FiCheck />
-                                      Approve
+                                      {t("purchase.actions.approve")}
                                     </button>
                                   )}
 
@@ -1214,7 +1227,7 @@ export default function Purchase() {
                                       }
                                     >
                                       <FiDownload />
-                                      Receive Items
+                                      {t("purchase.actions.receiveItems")}
                                     </button>
                                   )}
 
@@ -1231,7 +1244,7 @@ export default function Purchase() {
                                       }
                                     >
                                       <FiEdit2 />
-                                      Edit
+                                      {t("purchase.actions.edit")}
                                     </button>
                                   )}
 
@@ -1249,7 +1262,7 @@ export default function Purchase() {
                                         }
                                       >
                                         <FiX />
-                                        Cancel
+                                        {t("purchase.actions.cancel")}
                                       </button>
                                     )}
 
@@ -1263,7 +1276,7 @@ export default function Purchase() {
                                     }
                                   >
                                     <FiTrash2 />
-                                    Delete
+                                    {t("purchase.actions.delete")}
                                   </button>
                                 </div>
                               )}
@@ -1290,21 +1303,20 @@ export default function Purchase() {
 
           <div className="purchase-pagination">
             <p>
-              Showing{" "}
-              {filteredPurchases.length === 0
-                ? 0
-                : (currentPage - 1) *
-                    purchasesPerPage +
-                  1}
-              -
-              {Math.min(
-                currentPage *
-                  purchasesPerPage,
-                filteredPurchases.length
-              )}{" "}
-              of{" "}
-              {filteredPurchases.length} purchase
-              orders
+              {t("purchase.showingOrders", {
+                from:
+                  filteredPurchases.length === 0
+                    ? 0
+                    : (currentPage - 1) *
+                        purchasesPerPage +
+                      1,
+                to: Math.min(
+                  currentPage *
+                    purchasesPerPage,
+                  filteredPurchases.length
+                ),
+                total: filteredPurchases.length,
+              })}
             </p>
 
             <div>
@@ -1379,14 +1391,11 @@ export default function Purchase() {
               <div>
                 <h2>
                   {editingPurchaseId
-                    ? "Edit Purchase Order"
-                    : "New Purchase Request"}
+                    ? t("purchase.modal.editOrder")
+                    : t("purchase.newRequest")}
                 </h2>
 
-                <p>
-                  Enter the requested items and
-                  supplier information.
-                </p>
+                <p>{t("purchase.modal.enterSupplierInfo")}</p>
               </div>
 
               <button
@@ -1394,7 +1403,7 @@ export default function Purchase() {
                 onClick={
                   closePurchaseModal
                 }
-                aria-label="Close form"
+                aria-label={t("purchase.modal.closeForm")}
                 disabled={saving}
               >
                 <FiX />
@@ -1403,7 +1412,7 @@ export default function Purchase() {
 
             <div className="purchase-modal-grid">
               <label>
-                Supplier
+                {t("purchase.modal.supplier")}
 
                 <select
                   name="supplierId"
@@ -1413,9 +1422,7 @@ export default function Purchase() {
                   onChange={handleFormChange}
                   disabled={saving}
                 >
-                  <option value="">
-                    Select supplier
-                  </option>
+                  <option value="">{t("purchase.modal.selectSupplier")}</option>
 
                   {suppliers.map(
                     (supplier) => (
@@ -1431,7 +1438,7 @@ export default function Purchase() {
               </label>
 
               <label>
-                Warehouse
+                {t("purchase.modal.warehouse")}
 
                 <select
                   name="warehouseId"
@@ -1441,9 +1448,7 @@ export default function Purchase() {
                   onChange={handleFormChange}
                   disabled={saving}
                 >
-                  <option value="">
-                    Select warehouse
-                  </option>
+                  <option value="">{t("purchase.modal.selectWarehouse")}</option>
 
                   {warehouses.map(
                     (warehouse) => (
@@ -1451,7 +1456,7 @@ export default function Purchase() {
                         key={warehouse.id}
                         value={warehouse.id}
                       >
-                        {warehouse.name}
+                        {getWarehouseLabel(warehouse.name)}
                       </option>
                     )
                   )}
@@ -1459,7 +1464,7 @@ export default function Purchase() {
               </label>
 
               <label>
-                Order Date
+                {t("purchase.modal.orderDate")}
 
                 <input
                   type="date"
@@ -1471,7 +1476,7 @@ export default function Purchase() {
               </label>
 
               <label>
-                Expected Date
+                {t("purchase.modal.expectedDate")}
 
                 <input
                   type="date"
@@ -1488,10 +1493,9 @@ export default function Purchase() {
             <section className="purchase-items-section">
               <div className="purchase-items-header">
                 <div>
-                  <h3>Items & Quantities</h3>
+                  <h3>{t("purchase.modal.itemsQuantities")}</h3>
                   <p>
-                    Add one or more items to this
-                    purchase order.
+                    {t("purchase.modal.addItemsHelp")}
                   </p>
                 </div>
 
@@ -1502,7 +1506,7 @@ export default function Purchase() {
                   disabled={saving}
                 >
                   <FiPlus />
-                  Add Item
+                  {t("purchase.modal.addItem")}
                 </button>
               </div>
 
@@ -1514,7 +1518,7 @@ export default function Purchase() {
                       className="purchase-item-row"
                     >
                       <label>
-                        Item
+                        {t("purchase.modal.item")}
 
                         <select
                           value={
@@ -1530,7 +1534,7 @@ export default function Purchase() {
                           disabled={saving}
                         >
                           <option value="">
-                            Select item
+                            {t("purchase.modal.selectItem")}
                           </option>
 
                           {items.map((item) => (
@@ -1545,7 +1549,7 @@ export default function Purchase() {
                       </label>
 
                       <label>
-                        Quantity
+                        {t("purchase.modal.quantity")}
 
                         <input
                           type="number"
@@ -1566,7 +1570,7 @@ export default function Purchase() {
                       </label>
 
                       <label>
-                        Unit Cost
+                        {t("purchase.modal.unitCost")}
 
                         <input
                           type="number"
@@ -1600,7 +1604,7 @@ export default function Purchase() {
                           formData.items.length ===
                             1
                         }
-                        aria-label="Remove item"
+                        aria-label={t("purchase.modal.removeItem")}
                       >
                         <FiTrash2 />
                       </button>
@@ -1611,7 +1615,7 @@ export default function Purchase() {
             </section>
 
             <div className="purchase-total-preview">
-              Estimated Total:
+              {t("purchase.modal.estimatedTotal")}
 
               <strong>
                 {formData.items
@@ -1642,7 +1646,7 @@ export default function Purchase() {
                 }
                 disabled={saving}
               >
-                Cancel
+                {t("purchase.actions.cancel")}
               </button>
 
               <button
@@ -1654,7 +1658,7 @@ export default function Purchase() {
                   ? "Saving..."
                   : editingPurchaseId
                     ? "Update Order"
-                    : "Create Request"}
+                    : t("purchase.modal.createRequest")}
               </button>
             </div>
           </form>
@@ -1680,7 +1684,7 @@ export default function Purchase() {
           >
             <div className="purchase-modal-header">
               <div>
-                <h2>Receive Items</h2>
+                <h2>{t("purchase.receive.title")}</h2>
 
                 <p>
                   Confirm received items to update
@@ -1701,7 +1705,7 @@ export default function Purchase() {
 
             <div className="receive-summary">
               <div>
-                <span>PO Number</span>
+                <span>{t("purchase.table.poNumber")}</span>
 
                 <strong>
                   {
@@ -1711,7 +1715,7 @@ export default function Purchase() {
               </div>
 
               <div className="receive-summary-items">
-                <span>Items</span>
+                <span>{t("purchase.table.items")}</span>
 
                 <strong>
                   {receivingPurchase.items
@@ -1726,7 +1730,7 @@ export default function Purchase() {
               </div>
 
               <div>
-                <span>Total Quantity</span>
+                <span>{t("purchase.table.totalQuantity")}</span>
 
                 <strong>
                   {Number(
@@ -1736,7 +1740,7 @@ export default function Purchase() {
               </div>
 
               <div>
-                <span>Warehouse</span>
+                <span>{t("purchase.table.warehouse")}</span>
 
                 <strong>
                   {
@@ -1762,7 +1766,7 @@ export default function Purchase() {
                 }
                 disabled={saving}
               >
-                Cancel
+                {t("purchase.actions.cancel")}
               </button>
 
               <button

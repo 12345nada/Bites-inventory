@@ -10,6 +10,7 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 
 import { useDialog } from "../context/DialogContext";
@@ -67,6 +68,7 @@ const reportTitles = {
 };
 
 export default function Reports() {
+  const { t } = useTranslation();
   const { showAlert } = useDialog();
 
 
@@ -180,7 +182,7 @@ export default function Reports() {
 
       showAlert({
         message: error.message ||
-          "Could not load report data.",
+          t("reportsPage.errors.couldNotLoad"),
       });
     } finally {
       setLoading(false);
@@ -190,17 +192,17 @@ export default function Reports() {
   const reportConfig = useMemo(() => {
     if (reportType === "inventory") {
       return {
-        title: reportTitles.inventory,
+        title: t("reportsPage.types.inventory"),
         columns: [
-          "Item Code",
-          "Item",
-          "Category",
-          "Warehouse",
-          "Available",
-          "Damaged",
-          "Missing",
-          "Minimum Stock",
-          "Stock Level",
+          t("reportsPage.columns.itemCode"),
+          t("reportsPage.columns.item"),
+          t("reportsPage.columns.category"),
+          t("reportsPage.columns.warehouse"),
+          t("reportsPage.columns.available"),
+          t("reportsPage.columns.damaged"),
+          t("reportsPage.columns.missing"),
+          t("reportsPage.columns.minimumStock"),
+          t("reportsPage.columns.stockLevel"),
         ],
         rows:
           getInventoryReportRows(
@@ -211,16 +213,16 @@ export default function Reports() {
 
     if (reportType === "purchases") {
       return {
-        title: reportTitles.purchases,
+        title: t("reportsPage.types.purchases"),
         columns: [
-          "PO Number",
-          "Supplier",
-          "Item",
-          "Warehouse",
-          "Quantity",
-          "Total Amount",
-          "Order Date",
-          "Status",
+          t("reportsPage.columns.poNumber"),
+          t("reportsPage.columns.supplier"),
+          t("reportsPage.columns.item"),
+          t("reportsPage.columns.warehouse"),
+          t("reportsPage.columns.quantity"),
+          t("reportsPage.columns.totalAmount"),
+          t("reportsPage.columns.orderDate"),
+          t("reportsPage.columns.status"),
         ],
         rows:
           getPurchaseReportRows(
@@ -231,16 +233,16 @@ export default function Reports() {
 
     if (reportType === "dispatches") {
       return {
-        title: reportTitles.dispatches,
+        title: t("reportsPage.types.dispatches"),
         columns: [
-          "Dispatch ID",
-          "Event Reference",
-          "Warehouse",
-          "Destination",
-          "Driver",
-          "Date",
-          "Total Quantity",
-          "Status",
+          t("reportsPage.columns.dispatchId"),
+          t("reportsPage.columns.eventReference"),
+          t("reportsPage.columns.warehouse"),
+          t("reportsPage.columns.destination"),
+          t("reportsPage.columns.driver"),
+          t("reportsPage.columns.date"),
+          t("reportsPage.columns.totalQuantity"),
+          t("reportsPage.columns.status"),
         ],
         rows:
           getDispatchReportRows(
@@ -250,17 +252,17 @@ export default function Reports() {
     }
 
     return {
-      title: reportTitles.returns,
+      title: t("reportsPage.types.returns"),
       columns: [
-        "Return ID",
-        "Event Reference",
-        "Warehouse",
-        "Return Date",
-        "Received By",
-        "Total Sent",
-        "Returned",
-        "Damaged",
-        "Missing",
+        t("reportsPage.columns.returnId"),
+        t("reportsPage.columns.eventReference"),
+        t("reportsPage.columns.warehouse"),
+        t("reportsPage.columns.returnDate"),
+        t("reportsPage.columns.receivedBy"),
+        t("reportsPage.columns.totalSent"),
+        t("reportsPage.columns.returned"),
+        t("reportsPage.columns.damaged"),
+        t("reportsPage.columns.missing"),
       ],
       rows:
         getReturnsReportRows(returns),
@@ -271,6 +273,7 @@ export default function Reports() {
     purchases,
     dispatches,
     returns,
+    t,
   ]);
 
   const statusOptions = useMemo(() => {
@@ -464,9 +467,9 @@ export default function Reports() {
   const exportPdf = async () => {
     if (!canAdd) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("reportsPage.errors.permissionDenied"),
         message:
-          "You do not have permission to export reports.",
+          t("reportsPage.errors.noExportPermission"),
         type: "warning",
       });
 
@@ -475,7 +478,7 @@ export default function Reports() {
 
     if (filteredRows.length === 0) {
       showAlert({
-        message: "There is no data to export.",
+        message: t("reportsPage.errors.noDataExport"),
       });
       return;
     }
@@ -564,9 +567,9 @@ export default function Reports() {
   const exportExcel = async () => {
     if (!canAdd) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("reportsPage.errors.permissionDenied"),
         message:
-          "You do not have permission to export reports.",
+          t("reportsPage.errors.noExportPermission"),
         type: "warning",
       });
 
@@ -576,7 +579,7 @@ export default function Reports() {
     if (filteredRows.length === 0) {
       await showAlert({
         message:
-          "There is no data to export.",
+          t("reportsPage.errors.noDataExport"),
       });
 
       return;
@@ -676,10 +679,10 @@ export default function Reports() {
 
         <section className="reports-title-section">
           <div>
-            <h1>Reports</h1>
+            <h1>{t("reportsPage.title")}</h1>
 
             <p>
-              Generate and export system reports
+              {t("reportsPage.subtitle")}
             </p>
           </div>
 
@@ -703,7 +706,7 @@ export default function Reports() {
               }
             >
               <FiDownload />
-              Export
+              {t("reportsPage.export")}
               <FiChevronDown
                 className={
                   isExportMenuOpen
@@ -727,7 +730,7 @@ export default function Reports() {
                     )
                   }
                 >
-                  Export as PDF
+                  {t("reportsPage.exportPdf")}
                 </button>
 
                 <button
@@ -739,7 +742,7 @@ export default function Reports() {
                     )
                   }
                 >
-                  Export as Excel
+                  {t("reportsPage.exportExcel")}
                 </button>
               </div>
             )}
@@ -751,18 +754,17 @@ export default function Reports() {
             <FiFilter />
 
             <div>
-              <h3>Report Filters</h3>
+              <h3>{t("reportsPage.filters.title")}</h3>
 
               <p>
-                Select a report type and narrow
-                the results.
+                {t("reportsPage.filters.subtitle")}
               </p>
             </div>
           </div>
 
           <div className="reports-filter-grid">
             <label>
-              Report Type
+              {t("reportsPage.filters.reportType")}
 
               <select
                 value={reportType}
@@ -772,25 +774,25 @@ export default function Reports() {
                 disabled={loading}
               >
                 <option value="inventory">
-                  Inventory Report
+                  {t("reportsPage.types.inventory")}
                 </option>
 
                 <option value="purchases">
-                  Purchase Report
+                  {t("reportsPage.types.purchases")}
                 </option>
 
                 <option value="dispatches">
-                  Dispatch Report
+                  {t("reportsPage.types.dispatches")}
                 </option>
 
                 <option value="returns">
-                  Returns Report
+                  {t("reportsPage.types.returns")}
                 </option>
               </select>
             </label>
 
             <label>
-              From Date
+              {t("reportsPage.filters.fromDate")}
 
               <input
                 type="date"
@@ -809,7 +811,7 @@ export default function Reports() {
             </label>
 
             <label>
-              To Date
+              {t("reportsPage.filters.toDate")}
 
               <input
                 type="date"
@@ -828,7 +830,7 @@ export default function Reports() {
             </label>
 
             <label>
-              Warehouse
+              {t("reportsPage.filters.warehouse")}
 
               <select
                 value={selectedWarehouse}
@@ -840,7 +842,7 @@ export default function Reports() {
                 disabled={loading}
               >
                 <option value="All Warehouses">
-                  All Warehouses
+                  {t("reportsPage.filters.allWarehouses")}
                 </option>
 
                 {warehouses.map(
@@ -857,7 +859,7 @@ export default function Reports() {
             </label>
 
             <label>
-              Status
+              {t("reportsPage.filters.status")}
 
               <select
                 value={status}
@@ -874,7 +876,7 @@ export default function Reports() {
                       key={statusOption}
                       value={statusOption}
                     >
-                      {statusOption}
+                      {t(`reportsPage.statuses.${statusOption}`)}
                     </option>
                   )
                 )}
@@ -887,7 +889,7 @@ export default function Reports() {
               onClick={resetFilters}
               disabled={loading}
             >
-              Reset Filters
+              {t("reportsPage.filters.reset")}
             </button>
           </div>
         </section>
@@ -904,10 +906,11 @@ export default function Reports() {
               </div>
 
               <p>
-                Showing{" "}
-                {firstVisibleRecord}–
-                {lastVisibleRecord} of{" "}
-                {filteredRows.length} records
+                {t("reportsPage.showingRange", {
+                  from: firstVisibleRecord,
+                  to: lastVisibleRecord,
+                  total: filteredRows.length,
+                })}
               </p>
             </div>
 
@@ -916,7 +919,7 @@ export default function Reports() {
 
               <input
                 type="text"
-                placeholder="Search report..."
+                placeholder={t("reportsPage.search")}
                 value={searchValue}
                 onChange={(event) =>
                   setSearchValue(
@@ -952,7 +955,7 @@ export default function Reports() {
                       }
                       className="report-empty-state"
                     >
-                      Loading report data...
+                      {t("reportsPage.loading")}
                     </td>
                   </tr>
                 ) : filteredRows.length > 0 ? (
@@ -986,8 +989,7 @@ export default function Reports() {
                       }
                       className="report-empty-state"
                     >
-                      No records match the selected
-                      filters.
+                      {t("reportsPage.noRecords")}
                     </td>
                   </tr>
                 )}
@@ -997,9 +999,11 @@ export default function Reports() {
 
           <div className="report-result-footer">
             <p>
-              Showing {firstVisibleRecord} to{" "}
-              {lastVisibleRecord} of{" "}
-              {filteredRows.length} records
+              {t("reportsPage.showingRange", {
+                from: firstVisibleRecord,
+                to: lastVisibleRecord,
+                total: filteredRows.length,
+              })}
             </p>
 
             <div>

@@ -3,6 +3,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../context/AuthContext";
 
@@ -17,6 +18,11 @@ import {
   updateDriver,
   updateWaiter,
 } from "../services/staffService";
+
+import {
+  getStaffPayments,
+  markStaffPaymentPaid,
+} from "../services/staffPaymentService";
 
 import "../styles/dashboard.css";
 import "../styles/Staff.css";
@@ -43,6 +49,10 @@ const driverEmptyForm = {
   carNumber: "",
   carType: "Van",
   status: "Active",
+  eventRate: "",
+  branch: "",
+  staffRole: "Driver",
+  reportsToId: "",
   documents: {
     nationalIdImage: null,
     licenseImage: null,
@@ -54,6 +64,10 @@ const waiterEmptyForm = {
   phone: "",
   nationalId: "",
   status: "Active",
+  eventRate: "",
+  branch: "",
+  staffRole: "Waiter",
+  reportsToId: "",
   documents: {
     personalPhoto: null,
     nationalIdImage: null,
@@ -84,6 +98,7 @@ const formatDate = (value) => {
 };
 
 export default function Staff() {
+  const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -97,6 +112,19 @@ export default function Staff() {
 
   const [waiters, setWaiters] =
     useState([]);
+
+  const [payments, setPayments] =
+    useState([]);
+
+  const [
+    paymentsLoading,
+    setPaymentsLoading,
+  ] = useState(true);
+
+  const [
+    selectedEventDetails,
+    setSelectedEventDetails,
+  ] = useState(null);
 
   const [loading, setLoading] =
     useState(true);
@@ -222,10 +250,18 @@ export default function Staff() {
     try {
       setLoading(true);
 
-      const data = await getStaff();
+      const [
+        data,
+        paymentData,
+      ] = await Promise.all([
+        getStaff(),
+        getStaffPayments(),
+      ]);
 
       setDrivers(data.drivers || []);
       setWaiters(data.waiters || []);
+      setPayments(paymentData || []);
+      setPaymentsLoading(false);
     } catch (error) {
       console.error(
         "Error loading staff:",
@@ -234,10 +270,11 @@ export default function Staff() {
 
       showAlert({
         message: error.message ||
-          "Could not load staff.",
+          t("staffPage.errors.couldNotLoad"),
       });
     } finally {
       setLoading(false);
+      setPaymentsLoading(false);
     }
   };
 
@@ -256,6 +293,9 @@ export default function Staff() {
           driver.licenseNumber,
           driver.carNumber,
           driver.carType,
+          driver.staffRole,
+          driver.reportsToName,
+          driver.eventRate,
           driver.status,
         ].some((value) =>
           String(value)
@@ -291,6 +331,9 @@ export default function Staff() {
           waiter.fullName,
           waiter.phone,
           waiter.nationalId,
+          waiter.staffRole,
+          waiter.reportsToName,
+          waiter.eventRate,
           waiter.status,
         ].some((value) =>
           String(value)
@@ -317,7 +360,122 @@ export default function Staff() {
   const activeStaff =
     activeTab === "drivers"
       ? filteredDrivers
-      : filteredWaiters;
+      : activeTab === "waiters"
+        ? filteredWaiters
+        : [];
+
+  const headDrivers = useMemo(
+    () =>
+      drivers.filter(
+        (driver) =>
+          driver.staffRole ===
+            "Head Driver" &&
+          Number(driver.id) !==
+            Number(editingDriverId)
+      ),
+    [drivers, editingDriverId]
+  );
+
+  const headWaiters = useMemo(
+    () =>
+      waiters.filter(
+        (waiter) =>
+          waiter.staffRole ===
+            "Head Waiter" &&
+          Number(waiter.id) !==
+            Number(editingWaiterId)
+      ),
+    [waiters, editingWaiterId]
+  );
+
+  const filteredPayments = useMemo(() => {
+    const search =
+      searchValue.trim().toLowerCase();
+
+    return payments.filter((payment) => {
+      const matchesSearch =
+        search === "" ||
+        [
+          payment.staffName,
+          payment.staffType,
+          payment.staffRole,
+          payment.eventCode,
+          payment.eventName,
+          payment.eventDate,
+          payment.amount,
+          payment.status,
+        ].some((value) =>
+          String(value || "")
+            .toLowerCase()
+            .includes(search)
+        );
+
+      const matchesStatus =
+        statusFilter === "All Statuses" ||
+        payment.status === statusFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
+    });
+  }, [
+    payments,
+    searchValue,
+    statusFilter,
+  ]);
+
+  const pendingPaymentTotal = useMemo(
+    () =>
+      payments
+        .filter(
+          (payment) =>
+            payment.status !== "Paid"
+        )
+        .reduce(
+          (total, payment) =>
+            total +
+            Number(payment.amount || 0),
+          0
+        ),
+    [payments]
+  );
+
+  const handleMarkPaymentPaid = async (
+    payment
+  ) => {
+    const confirmed = await showConfirm({
+      message: t("staffPage.confirm.markPaid", { name: payment.staffName, eventCode: payment.eventCode }),
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const updated =
+        await markStaffPaymentPaid(
+          payment
+        );
+
+      setPayments((current) =>
+        current.map((item) =>
+          item.staffId ===
+            updated.staffId &&
+          item.eventId ===
+            updated.eventId
+            ? updated
+            : item
+        )
+      );
+    } catch (error) {
+      showAlert({
+        message:
+          error.message ||
+          t("staffPage.errors.couldNotMarkPaid"),
+      });
+    }
+  };
 
   const totalPages = Math.max(
     1,
@@ -428,9 +586,9 @@ export default function Staff() {
   const openEditDriver = (driver) => {
     if (!canEdit) {
       showAlert({
-        title: "Permission Denied",
+        title: t("staffPage.errors.permissionDenied"),
         message:
-          "You do not have permission to edit staff.",
+          t("staffPage.errors.noEditPermission"),
         type: "warning",
       });
 
@@ -451,9 +609,9 @@ export default function Staff() {
   const openEditWaiter = (waiter) => {
     if (!canEdit) {
       showAlert({
-        title: "Permission Denied",
+        title: t("staffPage.errors.permissionDenied"),
         message:
-          "You do not have permission to edit staff.",
+          t("staffPage.errors.noEditPermission"),
         type: "warning",
       });
 
@@ -521,7 +679,7 @@ export default function Staff() {
       !driverForm.carNumber.trim()
     ) {
       showAlert({
-        message: "Please complete the driver information.",
+        message: t("staffPage.errors.completeDriver"),
       });
       return;
     }
@@ -554,9 +712,9 @@ export default function Staff() {
 
       showAlert({
         message: error.code === "23505"
-          ? "National ID or license number already exists."
+          ? t("staffPage.errors.driverDuplicate")
           : error.message ||
-              "Could not save driver.",
+              t("staffPage.errors.couldNotSaveDriver"),
       });
     } finally {
       setSaving(false);
@@ -579,7 +737,7 @@ export default function Staff() {
       !waiterForm.nationalId.trim()
     ) {
       showAlert({
-        message: "Please complete the waiter information.",
+        message: t("staffPage.errors.completeWaiter"),
       });
       return;
     }
@@ -612,9 +770,9 @@ export default function Staff() {
 
       showAlert({
         message: error.code === "23505"
-          ? "National ID already exists."
+          ? t("staffPage.errors.waiterDuplicate")
           : error.message ||
-              "Could not save waiter.",
+              t("staffPage.errors.couldNotSaveWaiter"),
       });
     } finally {
       setSaving(false);
@@ -721,9 +879,9 @@ export default function Staff() {
   ) => {
     if (!canDelete) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("staffPage.errors.permissionDenied"),
         message:
-          "You do not have permission to delete staff.",
+          t("staffPage.errors.noDeletePermission"),
         type: "warning",
       });
 
@@ -731,7 +889,7 @@ export default function Staff() {
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this driver?",
+      message: t("staffPage.confirm.deleteDriver"),
     });
 
     if (!confirmed) {
@@ -752,9 +910,9 @@ export default function Staff() {
     } catch (error) {
       showAlert({
         message: error.code === "23503"
-          ? "This driver is connected to events or dispatches and cannot be deleted."
+          ? t("staffPage.errors.driverConnected")
           : error.message ||
-              "Could not delete driver.",
+              t("staffPage.errors.couldNotDeleteDriver"),
       });
     }
   };
@@ -764,9 +922,9 @@ export default function Staff() {
   ) => {
     if (!canDelete) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("staffPage.errors.permissionDenied"),
         message:
-          "You do not have permission to delete staff.",
+          t("staffPage.errors.noDeletePermission"),
         type: "warning",
       });
 
@@ -774,7 +932,7 @@ export default function Staff() {
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this waiter?",
+      message: t("staffPage.confirm.deleteWaiter"),
     });
 
     if (!confirmed) {
@@ -795,9 +953,9 @@ export default function Staff() {
     } catch (error) {
       showAlert({
         message: error.code === "23503"
-          ? "This waiter is connected to an event and cannot be deleted."
+          ? t("staffPage.errors.waiterConnected")
           : error.message ||
-              "Could not delete waiter.",
+              t("staffPage.errors.couldNotDeleteWaiter"),
       });
     }
   };
@@ -814,10 +972,9 @@ export default function Staff() {
 
         <section className="staff-title-section">
           <div>
-            <h1>Staff Management</h1>
+            <h1>{t("staffPage.title")}</h1>
             <p>
-              Manage drivers, waiters and
-              their documents
+              {t("staffPage.subtitle")}
             </p>
           </div>
         </section>
@@ -836,7 +993,7 @@ export default function Staff() {
                   setActiveTab("drivers")
                 }
               >
-                Drivers
+                {t("staffPage.tabs.drivers")}
               </button>
 
               <button
@@ -850,7 +1007,24 @@ export default function Staff() {
                   setActiveTab("waiters")
                 }
               >
-                Waiters
+                {t("staffPage.tabs.waiters")}
+              </button>
+
+              <button
+                type="button"
+                className={
+                  activeTab === "payments"
+                    ? "active"
+                    : ""
+                }
+                onClick={() => {
+                  setActiveTab("payments");
+                  setStatusFilter(
+                    "All Statuses"
+                  );
+                }}
+              >
+                {t("staffPage.tabs.payments")}
               </button>
             </div>
 
@@ -861,8 +1035,10 @@ export default function Staff() {
                   type="text"
                   placeholder={
                     activeTab === "drivers"
-                      ? "Search drivers..."
-                      : "Search waiters..."
+                      ? t("staffPage.search.drivers")
+                      : activeTab === "waiters"
+                        ? t("staffPage.search.waiters")
+                        : t("staffPage.search.payments")
                   }
                   value={searchValue}
                   onChange={(event) =>
@@ -881,18 +1057,30 @@ export default function Staff() {
                   )
                 }
               >
-                <option>
-                  All Statuses
-                </option>
-                <option value="Active">
-                  Active
-                </option>
-                <option value="Inactive">
-                  Inactive
-                </option>
-                <option value="Suspended">
-                  Suspended
-                </option>
+                <option value="All Statuses">{t("staffPage.status.all")}</option>
+
+                {activeTab === "payments" ? (
+                  <>
+                    <option value="Pending">
+                      {t("staffPage.status.pending")}
+                    </option>
+                    <option value="Paid">
+                      {t("staffPage.status.paid")}
+                    </option>
+                  </>
+                ) : (
+                  <>
+                    <option value="Active">
+                      {t("staffPage.status.active")}
+                    </option>
+                    <option value="Inactive">
+                      {t("staffPage.status.inactive")}
+                    </option>
+                    <option value="Suspended">
+                      {t("staffPage.status.suspended")}
+                    </option>
+                  </>
+                )}
               </select>
             </div>
           </div>
@@ -902,15 +1090,18 @@ export default function Staff() {
               <table>
                 <thead>
                   <tr>
-                    <th>Driver</th>
-                    <th>Phone</th>
-                    <th>National ID</th>
-                    <th>License</th>
-                    <th>License Expiry</th>
-                    <th>Car Number</th>
-                    <th>Car Type</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{t("staffPage.table.driver")}</th>
+                    <th>{t("staffPage.table.phone")}</th>
+                    <th>{t("staffPage.table.nationalId")}</th>
+                    <th>{t("staffPage.table.license")}</th>
+                    <th>{t("staffPage.table.licenseExpiry")}</th>
+                    <th>{t("staffPage.table.carNumber")}</th>
+                    <th>{t("staffPage.table.carType")}</th>
+                    <th>{t("staffPage.table.role")}</th>
+                    <th>{t("staffPage.table.reportsTo")}</th>
+                    <th>{t("staffPage.table.eventRate")}</th>
+                    <th>{t("staffPage.table.status")}</th>
+                    <th>{t("staffPage.table.actions")}</th>
                   </tr>
                 </thead>
 
@@ -918,10 +1109,10 @@ export default function Staff() {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="9"
+                        colSpan="12"
                         className="staff-empty-state"
                       >
-                        Loading drivers...
+                        {t("staffPage.loadingDrivers")}
                       </td>
                     </tr>
                   ) : paginatedDrivers.map(
@@ -965,10 +1156,25 @@ export default function Staff() {
                           {driver.carType}
                         </td>
                         <td>
+                          {driver.staffRole === "Head Driver" ? t("staffPage.values.headDriver") : t("staffPage.values.driver")}
+                        </td>
+                        <td>
+                          {driver.reportsToName ||
+                            "-"}
+                        </td>
+                        <td>
+                          {Number(
+                            driver.eventRate || 0
+                          ).toLocaleString(
+                            "en-US"
+                          )}{" "}
+                          {t("staffPage.egp")}
+                        </td>
+                        <td>
                           <span
                             className={`staff-status ${driver.status.toLowerCase()}`}
                           >
-                            {driver.status}
+                            {driver.status === "Active" ? t("staffPage.status.active") : driver.status === "Inactive" ? t("staffPage.status.inactive") : driver.status === "Suspended" ? t("staffPage.status.suspended") : driver.status}
                           </span>
                         </td>
                         <td className="staff-action-cell">
@@ -1022,7 +1228,7 @@ export default function Staff() {
                                     }}
                                   >
                                     <FiTrash2 />
-                                    Delete
+                                    {t("staffPage.actions.delete")}
                                   </button>
                                 </div>
                               )}
@@ -1035,19 +1241,22 @@ export default function Staff() {
                 </tbody>
               </table>
             </div>
-          ) : (
+          ) : activeTab === "waiters" ? (
             <div className="staff-table-wrapper">
               <table>
                 <thead>
                   <tr>
-                    <th>Waiter</th>
-                    <th>Phone</th>
-                    <th>National ID</th>
-                    <th>Health Expiry</th>
-                    <th>Contract End</th>
-                    <th>Documents</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{t("staffPage.table.waiter")}</th>
+                    <th>{t("staffPage.table.phone")}</th>
+                    <th>{t("staffPage.table.nationalId")}</th>
+                    <th>{t("staffPage.table.healthExpiry")}</th>
+                    <th>{t("staffPage.table.contractEnd")}</th>
+                    <th>{t("staffPage.table.documents")}</th>
+                    <th>{t("staffPage.table.role")}</th>
+                    <th>{t("staffPage.table.reportsTo")}</th>
+                    <th>{t("staffPage.table.eventRate")}</th>
+                    <th>{t("staffPage.table.status")}</th>
+                    <th>{t("staffPage.table.actions")}</th>
                   </tr>
                 </thead>
 
@@ -1055,10 +1264,10 @@ export default function Staff() {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="8"
+                        colSpan="11"
                         className="staff-empty-state"
                       >
-                        Loading waiters...
+                        {t("staffPage.loadingWaiters")}
                       </td>
                     </tr>
                   ) : paginatedWaiters.map(
@@ -1113,10 +1322,26 @@ export default function Staff() {
                           </td>
                           <td>{count}/4</td>
                           <td>
+                            {waiter.staffRole === "Head Waiter" ? t("staffPage.values.headWaiter") : t("staffPage.values.waiter")}
+                          </td>
+                          <td>
+                            {waiter.reportsToName ||
+                              "-"}
+                          </td>
+                          <td>
+                            {Number(
+                              waiter.eventRate ||
+                                0
+                            ).toLocaleString(
+                              "en-US"
+                            )}{" "}
+                            {t("staffPage.egp")}
+                          </td>
+                          <td>
                             <span
                               className={`staff-status ${waiter.status.toLowerCase()}`}
                             >
-                              {waiter.status}
+                              {waiter.status === "Active" ? t("staffPage.status.active") : waiter.status === "Inactive" ? t("staffPage.status.inactive") : waiter.status === "Suspended" ? t("staffPage.status.suspended") : waiter.status}
                             </span>
                           </td>
                           <td className="staff-action-cell">
@@ -1170,7 +1395,7 @@ export default function Staff() {
                                       }}
                                     >
                                       <FiTrash2 />
-                                      Delete
+                                      {t("staffPage.actions.delete")}
                                     </button>
                                   </div>
                                 )}
@@ -1184,8 +1409,175 @@ export default function Staff() {
                 </tbody>
               </table>
             </div>
+          ) : (
+            <>
+              <div className="staff-payment-summary">
+                <div>
+                  <span>
+                    {t("staffPage.payments.pendingPayments")}
+                  </span>
+                  <strong>
+                    {pendingPaymentTotal.toLocaleString(
+                      "en-US",
+                      {
+                        maximumFractionDigits: 2,
+                      }
+                    )}{" "}
+                    {t("staffPage.egp")}
+                  </strong>
+                </div>
+
+                <small>
+                  {t("staffPage.payments.calculatedPerEvent")}
+                </small>
+              </div>
+
+              <div className="staff-table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t("staffPage.table.payTo")}</th>
+                      <th>{t("staffPage.table.type")}</th>
+                      <th>{t("staffPage.table.event")}</th>
+                      <th>{t("staffPage.table.date")}</th>
+                      <th>{t("staffPage.table.amount")}</th>
+                      <th>{t("staffPage.table.status")}</th>
+                      <th>{t("staffPage.table.action")}</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {paymentsLoading ? (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="staff-empty-state"
+                        >
+                          {t("staffPage.loadingPayments")}
+                        </td>
+                      </tr>
+                    ) : filteredPayments.length >
+                      0 ? (
+                      filteredPayments.map(
+                        (payment) => (
+                          <tr
+                            key={`${payment.staffId}-${payment.eventId}`}
+                          >
+                            <td>
+                              <div className="staff-name-cell">
+                                <div className="staff-row-icon">
+                                  {payment.staffType ===
+                                  "Driver" ? (
+                                    <FiTruck />
+                                  ) : (
+                                    <FiUsers />
+                                  )}
+                                </div>
+                                <div>
+                                  <strong>
+                                    {payment.staffName}
+                                  </strong>
+                                  <span>
+                                    {payment.staffRole}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              {payment.staffType === "Driver" ? t("staffPage.values.driver") : t("staffPage.values.waiter")}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="staff-payment-event-button"
+                                onClick={() =>
+                                  setSelectedEventDetails(
+                                    {
+                                      ...payment.eventDetails,
+                                      selectedPaymentStatus:
+                                        payment.status,
+                                      selectedPaymentPaidAt:
+                                        payment.paidAt,
+                                    }
+                                  )
+                                }
+                              >
+                                <strong>
+                                  {payment.eventCode}
+                                </strong>
+                                <span>
+                                  {payment.eventName}
+                                </span>
+                              </button>
+                            </td>
+                            <td>
+                              {formatDate(
+                                payment.eventDate
+                              )}
+                            </td>
+                            <td>
+                              <strong>
+                                {Number(
+                                  payment.amount ||
+                                    0
+                                ).toLocaleString(
+                                  "en-US",
+                                  {
+                                    maximumFractionDigits: 2,
+                                  }
+                                )}{" "}
+                                {t("staffPage.egp")}
+                              </strong>
+                            </td>
+                            <td>
+                              <span
+                                className={`staff-payment-status ${String(
+                                  payment.status
+                                ).toLowerCase()}`}
+                              >
+                                {payment.status === "Paid" ? t("staffPage.status.paid") : payment.status === "Pending" ? t("staffPage.status.pending") : payment.status}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="staff-payment-button"
+                                disabled={
+                                  payment.status ===
+                                  "Paid"
+                                }
+                                onClick={() =>
+                                  handleMarkPaymentPaid(
+                                    payment
+                                  )
+                                }
+                              >
+                                {payment.status ===
+                                "Paid"
+                                  ? t("staffPage.status.paid")
+                                  : t("staffPage.actions.markAsPaid")}
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      )
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="staff-empty-state"
+                        >
+                          {t("staffPage.payments.noResults")}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
+          {activeTab !== "payments" && (
           <div className="staff-pagination">
             <p>
               Showing{" "}
@@ -1202,8 +1594,8 @@ export default function Staff() {
               )}{" "}
               of {activeStaff.length}{" "}
               {activeTab === "drivers"
-                ? "drivers"
-                : "waiters"}
+                ? t("staffPage.pagination.drivers")
+                : t("staffPage.pagination.waiters")}
             </p>
 
             <div>
@@ -1263,6 +1655,7 @@ export default function Staff() {
               </button>
             </div>
           </div>
+          )}
         </section>
       </main>
 
@@ -1283,11 +1676,10 @@ export default function Staff() {
             <div className="staff-modal-header">
               <div>
                 <h2>
-"Edit Driver"
+{t("staffPage.driverModal.title")}
                 </h2>
                 <p>
-                  Enter driver and vehicle
-                  information.
+                  {t("staffPage.driverModal.subtitle")}
                 </p>
               </div>
               <button
@@ -1303,14 +1695,14 @@ export default function Staff() {
 
             <div className="staff-form-grid">
               {[
-                ["fullName", "Full Name"],
-                ["phone", "Phone Number"],
-                ["nationalId", "National ID"],
+                ["fullName", t("staffPage.fields.fullName")],
+                ["phone", t("staffPage.fields.phoneNumber")],
+                ["nationalId", t("staffPage.fields.nationalId")],
                 [
                   "licenseNumber",
-                  "License Number",
+                  t("staffPage.fields.licenseNumber"),
                 ],
-                ["carNumber", "Car Number"],
+                ["carNumber", t("staffPage.fields.carNumber")],
               ].map(([name, label]) => (
                 <label key={name}>
                   {label}
@@ -1327,7 +1719,7 @@ export default function Staff() {
               ))}
 
               <label>
-                License Expiry Date
+                {t("staffPage.fields.licenseExpiryDate")}
                 <input
                   type="date"
                   name="licenseExpiryDate"
@@ -1341,7 +1733,7 @@ export default function Staff() {
               </label>
 
               <label>
-                Car Type
+                {t("staffPage.fields.carType")}
                 <select
                   name="carType"
                   value={
@@ -1352,25 +1744,25 @@ export default function Staff() {
                   }
                 >
                   <option value="Van">
-                    Van
+                    {t("staffPage.values.van")}
                   </option>
                   <option value="Truck">
-                    Truck
+                    {t("staffPage.values.truck")}
                   </option>
                   <option value="Pickup">
-                    Pickup
+                    {t("staffPage.values.pickup")}
                   </option>
                   <option value="Refrigerated Truck">
-                    Refrigerated Truck
+                    {t("staffPage.values.refrigeratedTruck")}
                   </option>
                   <option value="Other">
-                    Other
+                    {t("staffPage.values.other")}
                   </option>
                 </select>
               </label>
 
               <label>
-                Status
+                {t("staffPage.fields.status")}
                 <select
                   name="status"
                   value={driverForm.status}
@@ -1379,20 +1771,109 @@ export default function Staff() {
                   }
                 >
                   <option value="Active">
-                    Active
+                    {t("staffPage.status.active")}
                   </option>
                   <option value="Inactive">
-                    Inactive
+                    {t("staffPage.status.inactive")}
                   </option>
                   <option value="Suspended">
-                    Suspended
+                    {t("staffPage.status.suspended")}
                   </option>
                 </select>
               </label>
+
+              <label>
+  Branch
+  <select
+    name="branch"
+    value={driverForm.branch || ""}
+    onChange={handleDriverChange}
+  >
+    <option value="">Select branch</option>
+    <option value="Cairo">Cairo</option>
+    <option value="Alex">Alex</option>
+  </select>
+</label>
+
+              <label>
+                {t("staffPage.fields.eventRate")}
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  name="eventRate"
+                  value={driverForm.eventRate}
+                  onChange={
+                    handleDriverChange
+                  }
+                />
+              </label>
+
+              <label>
+                {t("staffPage.fields.driverRole")}
+                <select
+                  name="staffRole"
+                  value={driverForm.staffRole}
+                  onChange={(event) => {
+                    handleDriverChange(event);
+
+                    if (
+                      event.target.value ===
+                      "Head Driver"
+                    ) {
+                      setDriverForm(
+                        (current) => ({
+                          ...current,
+                          staffRole:
+                            "Head Driver",
+                          reportsToId: "",
+                        })
+                      );
+                    }
+                  }}
+                >
+                  <option value="Driver">
+                    {t("staffPage.values.driver")}
+                  </option>
+                  <option value="Head Driver">
+                    {t("staffPage.values.headDriver")}
+                  </option>
+                </select>
+              </label>
+
+              {driverForm.staffRole ===
+                "Driver" && (
+                <label>
+                  {t("staffPage.fields.reportsTo")}
+                  <select
+                    name="reportsToId"
+                    value={
+                      driverForm.reportsToId
+                    }
+                    onChange={
+                      handleDriverChange
+                    }
+                  >
+                    <option value="">
+                      No Head Driver
+                    </option>
+                    {headDrivers.map(
+                      (driver) => (
+                        <option
+                          key={driver.id}
+                          value={driver.id}
+                        >
+                          {driver.fullName}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+              )}
             </div>
 
             <div className="staff-documents-section">
-              <h3>Documents</h3>
+              <h3>{t("staffPage.fields.documents")}</h3>
               <div className="staff-upload-grid">
                 <label className="staff-upload-box">
                   <FiImage />
@@ -1461,8 +1942,8 @@ export default function Staff() {
                 }
               >
                 {saving
-                  ? "Saving..."
-                  : "Save Changes"}
+                  ? t("staffPage.actions.saving")
+                  : t("staffPage.actions.saveChanges")}
               </button>
             </div>
           </form>
@@ -1486,11 +1967,10 @@ export default function Staff() {
             <div className="staff-modal-header">
               <div>
                 <h2>
-"Edit Waiter"
+{t("staffPage.waiterModal.title")}
                 </h2>
                 <p>
-                  Enter waiter information and
-                  documents.
+                  {t("staffPage.waiterModal.subtitle")}
                 </p>
               </div>
               <button
@@ -1506,9 +1986,9 @@ export default function Staff() {
 
             <div className="staff-form-grid">
               {[
-                ["fullName", "Full Name"],
-                ["phone", "Phone Number"],
-                ["nationalId", "National ID"],
+                ["fullName", t("staffPage.fields.fullName")],
+                ["phone", t("staffPage.fields.phoneNumber")],
+                ["nationalId", t("staffPage.fields.nationalId")],
               ].map(([name, label]) => (
                 <label key={name}>
                   {label}
@@ -1525,7 +2005,7 @@ export default function Staff() {
               ))}
 
               <label>
-                Status
+                {t("staffPage.fields.status")}
                 <select
                   name="status"
                   value={waiterForm.status}
@@ -1534,41 +2014,130 @@ export default function Staff() {
                   }
                 >
                   <option value="Active">
-                    Active
+                    {t("staffPage.status.active")}
                   </option>
                   <option value="Inactive">
-                    Inactive
+                    {t("staffPage.status.inactive")}
                   </option>
                   <option value="Suspended">
-                    Suspended
+                    {t("staffPage.status.suspended")}
                   </option>
                 </select>
               </label>
+
+              <label>
+  Branch
+  <select
+    name="branch"
+    value={waiterForm.branch || ""}
+    onChange={handleWaiterChange}
+  >
+    <option value="">Select branch</option>
+    <option value="Cairo">Cairo</option>
+    <option value="Alex">Alex</option>
+  </select>
+</label>
+
+              <label>
+                {t("staffPage.fields.eventRate")}
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  name="eventRate"
+                  value={waiterForm.eventRate}
+                  onChange={
+                    handleWaiterChange
+                  }
+                />
+              </label>
+
+              <label>
+                {t("staffPage.fields.waiterRole")}
+                <select
+                  name="staffRole"
+                  value={waiterForm.staffRole}
+                  onChange={(event) => {
+                    handleWaiterChange(event);
+
+                    if (
+                      event.target.value ===
+                      "Head Waiter"
+                    ) {
+                      setWaiterForm(
+                        (current) => ({
+                          ...current,
+                          staffRole:
+                            "Head Waiter",
+                          reportsToId: "",
+                        })
+                      );
+                    }
+                  }}
+                >
+                  <option value="Waiter">
+                    {t("staffPage.values.waiter")}
+                  </option>
+                  <option value="Head Waiter">
+                    {t("staffPage.values.headWaiter")}
+                  </option>
+                </select>
+              </label>
+
+              {waiterForm.staffRole ===
+                "Waiter" && (
+                <label>
+                  {t("staffPage.fields.reportsTo")}
+                  <select
+                    name="reportsToId"
+                    value={
+                      waiterForm.reportsToId
+                    }
+                    onChange={
+                      handleWaiterChange
+                    }
+                  >
+                    <option value="">
+                      No Head Waiter
+                    </option>
+                    {headWaiters.map(
+                      (waiter) => (
+                        <option
+                          key={waiter.id}
+                          value={waiter.id}
+                        >
+                          {waiter.fullName}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+              )}
             </div>
 
             <div className="staff-documents-section">
-              <h3>Documents</h3>
+              <h3>{t("staffPage.fields.documents")}</h3>
 
               <div className="staff-upload-grid">
                 {[
                   [
                     "personalPhoto",
-                    "Personal Photo",
+                    t("staffPage.documents.personalPhoto"),
                     <FiImage />,
                   ],
                   [
                     "nationalIdImage",
-                    "National ID Image",
+                    t("staffPage.documents.nationalIdImage"),
                     <FiImage />,
                   ],
                   [
                     "healthCertificate",
-                    "Health Certificate",
+                    t("staffPage.documents.healthCertificate"),
                     <FiFileText />,
                   ],
                   [
                     "contract",
-                    "Contract",
+                    t("staffPage.documents.contract"),
                     <FiFileText />,
                   ],
                 ].map(
@@ -1625,7 +2194,7 @@ export default function Staff() {
 
               <div className="staff-document-dates">
                 <label>
-                  Health Certificate Expiry
+                  {t("staffPage.fields.healthCertificateExpiry")}
                   <input
                     type="date"
                     value={
@@ -1644,7 +2213,7 @@ export default function Staff() {
                 </label>
 
                 <label>
-                  Contract Start Date
+                  {t("staffPage.fields.contractStartDate")}
                   <input
                     type="date"
                     value={
@@ -1662,7 +2231,7 @@ export default function Staff() {
                 </label>
 
                 <label>
-                  Contract End Date
+                  {t("staffPage.fields.contractEndDate")}
                   <input
                     type="date"
                     value={
@@ -1701,11 +2270,361 @@ export default function Staff() {
                 }
               >
                 {saving
-                  ? "Saving..."
-                  : "Save Changes"}
+                  ? t("staffPage.actions.saving")
+                  : t("staffPage.actions.saveChanges")}
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {selectedEventDetails && (
+        <div
+          className="staff-modal-overlay"
+          onMouseDown={() =>
+            setSelectedEventDetails(null)
+          }
+        >
+          <div
+            className="staff-modal staff-event-details-modal"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="staff-modal-header">
+              <div>
+                <h2>
+                  Event Payment Details
+                </h2>
+                <p>
+                  Full staff breakdown for{" "}
+                  {
+                    selectedEventDetails.eventCode
+                  }
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedEventDetails(
+                    null
+                  )
+                }
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <div className="staff-event-info-grid">
+              <div>
+                <span>{t("staffPage.eventDetails.eventCode")}</span>
+                <strong>
+                  {
+                    selectedEventDetails.eventCode
+                  }
+                </strong>
+              </div>
+
+              <div>
+                <span>{t("staffPage.eventDetails.eventName")}</span>
+                <strong>
+                  {
+                    selectedEventDetails.eventName
+                  }
+                </strong>
+              </div>
+
+              <div>
+                <span>{t("staffPage.eventDetails.client")}</span>
+                <strong>
+                  {
+                    selectedEventDetails.client ||
+                    "-"
+                  }
+                </strong>
+              </div>
+
+              <div>
+                <span>{t("staffPage.eventDetails.date")}</span>
+                <strong>
+                  {formatDate(
+                    selectedEventDetails.eventDate
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>{t("staffPage.eventDetails.branch")}</span>
+                <strong>
+                  {
+                    selectedEventDetails.branch ||
+                    "-"
+                  }
+                </strong>
+              </div>
+
+              <div>
+                <span>{t("staffPage.eventDetails.location")}</span>
+                <strong>
+                  {
+                    selectedEventDetails.location ||
+                    "-"
+                  }
+                  {selectedEventDetails.area
+                    ? ` - ${selectedEventDetails.area}`
+                    : ""}
+                </strong>
+              </div>
+
+              <div>
+                <span>{t("staffPage.eventDetails.startTime")}</span>
+                <strong>
+                  {
+                    selectedEventDetails.startTime ||
+                    "-"
+                  }
+                </strong>
+              </div>
+
+              <div>
+                <span>{t("staffPage.eventDetails.endTime")}</span>
+                <strong>
+                  {
+                    selectedEventDetails.endTime ||
+                    "-"
+                  }
+                </strong>
+              </div>
+            </div>
+
+            <div className="staff-event-details-section">
+              <div className="staff-event-details-heading">
+                <div>
+                  <h3>{t("staffPage.tabs.waiters")}</h3>
+                  <p>
+                    {t("staffPage.eventDetails.waitersDescription")}
+                  </p>
+                </div>
+
+                <strong>
+                  {Number(
+                    selectedEventDetails.waiterTotal ||
+                      0
+                  ).toLocaleString(
+                    "en-US",
+                    {
+                      maximumFractionDigits: 2,
+                    }
+                  )}{" "}
+                  EGP
+                </strong>
+              </div>
+
+              <div className="staff-event-details-table-wrapper">
+                <table className="staff-event-details-table">
+                  <thead>
+                    <tr>
+                      <th>{t("staffPage.table.name")}</th>
+                      <th>{t("staffPage.table.role")}</th>
+                      <th>{t("staffPage.table.reportsTo")}</th>
+                      <th>{t("staffPage.table.attendance")}</th>
+                      <th>{t("staffPage.table.eventRate")}</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {selectedEventDetails.waiters
+                      ?.length > 0 ? (
+                      selectedEventDetails.waiters.map(
+                        (waiter) => (
+                          <tr
+                            key={`waiter-${waiter.id}`}
+                          >
+                            <td>
+                              {waiter.name}
+                            </td>
+                            <td>
+                              {waiter.role}
+                            </td>
+                            <td>
+                              {waiter.reportsTo ||
+                                "-"}
+                            </td>
+                            <td>
+                              {waiter.attendance ||
+                                "Assigned"}
+                            </td>
+                            <td>
+                              {Number(
+                                waiter.rate || 0
+                              ).toLocaleString(
+                                "en-US",
+                                {
+                                  maximumFractionDigits: 2,
+                                }
+                              )}{" "}
+                              {t("staffPage.egp")}
+                            </td>
+                          </tr>
+                        )
+                      )
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="staff-event-details-empty"
+                        >
+                          {t("staffPage.eventDetails.noWaiters")}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="staff-event-details-section">
+              <div className="staff-event-details-heading">
+                <div>
+                  <h3>{t("staffPage.values.driver")}</h3>
+                  <p>
+                    {t("staffPage.eventDetails.driverDescription")}
+                  </p>
+                </div>
+
+                <strong>
+                  {Number(
+                    selectedEventDetails.driverTotal ||
+                      0
+                  ).toLocaleString(
+                    "en-US",
+                    {
+                      maximumFractionDigits: 2,
+                    }
+                  )}{" "}
+                  EGP
+                </strong>
+              </div>
+
+              <div className="staff-event-details-table-wrapper">
+                <table className="staff-event-details-table">
+                  <thead>
+                    <tr>
+                      <th>{t("staffPage.table.name")}</th>
+                      <th>{t("staffPage.table.role")}</th>
+                      <th>{t("staffPage.table.reportsTo")}</th>
+                      <th>{t("staffPage.table.paymentTo")}</th>
+                      <th>{t("staffPage.table.eventAmount")}</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {selectedEventDetails.driver ? (
+                      <tr>
+                        <td>
+                          {
+                            selectedEventDetails
+                              .driver.name
+                          }
+                        </td>
+                        <td>
+                          {
+                            selectedEventDetails
+                              .driver.role
+                          }
+                        </td>
+                        <td>
+                          {selectedEventDetails
+                            .driver.reportsTo ||
+                            "-"}
+                        </td>
+                        <td>
+                          {selectedEventDetails
+                            .driver.payTo ||
+                            selectedEventDetails
+                              .driver.name}
+                        </td>
+                        <td>
+                          {Number(
+                            selectedEventDetails
+                              .driverTotal || 0
+                          ).toLocaleString(
+                            "en-US",
+                            {
+                              maximumFractionDigits: 2,
+                            }
+                          )}{" "}
+                          {t("staffPage.egp")}
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="5"
+                          className="staff-event-details-empty"
+                        >
+                          {t("staffPage.eventDetails.noDriver")}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="staff-event-payment-total">
+              <div>
+                <span>{t("staffPage.eventDetails.waitersTotal")}</span>
+                <strong>
+                  {Number(
+                    selectedEventDetails.waiterTotal ||
+                      0
+                  ).toLocaleString(
+                    "en-US",
+                    {
+                      maximumFractionDigits: 2,
+                    }
+                  )}{" "}
+                  EGP
+                </strong>
+              </div>
+
+              <div>
+                <span>{t("staffPage.eventDetails.driverTotal")}</span>
+                <strong>
+                  {Number(
+                    selectedEventDetails.driverTotal ||
+                      0
+                  ).toLocaleString(
+                    "en-US",
+                    {
+                      maximumFractionDigits: 2,
+                    }
+                  )}{" "}
+                  EGP
+                </strong>
+              </div>
+
+              <div className="grand-total">
+                <span>
+                  Total Event Staff Cost
+                </span>
+                <strong>
+                  {Number(
+                    selectedEventDetails.grandTotal ||
+                      0
+                  ).toLocaleString(
+                    "en-US",
+                    {
+                      maximumFractionDigits: 2,
+                    }
+                  )}{" "}
+                  EGP
+                </strong>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

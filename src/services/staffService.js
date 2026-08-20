@@ -10,7 +10,11 @@ const STAFF_FIELDS = `
   full_name,
   phone,
   national_id,
+  branch,
   status,
+  event_rate,
+  staff_role,
+  reports_to_id,
   license_number,
   license_expiry_date,
   car_number,
@@ -82,6 +86,7 @@ export const mapStaffFromDatabase = (staff) => {
       fullName: staff.full_name || "",
       phone: staff.phone || "",
       nationalId: staff.national_id || "",
+      branch: staff.branch || "",
       licenseNumber:
         staff.license_number || "",
       licenseExpiryDate:
@@ -89,6 +94,12 @@ export const mapStaffFromDatabase = (staff) => {
       carNumber: staff.car_number || "",
       carType: staff.car_type || "Van",
       status: staff.status || "Active",
+      eventRate: Number(staff.event_rate || 0),
+      staffRole:
+        staff.staff_role || "Driver",
+      reportsToId:
+        staff.reports_to_id || "",
+      reportsToName: "",
       documents: {
         nationalIdImage: mapDocument(
           getDocumentByType(
@@ -114,7 +125,14 @@ export const mapStaffFromDatabase = (staff) => {
     fullName: staff.full_name || "",
     phone: staff.phone || "",
     nationalId: staff.national_id || "",
+    branch: staff.branch || "",
     status: staff.status || "Active",
+    eventRate: Number(staff.event_rate || 0),
+    staffRole:
+      staff.staff_role || "Waiter",
+    reportsToId:
+      staff.reports_to_id || "",
+    reportsToName: "",
     documents: {
       personalPhoto: mapDocument(
         getDocumentByType(
@@ -174,6 +192,22 @@ export async function getStaff() {
   const mapped = (data || []).map(
     mapStaffFromDatabase
   );
+
+  const staffNameMap = new Map(
+    (data || []).map((record) => [
+      Number(record.id),
+      record.full_name || "",
+    ])
+  );
+
+  mapped.forEach((record) => {
+    record.reportsToName =
+      record.reportsToId
+        ? staffNameMap.get(
+            Number(record.reportsToId)
+          ) || ""
+        : "";
+  });
 
   return {
     drivers: mapped.filter(
@@ -357,7 +391,18 @@ export async function createDriver(
       phone: driverData.phone.trim(),
       national_id:
         driverData.nationalId.trim(),
+      branch: driverData.branch,
       status: driverData.status,
+      event_rate:
+        Number(driverData.eventRate || 0),
+      staff_role:
+        driverData.staffRole || "Driver",
+      reports_to_id:
+        driverData.staffRole === "Head Driver"
+          ? null
+          : driverData.reportsToId
+            ? Number(driverData.reportsToId)
+            : null,
       license_number:
         driverData.licenseNumber.trim(),
       license_expiry_date:
@@ -402,7 +447,18 @@ export async function updateDriver(
       phone: driverData.phone.trim(),
       national_id:
         driverData.nationalId.trim(),
+      branch: driverData.branch,
       status: driverData.status,
+      event_rate:
+        Number(driverData.eventRate || 0),
+      staff_role:
+        driverData.staffRole || "Driver",
+      reports_to_id:
+        driverData.staffRole === "Head Driver"
+          ? null
+          : driverData.reportsToId
+            ? Number(driverData.reportsToId)
+            : null,
       license_number:
         driverData.licenseNumber.trim(),
       license_expiry_date:
@@ -437,7 +493,18 @@ export async function createWaiter(
       phone: waiterData.phone.trim(),
       national_id:
         waiterData.nationalId.trim(),
+      branch: waiterData.branch,
       status: waiterData.status,
+      event_rate:
+        Number(waiterData.eventRate || 0),
+      staff_role:
+        waiterData.staffRole || "Waiter",
+      reports_to_id:
+        waiterData.staffRole === "Head Waiter"
+          ? null
+          : waiterData.reportsToId
+            ? Number(waiterData.reportsToId)
+            : null,
       health_certificate_expiry:
         waiterData.documents
           .healthCertificate.expiryDate ||
@@ -485,7 +552,18 @@ export async function updateWaiter(
       phone: waiterData.phone.trim(),
       national_id:
         waiterData.nationalId.trim(),
+      branch: waiterData.branch,
       status: waiterData.status,
+      event_rate:
+        Number(waiterData.eventRate || 0),
+      staff_role:
+        waiterData.staffRole || "Waiter",
+      reports_to_id:
+        waiterData.staffRole === "Head Waiter"
+          ? null
+          : waiterData.reportsToId
+            ? Number(waiterData.reportsToId)
+            : null,
       health_certificate_expiry:
         waiterData.documents
           .healthCertificate.expiryDate ||
@@ -555,5 +633,26 @@ async function getStaffById(staffId) {
     throw error;
   }
 
-  return mapStaffFromDatabase(data);
+  const mapped =
+    mapStaffFromDatabase(data);
+
+  if (mapped.reportsToId) {
+    const {
+      data: headStaff,
+      error: headStaffError,
+    } = await supabase
+      .from("staff")
+      .select("full_name")
+      .eq("id", mapped.reportsToId)
+      .maybeSingle();
+
+    if (headStaffError) {
+      throw headStaffError;
+    }
+
+    mapped.reportsToName =
+      headStaff?.full_name || "";
+  }
+
+  return mapped;
 }

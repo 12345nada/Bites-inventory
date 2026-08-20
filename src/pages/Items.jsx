@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 
+import { useTranslation } from "react-i18next";
+
 
 import { useDialog } from "../context/DialogContext";
 import Sidebar from "../components/dashboard/Sidebar";
@@ -44,6 +46,7 @@ const emptyForm = {
 };
 
 export default function Items() {
+  const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -286,7 +289,7 @@ export default function Items() {
       setItems(normalizedItems);
     } catch (error) {
       console.error("Items loading error:", error);
-      setPageError(error.message || "Unable to load items.");
+      setPageError(error.message || t("items.errors.unableToLoadItems"));
     } finally {
       setLoading(false);
     }
@@ -375,6 +378,28 @@ export default function Items() {
     [items]
   );
 
+
+  const getUnitLabel = (unit) =>
+    t(`items.units.${String(unit || "").toLowerCase()}`, {
+      defaultValue: unit,
+    });
+
+  const getItemTypeLabel = (itemType) =>
+    t(`items.itemTypes.${String(itemType || "").toLowerCase()}`, {
+      defaultValue: itemType,
+    });
+
+  const getWarehouseLabel = (warehouse) =>
+    t(
+      `warehouses.${String(warehouse || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`,
+      {
+        defaultValue: warehouse,
+      }
+    );
+
   const toggleActionMenu = (event, itemId) => {
     event.stopPropagation();
 
@@ -433,9 +458,9 @@ export default function Items() {
       !canDelete
     ) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("items.errors.permissionDenied"),
         message:
-          "You do not have permission to manage item categories.",
+          t("items.errors.noManageCategoriesPermission"),
         type: "warning",
       });
 
@@ -458,9 +483,9 @@ export default function Items() {
   const startEditCategory = async (category) => {
     if (!canEdit) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("items.errors.permissionDenied"),
         message:
-          "You do not have permission to edit item categories.",
+          t("items.errors.noEditCategoriesPermission"),
         type: "warning",
       });
 
@@ -486,10 +511,10 @@ export default function Items() {
 
     if (!requiredPermission) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("items.errors.permissionDenied"),
         message: editingCategoryId
-          ? "You do not have permission to edit item categories."
-          : "You do not have permission to add item categories.",
+          ? t("items.errors.noEditCategoriesPermission")
+          : t("items.errors.noAddCategoriesPermission"),
         type: "warning",
       });
 
@@ -500,7 +525,7 @@ export default function Items() {
 
     if (!normalizedName) {
       showAlert({
-        message: "Please enter a category name.",
+        message: t("items.errors.enterCategoryName"),
       });
       return;
     }
@@ -514,7 +539,7 @@ export default function Items() {
 
     if (duplicateCategory) {
       showAlert({
-        message: "This category already exists.",
+        message: t("items.errors.categoryExists"),
       });
       return;
     }
@@ -582,7 +607,7 @@ export default function Items() {
       showAlert({
         message:
           error.message ||
-          "Unable to save the category.",
+          t("items.errors.unableToSaveCategory"),
       });
     } finally {
       setSavingCategory(false);
@@ -592,9 +617,9 @@ export default function Items() {
   const handleDeleteCategory = async (category) => {
     if (!canDelete) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("items.errors.permissionDenied"),
         message:
-          "You do not have permission to delete item categories.",
+          t("items.errors.noDeleteCategoriesPermission"),
         type: "warning",
       });
 
@@ -602,7 +627,7 @@ export default function Items() {
     }
 
     const confirmed = await showConfirm({
-      message: `Are you sure you want to delete ${category.name}?`,
+      message: t("items.confirm.deleteCategory", { name: category.name }),
     });
 
     if (!confirmed) {
@@ -625,7 +650,7 @@ export default function Items() {
       if ((data || []).length > 0) {
         await showAlert({
           message:
-            "This category is used by one or more items and cannot be deleted.",
+            t("items.errors.categoryInUse"),
         });
         return;
       }
@@ -665,7 +690,7 @@ export default function Items() {
       showAlert({
         message:
           error.message ||
-          "Unable to delete the category.",
+          t("items.errors.unableToDeleteCategory"),
       });
     } finally {
       setSavingCategory(false);
@@ -733,7 +758,7 @@ export default function Items() {
   const openAddModal = () => {
     if (!canAdd) {
       showAlert({
-        message: "You do not have permission to add items.",
+        message: t("items.errors.noAddItemsPermission"),
       });
       return;
     }
@@ -754,7 +779,7 @@ export default function Items() {
   const openEditModal = (item) => {
     if (!canEdit) {
       showAlert({
-        message: "You do not have permission to edit items.",
+        message: t("items.errors.noEditItemsPermission"),
       });
       return;
     }
@@ -938,8 +963,8 @@ console.log(
 
     if (quantityToAdd > availableCapacity) {
       await showAlert({
-        title: "Warehouse Capacity Exceeded",
-        message: `${warehouse.name} does not have enough available capacity. Only ${availableCapacity.toLocaleString()} items can be added.`,
+        title: t("items.errors.warehouseCapacityExceeded"),
+        message: t("items.errors.warehouseCapacityMessage", { warehouse: warehouse.name, count: availableCapacity.toLocaleString() }),
         type: "warning",
       });
 
@@ -959,10 +984,10 @@ console.log(
 
     if (!requiredPermission) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("items.errors.permissionDenied"),
         message: editingItemId
-          ? "You do not have permission to edit items."
-          : "You do not have permission to add items.",
+          ? t("items.errors.noEditItemsPermission")
+          : t("items.errors.noAddItemsPermission"),
         type: "warning",
       });
 
@@ -988,7 +1013,7 @@ console.log(
 
     if (hasEmptyField) {
       showAlert({
-        message: "Please complete all item fields.",
+        message: t("items.errors.completeAllFields"),
       });
       return;
     }
@@ -999,7 +1024,7 @@ console.log(
       Number(formData.quantity) < 0
     ) {
       showAlert({
-        message: "Cost, stock and quantity values cannot be negative.",
+        message: t("items.errors.noNegativeValues"),
       });
       return;
     }
@@ -1014,7 +1039,7 @@ console.log(
 
     if (duplicateCode) {
       showAlert({
-        message: "This item code already exists.",
+        message: t("items.errors.itemCodeExists"),
       });
       return;
     }
@@ -1032,7 +1057,7 @@ console.log(
       showAlert({
         message:
           error.message ||
-          "Unable to validate warehouse capacity.",
+          t("items.errors.unableToValidateCapacity"),
       });
       return;
     }
@@ -1142,7 +1167,7 @@ console.log(
       }
 
       showAlert({
-        message: error.message || "Unable to save the item.",
+        message: error.message || t("items.errors.unableToSaveItem"),
       });
     } finally {
       setSaving(false);
@@ -1152,9 +1177,9 @@ console.log(
   const deleteItem = async (item) => {
     if (!canDelete) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("items.errors.permissionDenied"),
         message:
-          "You do not have permission to delete items.",
+          t("items.errors.noDeleteItemsPermission"),
         type: "warning",
       });
 
@@ -1162,7 +1187,7 @@ console.log(
     }
 
     const confirmed = await showConfirm({
-      message: `Are you sure you want to delete ${item.name}?`,
+      message: t("items.confirm.deleteItem", { name: item.name }),
     });
 
     if (!confirmed) return;
@@ -1193,7 +1218,7 @@ console.log(
       console.error("Delete item error:", error);
       showAlert({
         message: error.message ||
-          "Unable to delete this item. It may be used in another record.",
+          t("items.errors.unableToDeleteItem"),
       });
     }
   };
@@ -1215,8 +1240,8 @@ console.log(
             </div>
 
             <div>
-              <h1>Item List</h1>
-              <p>Manage all inventory items</p>
+              <h1>{t("items.title")}</h1>
+              <p>{t("items.subtitle")}</p>
             </div>
           </div>
 
@@ -1227,37 +1252,37 @@ console.log(
             disabled={loading}
           >
             <FiPlus />
-            Add New Item
+            {t("items.addNewItem")}
           </button>
         </section>
 
         <section className="items-stats">
           <ItemStatCard
             icon={<FiBox />}
-            title="Total Items"
+            title={t("items.stats.totalItems")}
             value={totalItems}
-            subtitle="All inventory items"
+            subtitle={t("items.stats.allInventoryItems")}
           />
 
           <ItemStatCard
             icon={<FiCheckCircle />}
-            title="Available Items"
+            title={t("items.stats.availableItems")}
             value={totalAvailableItems}
-            subtitle="Available quantity"
+            subtitle={t("items.stats.availableQuantity")}
           />
 
           <ItemStatCard
             icon={<FiClock />}
-            title="Reserved Items"
+            title={t("items.stats.reservedItems")}
             value={totalReservedItems}
-            subtitle="Reserved quantity"
+            subtitle={t("items.stats.reservedQuantity")}
           />
 
           <ItemStatCard
             icon={<FiAlertTriangle />}
-            title="Low Stock Items"
+            title={t("items.stats.lowStockItems")}
             value={lowStockItems}
-            subtitle="Need restock"
+            subtitle={t("items.stats.needRestock")}
           />
         </section>
 
@@ -1269,7 +1294,7 @@ console.log(
               <input
                 type="text"
                 value={searchValue}
-                placeholder="Search items..."
+                placeholder={t("items.searchItems")}
                 onChange={(event) => setSearchValue(event.target.value)}
               />
             </div>
@@ -1279,11 +1304,11 @@ console.log(
               value={selectedWarehouse}
               onChange={(event) => setSelectedWarehouse(event.target.value)}
             >
-              <option value="all">All Warehouses</option>
+              <option value="all">{t("items.allWarehouses")}</option>
 
               {warehouses.map((warehouse) => (
                 <option key={warehouse.id} value={String(warehouse.id)}>
-                  {warehouse.name}
+                  {getWarehouseLabel(warehouse.name)}
                 </option>
               ))}
             </select>
@@ -1295,13 +1320,13 @@ console.log(
             <table>
               <thead>
                 <tr>
-                  <th>Item</th>
-                  <th>Category</th>
-                  <th>Unit</th>
-                  <th>Warehouse</th>
-                  <th>Available</th>
-                  <th>Minimum Stock</th>
-                  <th>Actions</th>
+                  <th>{t("items.table.item")}</th>
+                  <th>{t("items.table.category")}</th>
+                  <th>{t("items.table.unit")}</th>
+                  <th>{t("items.table.warehouse")}</th>
+                  <th>{t("items.table.available")}</th>
+                  <th>{t("items.table.minimumStock")}</th>
+                  <th>{t("items.table.actions")}</th>
                 </tr>
               </thead>
 
@@ -1309,7 +1334,7 @@ console.log(
                 {loading ? (
                   <tr>
                     <td colSpan="7" className="items-empty-state">
-                      Loading items...
+                      {t("items.loadingItems")}
                     </td>
                   </tr>
                 ) : filteredItems.length > 0 ? (
@@ -1334,8 +1359,8 @@ console.log(
                       </td>
 
                       <td>{item.category}</td>
-                      <td>{item.unit}</td>
-                      <td>{item.warehouse}</td>
+                      <td>{getUnitLabel(item.unit)}</td>
+                      <td>{getWarehouseLabel(item.warehouse)}</td>
 
                       <td
                         className={
@@ -1361,7 +1386,7 @@ console.log(
                         <div className="item-actions">
                           <button
                             type="button"
-                            aria-label={`Edit ${item.name}`}
+                            aria-label={t("items.aria.editItem", { name: item.name })}
                             onClick={() => openEditModal(item)}
                           >
                             <FiEdit2 />
@@ -1371,7 +1396,7 @@ console.log(
                             <button
                               type="button"
                               className="item-more-button"
-                              aria-label={`More actions for ${item.name}`}
+                              aria-label={t("items.aria.moreActions", { name: item.name })}
                               onClick={(event) =>
                                 toggleActionMenu(event, item.rowKey)
                               }
@@ -1395,7 +1420,7 @@ console.log(
                                   onClick={() => openEditModal(item)}
                                 >
                                   <FiEdit2 />
-                                  Edit
+                                  {t("items.edit")}
                                 </button>
 
                                 <button
@@ -1404,7 +1429,7 @@ console.log(
                                   onClick={() => deleteItem(item)}
                                 >
                                   <FiTrash2 />
-                                  Delete
+                                  {t("items.delete")}
                                 </button>
                               </div>
                             )}
@@ -1416,7 +1441,7 @@ console.log(
                 ) : (
                   <tr>
                     <td colSpan="7" className="items-empty-state">
-                      No items match your search.
+                      {t("items.noItemsMatch")}
                     </td>
                   </tr>
                 )}
@@ -1426,8 +1451,10 @@ console.log(
 
           <div className="items-pagination">
             <p>
-              Showing {paginatedItems.length} of{" "}
-              {filteredItems.length} items
+              {t("items.showingItems", {
+                shown: paginatedItems.length,
+                total: filteredItems.length,
+              })}
             </p>
 
             {filteredItems.length > 0 && (
@@ -1440,7 +1467,7 @@ console.log(
                     )
                   }
                   disabled={currentPage === 1}
-                  aria-label="Previous page"
+                  aria-label={t("items.previousPage")}
                 >
                   ‹
                 </button>
@@ -1478,7 +1505,7 @@ console.log(
                     )
                   }
                   disabled={currentPage === totalPages}
-                  aria-label="Next page"
+                  aria-label={t("items.nextPage")}
                 >
                   ›
                 </button>
@@ -1497,11 +1524,11 @@ console.log(
           >
             <div className="item-modal-header">
               <div>
-                <h2>{editingItemId ? "Edit Item" : "Add New Item"}</h2>
+                <h2>{editingItemId ? t("items.editItem") : t("items.addNewItem")}</h2>
                 <p>
                   {editingItemId
-                    ? "Update the item information."
-                    : "Enter the item information."}
+                    ? t("items.form.updateItemInfo")
+                    : t("items.form.enterItemInfo")}
                 </p>
               </div>
 
@@ -1514,14 +1541,14 @@ console.log(
               <div className="item-section-heading">
                 <span>1</span>
                 <div>
-                  <h3>Item Master</h3>
-                  <p>Add the basic item information.</p>
+                  <h3>{t("items.form.itemMaster")}</h3>
+                  <p>{t("items.form.basicInfo")}</p>
                 </div>
               </div>
 
               <div className="item-modal-grid">
                 <label>
-                  Item Code
+                  {t("items.form.itemCode")}
                   <input
                     type="text"
                     name="itemCode"
@@ -1533,11 +1560,11 @@ console.log(
                 </label>
 
                 <label>
-                  Item Name
+                  {t("items.form.itemName")}
                   <input
                     type="text"
                     name="name"
-                    placeholder="Dinner Plate 28 cm"
+                    placeholder={t("items.form.itemNamePlaceholder")}
                     value={formData.name}
                     onChange={handleFormChange}
                     disabled={saving}
@@ -1545,7 +1572,7 @@ console.log(
                 </label>
 
                 <label>
-                  Category
+                  {t("items.form.category")}
 
                   <div className="item-category-field">
                     <select
@@ -1554,7 +1581,7 @@ console.log(
                       onChange={handleFormChange}
                       disabled={saving}
                     >
-                      <option value="">Select category</option>
+                      <option value="">{t("items.form.selectCategory")}</option>
 
                       {categories.map((category) => (
                         <option
@@ -1573,44 +1600,44 @@ console.log(
                       disabled={saving}
                     >
                       <FiEdit2 />
-                      Manage Categories
+                      {t("items.categories.manageCategories")}
                     </button>
                   </div>
                 </label>
 
                 <label>
-                  Unit
+                  {t("items.form.unit")}
                   <select
                     name="unit"
                     value={formData.unit}
                     onChange={handleFormChange}
                     disabled={saving}
                   >
-                    <option value="Piece">Piece</option>
-                    <option value="Set">Set</option>
-                    <option value="Box">Box</option>
-                    <option value="Pack">Pack</option>
-                    <option value="Dozen">Dozen</option>
-                    <option value="Kilogram">Kilogram</option>
-                    <option value="Liter">Liter</option>
+                    <option value="Piece">{t("items.units.piece")}</option>
+                    <option value="Set">{t("items.units.set")}</option>
+                    <option value="Box">{t("items.units.box")}</option>
+                    <option value="Pack">{t("items.units.pack")}</option>
+                    <option value="Dozen">{t("items.units.dozen")}</option>
+                    <option value="Kilogram">{t("items.units.kilogram")}</option>
+                    <option value="Liter">{t("items.units.liter")}</option>
                   </select>
                 </label>
 
                 <label>
-                  Item Type
+                  {t("items.form.itemType")}
                   <select
                     name="itemType"
                     value={formData.itemType}
                     onChange={handleFormChange}
                     disabled={saving}
                   >
-                    <option value="Reusable">Reusable</option>
-                    <option value="Consumable">Consumable</option>
+                    <option value="Reusable">{t("items.itemTypes.reusable")}</option>
+                    <option value="Consumable">{t("items.itemTypes.consumable")}</option>
                   </select>
                 </label>
 
                 <label>
-                  Purchase Cost
+                  {t("items.form.purchaseCost")}
                   <input
                     type="number"
                     min="0"
@@ -1624,14 +1651,14 @@ console.log(
                 </label>
 
                 <label>
-                  Supplier
+                  {t("items.form.supplier")}
                   <select
                     name="supplierId"
                     value={formData.supplierId}
                     onChange={handleFormChange}
                     disabled={saving}
                   >
-                    <option value="">Select supplier</option>
+                    <option value="">{t("items.form.selectSupplier")}</option>
 
                     {suppliers.map((supplier) => (
                       <option key={supplier.id} value={String(supplier.id)}>
@@ -1642,25 +1669,25 @@ console.log(
                 </label>
 
                 <label>
-                  Location / Warehouse
+                  {t("items.form.locationWarehouse")}
                   <select
                     name="warehouseId"
                     value={formData.warehouseId}
                     onChange={handleFormChange}
                     disabled={saving}
                   >
-                    <option value="">Select warehouse</option>
+                    <option value="">{t("items.form.selectWarehouse")}</option>
 
                     {warehouses.map((warehouse) => (
                       <option key={warehouse.id} value={String(warehouse.id)}>
-                        {warehouse.name}
+                        {getWarehouseLabel(warehouse.name)}
                       </option>
                     ))}
                   </select>
                 </label>
 
                 <label>
-                  Minimum Stock
+                  {t("items.form.minimumStock")}
                   <input
                     type="number"
                     min="0"
@@ -1673,12 +1700,12 @@ console.log(
                 </label>
 
                 <label>
-                  Quantity
+                  {t("items.form.quantity")}
                   <input
                     type="number"
                     min="0"
                     name="quantity"
-                    placeholder="Enter item quantity"
+                    placeholder={t("items.form.quantityPlaceholder")}
                     value={formData.quantity}
                     onChange={handleFormChange}
                     disabled={saving}
@@ -1691,15 +1718,15 @@ console.log(
               <div className="item-section-heading">
                 <span>2</span>
                 <div>
-                  <h3>Pictures for Item</h3>
-                  <p>Upload item pictures.</p>
+                  <h3>{t("items.form.picturesForItem")}</h3>
+                  <p>{t("items.form.uploadItemPictures")}</p>
                 </div>
               </div>
 
               <div className="item-images-area">
                 <label className="item-upload-box">
                   <FiImage />
-                  <strong>Upload Pictures</strong>
+                  <strong>{t("items.form.uploadPictures")}</strong>
                   <small>PNG, JPG or WEBP</small>
 
                   <input
@@ -1723,7 +1750,7 @@ console.log(
                       >
                         <img
                           src={image.preview}
-                          alt={`Item preview ${index + 1}`}
+                          alt={t("items.aria.itemPreview", { number: index + 1 })}
                         />
 
                         <button
@@ -1747,7 +1774,7 @@ console.log(
                 onClick={closeModal}
                 disabled={saving}
               >
-                Cancel
+                {t("items.cancel")}
               </button>
 
               <button
@@ -1756,10 +1783,10 @@ console.log(
                 disabled={saving}
               >
                 {saving
-                  ? "Saving..."
+                  ? t("items.saving")
                   : editingItemId
-                  ? "Update Item"
-                  : "Save Item"}
+                  ? t("items.updateItem")
+                  : t("items.saveItem")}
               </button>
             </div>
           </form>
@@ -1776,9 +1803,9 @@ console.log(
           >
             <div className="item-category-modal-header">
               <div>
-                <h2>Manage Categories</h2>
+                <h2>{t("items.categories.manageCategories")}</h2>
                 <p>
-                  Add, edit or delete item categories.
+                  {t("items.categories.subtitle")}
                 </p>
               </div>
 
@@ -1786,7 +1813,7 @@ console.log(
                 type="button"
                 onClick={closeCategoryModal}
                 disabled={savingCategory}
-                aria-label="Close category manager"
+                aria-label={t("items.categories.closeManager")}
               >
                 <FiX />
               </button>
@@ -1798,8 +1825,8 @@ console.log(
             >
               <label className="item-category-name-field">
                 {editingCategoryId
-                  ? "Edit Category"
-                  : "New Category"}
+                  ? t("items.categories.editCategory")
+                  : t("items.categories.newCategory")}
 
                 <input
                   type="text"
@@ -1807,7 +1834,7 @@ console.log(
                   onChange={(event) =>
                     setCategoryName(event.target.value)
                   }
-                  placeholder="Example: Plates"
+                  placeholder={t("items.categories.examplePlaceholder")}
                   autoFocus
                   disabled={savingCategory}
                 />
@@ -1821,7 +1848,7 @@ console.log(
                     onClick={cancelEditCategory}
                     disabled={savingCategory}
                   >
-                    Cancel Edit
+                    {t("items.categories.cancelEdit")}
                   </button>
                 )}
 
@@ -1831,10 +1858,10 @@ console.log(
                   disabled={savingCategory}
                 >
                   {savingCategory
-                    ? "Saving..."
+                    ? t("items.saving")
                     : editingCategoryId
-                    ? "Save Changes"
-                    : "Add Category"}
+                    ? t("items.categories.saveChanges")
+                    : t("items.categories.addCategory")}
                 </button>
               </div>
             </form>
@@ -1856,7 +1883,7 @@ console.log(
                           startEditCategory(category)
                         }
                         disabled={savingCategory}
-                        aria-label={`Edit ${category.name}`}
+                        aria-label={t("items.aria.editCategory", { name: category.name })}
                       >
                         <FiEdit2 />
                       </button>
@@ -1868,7 +1895,7 @@ console.log(
                           handleDeleteCategory(category)
                         }
                         disabled={savingCategory}
-                        aria-label={`Delete ${category.name}`}
+                        aria-label={t("items.aria.deleteCategory", { name: category.name })}
                       >
                         <FiTrash2 />
                       </button>
@@ -1877,7 +1904,7 @@ console.log(
                 ))
               ) : (
                 <p className="item-category-empty">
-                  No categories found.
+                  {t("items.categories.noCategories")}
                 </p>
               )}
             </div>
@@ -1889,7 +1916,7 @@ console.log(
                 onClick={closeCategoryModal}
                 disabled={savingCategory}
               >
-                Close
+                {t("items.close")}
               </button>
             </div>
           </div>

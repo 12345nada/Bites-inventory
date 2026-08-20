@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 
 import { useDialog } from "../context/DialogContext";
@@ -51,6 +52,7 @@ const emptyForm = {
 };
 
 export default function Suppliers() {
+  const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -129,7 +131,7 @@ export default function Suppliers() {
       showAlert({
         message:
           error.message ||
-          "Could not load suppliers.",
+          t("suppliers.errors.couldNotLoad"),
       });
     } finally {
       setLoading(false);
@@ -312,7 +314,7 @@ export default function Suppliers() {
   const openAddModal = () => {
     if (!canAdd) {
       showAlert({
-        message: "You do not have permission to add suppliers.",
+        message: t("suppliers.errors.noAddPermission"),
       });
       return;
     }
@@ -325,7 +327,7 @@ export default function Suppliers() {
   const openEditModal = (supplier) => {
     if (!canEdit) {
       showAlert({
-        message: "You do not have permission to edit suppliers.",
+        message: t("suppliers.errors.noEditPermission"),
       });
       return;
     }
@@ -380,10 +382,10 @@ export default function Suppliers() {
 
     if (!requiredPermission) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("suppliers.errors.permissionDenied"),
         message: editingSupplierId
-          ? "You do not have permission to edit suppliers."
-          : "You do not have permission to add suppliers.",
+          ? t("suppliers.errors.noEditPermission")
+          : t("suppliers.errors.noAddPermission"),
         type: "warning",
       });
 
@@ -409,7 +411,7 @@ export default function Suppliers() {
     if (hasEmptyField) {
       showAlert({
         message:
-          "Please complete all supplier fields.",
+          t("suppliers.errors.completeAllFields"),
       });
       return;
     }
@@ -459,7 +461,7 @@ export default function Suppliers() {
       showAlert({
         message:
           error.message ||
-          "Could not save supplier.",
+          t("suppliers.errors.couldNotSave"),
       });
     } finally {
       setSaving(false);
@@ -471,13 +473,13 @@ export default function Suppliers() {
   ) => {
     if (!canDelete) {
       showAlert({
-        message: "You do not have permission to delete suppliers.",
+        message: t("suppliers.errors.noDeletePermission"),
       });
       return;
     }
 
     const confirmed = await showConfirm({
-      message: "Are you sure you want to delete this supplier?",
+      message: t("suppliers.confirm.deleteSupplier"),
     });
 
     if (!confirmed) {
@@ -507,7 +509,7 @@ export default function Suppliers() {
       showAlert({
         message:
           error.message ||
-          "Could not delete supplier.",
+          t("suppliers.errors.couldNotDelete"),
       });
     }
   };
@@ -517,9 +519,9 @@ export default function Suppliers() {
   ) => {
     if (!canEdit) {
       await showAlert({
-        title: "Permission Denied",
+        title: t("suppliers.errors.permissionDenied"),
         message:
-          "You do not have permission to edit suppliers.",
+          t("suppliers.errors.noEditPermission"),
         type: "warning",
       });
 
@@ -553,7 +555,7 @@ export default function Suppliers() {
       showAlert({
         message:
           error.message ||
-          "Could not update supplier status.",
+          t("suppliers.errors.couldNotUpdateStatus"),
       });
     }
   };
@@ -570,11 +572,10 @@ export default function Suppliers() {
 
         <section className="suppliers-title-section">
           <div>
-            <h1>Suppliers</h1>
+            <h1>{t("suppliers.title")}</h1>
 
             <p>
-              Manage supplier contact
-              information
+              {t("suppliers.subtitle")}
             </p>
           </div>
 
@@ -584,7 +585,7 @@ export default function Suppliers() {
             onClick={openAddModal}
           >
             <FiPlus />
-            Add New Supplier
+            {t("suppliers.addNewSupplier")}
           </button>
         </section>
 
@@ -604,7 +605,7 @@ export default function Suppliers() {
                     setActiveTab(tab)
                   }
                 >
-                  {tab}
+                  {t(`suppliers.tabs.${tab === "All Suppliers" ? "all" : tab.toLowerCase()}`)}
                 </button>
               ))}
             </div>
@@ -614,7 +615,7 @@ export default function Suppliers() {
 
               <input
                 type="text"
-                placeholder="Search suppliers..."
+                placeholder={t("suppliers.searchPlaceholder")}
                 value={searchValue}
                 onChange={(event) =>
                   setSearchValue(
@@ -629,13 +630,13 @@ export default function Suppliers() {
             <table>
               <thead>
                 <tr>
-                  <th>Supplier</th>
-                  <th>Contact Person</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>Address</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{t("suppliers.table.supplier")}</th>
+                  <th>{t("suppliers.table.contactPerson")}</th>
+                  <th>{t("suppliers.table.phone")}</th>
+                  <th>{t("suppliers.table.email")}</th>
+                  <th>{t("suppliers.table.address")}</th>
+                  <th>{t("suppliers.table.status")}</th>
+                  <th>{t("suppliers.table.actions")}</th>
                 </tr>
               </thead>
 
@@ -646,7 +647,7 @@ export default function Suppliers() {
                       colSpan="7"
                       className="suppliers-empty-state"
                     >
-                      Loading suppliers...
+                      {t("suppliers.loading")}
                     </td>
                   </tr>
                 ) : paginatedSuppliers.length > 0 ? (
@@ -695,7 +696,7 @@ export default function Suppliers() {
                           <span
                             className={`supplier-status ${supplier.status.toLowerCase()}`}
                           >
-                            {supplier.status}
+                            {t(`suppliers.status.${supplier.status.toLowerCase()}`)}
                           </span>
                         </td>
 
@@ -708,7 +709,7 @@ export default function Suppliers() {
                                   supplier
                                 )
                               }
-                              aria-label={`Edit ${supplier.name}`}
+                              aria-label={t("suppliers.aria.editSupplier", { name: supplier.name })}
                             >
                               <FiEdit2 />
                             </button>
@@ -723,7 +724,7 @@ export default function Suppliers() {
                                     supplier.id
                                   )
                                 }
-                                aria-label={`More actions for ${supplier.name}`}
+                                aria-label={t("suppliers.aria.moreActions", { name: supplier.name })}
                               >
                                 <FiMoreVertical />
                               </button>
@@ -754,8 +755,8 @@ export default function Suppliers() {
 
                                     {supplier.status ===
                                     "Active"
-                                      ? "Deactivate"
-                                      : "Activate"}
+                                      ? t("suppliers.actions.deactivate")
+                                      : t("suppliers.actions.activate")}
                                   </button>
 
                                   <button
@@ -768,7 +769,7 @@ export default function Suppliers() {
                                     }
                                   >
                                     <FiTrash2 />
-                                    Delete
+                                    {t("suppliers.actions.delete")}
                                   </button>
                                 </div>
                               )}
@@ -784,8 +785,7 @@ export default function Suppliers() {
                       colSpan="7"
                       className="suppliers-empty-state"
                     >
-                      No suppliers match your
-                      search.
+                      {t("suppliers.noResults")}
                     </td>
                   </tr>
                 )}
@@ -795,7 +795,7 @@ export default function Suppliers() {
 
           <div className="suppliers-pagination">
             <p>
-              Showing{" "}
+              {t("suppliers.pagination.showing")} {" "}
               {filteredSuppliers.length === 0
                 ? 0
                 : (currentPage - 1) *
@@ -807,9 +807,9 @@ export default function Suppliers() {
                   suppliersPerPage,
                 filteredSuppliers.length
               )}{" "}
-              of{" "}
+              {t("suppliers.pagination.of")} {" "}
               {filteredSuppliers.length}{" "}
-              suppliers
+              {t("suppliers.pagination.suppliers")}
             </p>
 
             <div>
@@ -887,13 +887,12 @@ export default function Suppliers() {
               <div>
                 <h2>
                   {editingSupplierId
-                    ? "Edit Supplier"
-                    : "Add New Supplier"}
+                    ? t("suppliers.modal.editSupplier")
+                    : t("suppliers.addNewSupplier")}
                 </h2>
 
                 <p>
-                  Enter supplier contact
-                  information.
+                  {t("suppliers.modal.description")}
                 </p>
               </div>
 
@@ -907,7 +906,7 @@ export default function Suppliers() {
 
             <div className="supplier-modal-grid">
               <label>
-                Supplier Name
+                {t("suppliers.modal.supplierName")}
                 <input
                   type="text"
                   name="name"
@@ -918,7 +917,7 @@ export default function Suppliers() {
               </label>
 
               <label>
-                Contact Person
+                {t("suppliers.modal.contactPerson")}
                 <input
                   type="text"
                   name="contactPerson"
@@ -931,7 +930,7 @@ export default function Suppliers() {
               </label>
 
               <label>
-                Phone Number
+                {t("suppliers.modal.phoneNumber")}
                 <input
                   type="text"
                   name="phone"
@@ -942,7 +941,7 @@ export default function Suppliers() {
               </label>
 
               <label>
-                Email
+                {t("suppliers.modal.email")}
                 <input
                   type="email"
                   name="email"
@@ -953,29 +952,29 @@ export default function Suppliers() {
               </label>
 
               <label className="supplier-full-field">
-                Address
+                {t("suppliers.modal.address")}
                 <input
                   type="text"
                   name="address"
-                  placeholder="Supplier address"
+                  placeholder={t("suppliers.modal.addressPlaceholder")}
                   value={formData.address}
                   onChange={handleFormChange}
                 />
               </label>
 
               <label className="supplier-full-field">
-                Status
+                {t("suppliers.modal.status")}
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleFormChange}
                 >
                   <option value="Active">
-                    Active
+                    {t("suppliers.status.active")}
                   </option>
 
                   <option value="Inactive">
-                    Inactive
+                    {t("suppliers.status.inactive")}
                   </option>
                 </select>
               </label>
@@ -988,7 +987,7 @@ export default function Suppliers() {
                 onClick={closeModal}
                 disabled={saving}
               >
-                Cancel
+                {t("suppliers.modal.cancel")}
               </button>
 
               <button
@@ -997,10 +996,10 @@ export default function Suppliers() {
                 disabled={saving}
               >
                 {saving
-                  ? "Saving..."
+                  ? t("suppliers.modal.saving")
                   : editingSupplierId
-                    ? "Save Changes"
-                    : "Save Supplier"}
+                    ? t("suppliers.modal.saveChanges")
+                    : t("suppliers.modal.saveSupplier")}
               </button>
             </div>
           </form>
