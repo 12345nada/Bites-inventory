@@ -21,7 +21,7 @@ import {
 
 import {
   getStaffPayments,
-  markStaffPaymentPaid,
+  recordStaffPayment,
 } from "../services/staffPaymentService";
 
 import "../styles/dashboard.css";
@@ -125,6 +125,17 @@ export default function Staff() {
     selectedEventDetails,
     setSelectedEventDetails,
   ] = useState(null);
+
+  const [
+    selectedStaffPayment,
+    setSelectedStaffPayment,
+  ] = useState(null);
+
+  const [paymentDrafts, setPaymentDrafts] =
+    useState({});
+
+  const [paymentSavingKey, setPaymentSavingKey] =
+    useState(null);
 
   const [loading, setLoading] =
     useState(true);
@@ -388,22 +399,79 @@ export default function Staff() {
     [waiters, editingWaiterId]
   );
 
-  const filteredPayments = useMemo(() => {
+  const paymentSummaries = useMemo(() => {
+    const grouped = new Map();
+
+    payments.forEach((payment) => {
+      const key = Number(payment.staffId);
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          staffId: key,
+          staffName: payment.staffName,
+          staffType: payment.staffType,
+          staffRole: payment.staffRole,
+          totalAmount: 0,
+          paidAmount: 0,
+          remainingAmount: 0,
+          events: [],
+        });
+      }
+
+      const summary = grouped.get(key);
+      const totalAmount = Number(payment.amount || 0);
+      const paidAmount = Math.min(
+        totalAmount,
+        Number(payment.paidAmount || 0)
+      );
+      const remainingAmount = Math.max(
+        totalAmount - paidAmount,
+        0
+      );
+
+      summary.totalAmount += totalAmount;
+      summary.paidAmount += paidAmount;
+      summary.remainingAmount += remainingAmount;
+      summary.events.push({
+        ...payment,
+        paidAmount,
+        remainingAmount,
+      });
+    });
+
+    return Array.from(grouped.values()).map(
+      (summary) => ({
+        ...summary,
+        status:
+          summary.remainingAmount <= 0
+            ? "Paid"
+            : summary.paidAmount > 0
+              ? "Partial"
+              : "Pending",
+      })
+    );
+  }, [payments]);
+
+  const filteredPaymentSummaries = useMemo(() => {
     const search =
       searchValue.trim().toLowerCase();
 
-    return payments.filter((payment) => {
+    return paymentSummaries.filter((summary) => {
       const matchesSearch =
         search === "" ||
         [
-          payment.staffName,
-          payment.staffType,
-          payment.staffRole,
-          payment.eventCode,
-          payment.eventName,
-          payment.eventDate,
-          payment.amount,
-          payment.status,
+          summary.staffName,
+          summary.staffType,
+          summary.staffRole,
+          summary.totalAmount,
+          summary.paidAmount,
+          summary.remainingAmount,
+          summary.status,
+          ...summary.events.flatMap((payment) => [
+            payment.eventCode,
+            payment.eventName,
+            payment.eventDate,
+          ]),
         ].some((value) =>
           String(value || "")
             .toLowerCase()
@@ -412,68 +480,141 @@ export default function Staff() {
 
       const matchesStatus =
         statusFilter === "All Statuses" ||
-        payment.status === statusFilter;
+        summary.status === statusFilter;
 
-      return (
-        matchesSearch &&
-        matchesStatus
-      );
+      return matchesSearch && matchesStatus;
     });
   }, [
-    payments,
+    paymentSummaries,
     searchValue,
     statusFilter,
   ]);
 
   const pendingPaymentTotal = useMemo(
     () =>
-      payments
-        .filter(
-          (payment) =>
-            payment.status !== "Paid"
-        )
-        .reduce(
-          (total, payment) =>
-            total +
-            Number(payment.amount || 0),
-          0
-        ),
-    [payments]
+      paymentSummaries.reduce(
+        (total, summary) =>
+          total + Number(summary.remainingAmount || 0),
+        0
+      ),
+    [paymentSummaries]
   );
 
-  const handleMarkPaymentPaid = async (
+  const handleRecordPayment = async (
     payment
   ) => {
-    const confirmed = await showConfirm({
-      message: t("staffPage.confirm.markPaid", { name: payment.staffName, eventCode: payment.eventCode }),
-    });
+    const key = `${payment.staffId}-${payment.eventId}`;
+    const enteredAmount = Number(
+      paymentDrafts[key] || 0
+    );
+    const remainingAmount = Number(
+      payment.remainingAmount ??
+        Math.max(
+          Number(payment.amount || 0) -
+            Number(payment.paidAmount || 0),
+          0
+        )
+    );
 
-    if (!confirmed) {
+    if (!enteredAmount || enteredAmount <= 0) {
+      await showAlert({
+        message: "Enter a payment amount greater than 0.",
+      });
+      return;
+    }
+
+    if (enteredAmount > remainingAmount) {
+      await showAlert({
+        message: `Payment cannot exceed the remaining ${remainingAmount.toLocaleString(
+          "en-US"
+        )} EGP.`,
+      });
       return;
     }
 
     try {
-      const updated =
-        await markStaffPaymentPaid(
-          payment
-        );
+      setPaymentSavingKey(key);
+
+      const updated = await recordStaffPayment(
+        payment,
+        enteredAmount
+      );
 
       setPayments((current) =>
         current.map((item) =>
-          item.staffId ===
-            updated.staffId &&
-          item.eventId ===
-            updated.eventId
+          Number(item.staffId) ===
+              Number(updated.staffId) &&
+            Number(item.eventId) ===
+              Number(updated.eventId)
             ? updated
             : item
         )
       );
+
+      setPaymentDrafts((current) => ({
+        ...current,
+        [key]: "",
+      }));
+
+      setSelectedStaffPayment((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const refreshedEvents = current.events.map(
+          (item) =>
+            Number(item.staffId) ===
+                Number(updated.staffId) &&
+              Number(item.eventId) ===
+                Number(updated.eventId)
+              ? {
+                  ...updated,
+                  remainingAmount: Math.max(
+                    Number(updated.amount || 0) -
+                      Number(updated.paidAmount || 0),
+                    0
+                  ),
+                }
+              : item
+        );
+
+        const totalAmount = refreshedEvents.reduce(
+          (sum, item) =>
+            sum + Number(item.amount || 0),
+          0
+        );
+        const paidAmount = refreshedEvents.reduce(
+          (sum, item) =>
+            sum + Number(item.paidAmount || 0),
+          0
+        );
+        const remainingAmount = Math.max(
+          totalAmount - paidAmount,
+          0
+        );
+
+        return {
+          ...current,
+          events: refreshedEvents,
+          totalAmount,
+          paidAmount,
+          remainingAmount,
+          status:
+            remainingAmount <= 0
+              ? "Paid"
+              : paidAmount > 0
+                ? "Partial"
+                : "Pending",
+        };
+      });
     } catch (error) {
       showAlert({
         message:
           error.message ||
-          t("staffPage.errors.couldNotMarkPaid"),
+          "Could not record payment.",
       });
+    } finally {
+      setPaymentSavingKey(null);
     }
   };
 
@@ -1064,6 +1205,9 @@ export default function Staff() {
                     <option value="Pending">
                       {t("staffPage.status.pending")}
                     </option>
+                    <option value="Partial">
+                      Partial
+                    </option>
                     <option value="Paid">
                       {t("staffPage.status.paid")}
                     </option>
@@ -1436,11 +1580,11 @@ export default function Staff() {
                 <table>
                   <thead>
                     <tr>
-                      <th>{t("staffPage.table.payTo")}</th>
+                      <th>Staff</th>
                       <th>{t("staffPage.table.type")}</th>
-                      <th>{t("staffPage.table.event")}</th>
-                      <th>{t("staffPage.table.date")}</th>
-                      <th>{t("staffPage.table.amount")}</th>
+                      <th>Total Amount</th>
+                      <th>Paid</th>
+                      <th>Remaining</th>
                       <th>{t("staffPage.table.status")}</th>
                       <th>{t("staffPage.table.action")}</th>
                     </tr>
@@ -1456,17 +1600,15 @@ export default function Staff() {
                           {t("staffPage.loadingPayments")}
                         </td>
                       </tr>
-                    ) : filteredPayments.length >
+                    ) : filteredPaymentSummaries.length >
                       0 ? (
-                      filteredPayments.map(
-                        (payment) => (
-                          <tr
-                            key={`${payment.staffId}-${payment.eventId}`}
-                          >
+                      filteredPaymentSummaries.map(
+                        (summary) => (
+                          <tr key={summary.staffId}>
                             <td>
                               <div className="staff-name-cell">
                                 <div className="staff-row-icon">
-                                  {payment.staffType ===
+                                  {summary.staffType ===
                                   "Driver" ? (
                                     <FiTruck />
                                   ) : (
@@ -1475,87 +1617,58 @@ export default function Staff() {
                                 </div>
                                 <div>
                                   <strong>
-                                    {payment.staffName}
+                                    {summary.staffName}
                                   </strong>
                                   <span>
-                                    {payment.staffRole}
+                                    {summary.staffRole}
                                   </span>
                                 </div>
                               </div>
                             </td>
                             <td>
-                              {payment.staffType === "Driver" ? t("staffPage.values.driver") : t("staffPage.values.waiter")}
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="staff-payment-event-button"
-                                onClick={() =>
-                                  setSelectedEventDetails(
-                                    {
-                                      ...payment.eventDetails,
-                                      selectedPaymentStatus:
-                                        payment.status,
-                                      selectedPaymentPaidAt:
-                                        payment.paidAt,
-                                    }
-                                  )
-                                }
-                              >
-                                <strong>
-                                  {payment.eventCode}
-                                </strong>
-                                <span>
-                                  {payment.eventName}
-                                </span>
-                              </button>
-                            </td>
-                            <td>
-                              {formatDate(
-                                payment.eventDate
-                              )}
+                              {summary.staffType === "Driver"
+                                ? t("staffPage.values.driver")
+                                : t("staffPage.values.waiter")}
                             </td>
                             <td>
                               <strong>
                                 {Number(
-                                  payment.amount ||
-                                    0
-                                ).toLocaleString(
-                                  "en-US",
-                                  {
-                                    maximumFractionDigits: 2,
-                                  }
-                                )}{" "}
-                                {t("staffPage.egp")}
+                                  summary.totalAmount || 0
+                                ).toLocaleString("en-US")} {t("staffPage.egp")}
+                              </strong>
+                            </td>
+                            <td>
+                              {Number(
+                                summary.paidAmount || 0
+                              ).toLocaleString("en-US")} {t("staffPage.egp")}
+                            </td>
+                            <td>
+                              <strong>
+                                {Number(
+                                  summary.remainingAmount || 0
+                                ).toLocaleString("en-US")} {t("staffPage.egp")}
                               </strong>
                             </td>
                             <td>
                               <span
                                 className={`staff-payment-status ${String(
-                                  payment.status
+                                  summary.status
                                 ).toLowerCase()}`}
                               >
-                                {payment.status === "Paid" ? t("staffPage.status.paid") : payment.status === "Pending" ? t("staffPage.status.pending") : payment.status}
+                                {summary.status}
                               </span>
                             </td>
                             <td>
                               <button
                                 type="button"
                                 className="staff-payment-button"
-                                disabled={
-                                  payment.status ===
-                                  "Paid"
-                                }
                                 onClick={() =>
-                                  handleMarkPaymentPaid(
-                                    payment
+                                  setSelectedStaffPayment(
+                                    summary
                                   )
                                 }
                               >
-                                {payment.status ===
-                                "Paid"
-                                  ? t("staffPage.status.paid")
-                                  : t("staffPage.actions.markAsPaid")}
+                                View / Pay
                               </button>
                             </td>
                           </tr>
@@ -2275,6 +2388,184 @@ export default function Staff() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {selectedStaffPayment && (
+        <div
+          className="staff-modal-overlay"
+          onMouseDown={() =>
+            setSelectedStaffPayment(null)
+          }
+        >
+          <div
+            className="staff-modal staff-payment-details-modal"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="staff-modal-header">
+              <div>
+                <h2>{selectedStaffPayment.staffName}</h2>
+                <p>Payment summary for all completed events</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedStaffPayment(null)
+                }
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <div className="staff-payment-total-grid">
+              <div>
+                <span>Total Amount</span>
+                <strong>
+                  {Number(
+                    selectedStaffPayment.totalAmount || 0
+                  ).toLocaleString("en-US")} EGP
+                </strong>
+              </div>
+              <div>
+                <span>Paid</span>
+                <strong>
+                  {Number(
+                    selectedStaffPayment.paidAmount || 0
+                  ).toLocaleString("en-US")} EGP
+                </strong>
+              </div>
+              <div>
+                <span>Remaining</span>
+                <strong>
+                  {Number(
+                    selectedStaffPayment.remainingAmount || 0
+                  ).toLocaleString("en-US")} EGP
+                </strong>
+              </div>
+              <div>
+                <span>Status</span>
+                <strong>
+                  {selectedStaffPayment.status}
+                </strong>
+              </div>
+            </div>
+
+            <div className="staff-payment-events-wrapper">
+              <table className="staff-payment-events-table">
+                <thead>
+                  <tr>
+                    <th>Event</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Paid</th>
+                    <th>Remaining</th>
+                    <th>Status</th>
+                    <th>Payment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedStaffPayment.events.map(
+                    (payment) => {
+                      const key = `${payment.staffId}-${payment.eventId}`;
+                      const remaining = Math.max(
+                        Number(payment.amount || 0) -
+                          Number(payment.paidAmount || 0),
+                        0
+                      );
+
+                      return (
+                        <tr key={key}>
+                          <td>
+                            <button
+                              type="button"
+                              className="staff-payment-event-button"
+                              onClick={() =>
+                                setSelectedEventDetails({
+                                  ...payment.eventDetails,
+                                  selectedPaymentStatus:
+                                    payment.status,
+                                  selectedPaymentPaidAt:
+                                    payment.paidAt,
+                                })
+                              }
+                            >
+                              <strong>{payment.eventCode}</strong>
+                              <span>{payment.eventName}</span>
+                            </button>
+                          </td>
+                          <td>{formatDate(payment.eventDate)}</td>
+                          <td>
+                            {Number(payment.amount || 0).toLocaleString("en-US")} EGP
+                          </td>
+                          <td>
+                            {Number(payment.paidAmount || 0).toLocaleString("en-US")} EGP
+                          </td>
+                          <td>
+                            <strong>
+                              {remaining.toLocaleString("en-US")} EGP
+                            </strong>
+                          </td>
+                          <td>
+                            <span
+                              className={`staff-payment-status ${String(
+                                payment.status
+                              ).toLowerCase()}`}
+                            >
+                              {payment.status}
+                            </span>
+                          </td>
+                          <td>
+                            {remaining > 0 ? (
+                              <div className="staff-payment-entry">
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  max={remaining}
+                                  step="0.01"
+                                  placeholder="Amount"
+                                  value={paymentDrafts[key] || ""}
+                                  onChange={(event) =>
+                                    setPaymentDrafts((current) => ({
+                                      ...current,
+                                      [key]: event.target.value,
+                                    }))
+                                  }
+                                />
+                                <button
+                                  type="button"
+                                  className="staff-payment-button"
+                                  disabled={
+                                    paymentSavingKey === key
+                                  }
+                                  onClick={() =>
+                                    handleRecordPayment({
+                                      ...payment,
+                                      remainingAmount: remaining,
+                                    })
+                                  }
+                                >
+                                  {paymentSavingKey === key
+                                    ? "Saving..."
+                                    : "Pay"}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="staff-payment-paid-label">
+                                Paid
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 

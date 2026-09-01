@@ -16,6 +16,24 @@ const isCompletedEvent = (event) => {
   return new Date() > endDateTime;
 };
 
+const getPaymentStatus = (amount, paidAmount) => {
+  const total = Number(amount || 0);
+  const paid = Math.min(
+    Math.max(Number(paidAmount || 0), 0),
+    total
+  );
+
+  if (total <= 0 || paid >= total) {
+    return "Paid";
+  }
+
+  if (paid > 0) {
+    return "Partial";
+  }
+
+  return "Pending";
+};
+
 export async function getStaffPayments() {
   const [
     eventsResult,
@@ -74,6 +92,7 @@ export async function getStaffPayments() {
         staff_id,
         event_id,
         amount,
+        paid_amount,
         status,
         paid_at,
         created_at
@@ -216,8 +235,7 @@ export async function getStaffPayments() {
         event.location || "",
       area: event.area || "",
       branch: event.branch || "",
-      waiters:
-        eventWaiterDetails,
+      waiters: eventWaiterDetails,
       waiterTotal,
       driver: driver
         ? {
@@ -283,6 +301,16 @@ export async function getStaffPayments() {
             )}`
           );
 
+        const totalAmount = Number(
+          saved?.amount ?? amount
+        );
+        const paidAmount = Number(
+          saved?.paid_amount ??
+            (saved?.status === "Paid"
+              ? totalAmount
+              : 0)
+        );
+
         payments.push({
           id:
             saved?.id ||
@@ -304,11 +332,19 @@ export async function getStaffPayments() {
             event.event_type || "Event",
           eventDate:
             event.event_date || "",
-          amount: Number(
-            saved?.amount ?? amount
+          amount: totalAmount,
+          paidAmount: Math.min(
+            paidAmount,
+            totalAmount
           ),
-          status:
-            saved?.status || "Pending",
+          remainingAmount: Math.max(
+            totalAmount - paidAmount,
+            0
+          ),
+          status: getPaymentStatus(
+            totalAmount,
+            paidAmount
+          ),
           paidAt:
             saved?.paid_at || null,
           eventDetails,
@@ -334,6 +370,18 @@ export async function getStaffPayments() {
             )}`
           );
 
+        const totalAmount = Number(
+          saved?.amount ??
+            event.driver_rate_at_event ??
+            0
+        );
+        const paidAmount = Number(
+          saved?.paid_amount ??
+            (saved?.status === "Paid"
+              ? totalAmount
+              : 0)
+        );
+
         payments.push({
           id:
             saved?.id ||
@@ -355,13 +403,19 @@ export async function getStaffPayments() {
             event.event_type || "Event",
           eventDate:
             event.event_date || "",
-          amount: Number(
-            saved?.amount ??
-              event.driver_rate_at_event ??
-              0
+          amount: totalAmount,
+          paidAmount: Math.min(
+            paidAmount,
+            totalAmount
           ),
-          status:
-            saved?.status || "Pending",
+          remainingAmount: Math.max(
+            totalAmount - paidAmount,
+            0
+          ),
+          status: getPaymentStatus(
+            totalAmount,
+            paidAmount
+          ),
           paidAt:
             saved?.paid_at || null,
           eventDetails,
@@ -373,9 +427,40 @@ export async function getStaffPayments() {
   return payments;
 }
 
-export async function markStaffPaymentPaid(
-  payment
+export async function recordStaffPayment(
+  payment,
+  paymentAmount
 ) {
+  const totalAmount = Number(
+    payment.amount || 0
+  );
+  const currentPaid = Number(
+    payment.paidAmount || 0
+  );
+  const amountToPay = Number(
+    paymentAmount || 0
+  );
+
+  if (amountToPay <= 0) {
+    throw new Error(
+      "Payment amount must be greater than 0."
+    );
+  }
+
+  const nextPaid =
+    currentPaid + amountToPay;
+
+  if (nextPaid > totalAmount) {
+    throw new Error(
+      "Payment amount cannot exceed the remaining balance."
+    );
+  }
+
+  const nextStatus = getPaymentStatus(
+    totalAmount,
+    nextPaid
+  );
+
   const { data, error } = await supabase
     .from("staff_payments")
     .upsert(
@@ -384,11 +469,13 @@ export async function markStaffPaymentPaid(
           Number(payment.staffId),
         event_id:
           Number(payment.eventId),
-        amount:
-          Number(payment.amount || 0),
-        status: "Paid",
+        amount: totalAmount,
+        paid_amount: nextPaid,
+        status: nextStatus,
         paid_at:
-          new Date().toISOString(),
+          nextStatus === "Paid"
+            ? new Date().toISOString()
+            : null,
       },
       {
         onConflict:
@@ -400,6 +487,7 @@ export async function markStaffPaymentPaid(
       staff_id,
       event_id,
       amount,
+      paid_amount,
       status,
       paid_at
     `)
@@ -412,10 +500,17 @@ export async function markStaffPaymentPaid(
   return {
     ...payment,
     id: data.id,
-    amount:
-      Number(data.amount || 0),
+    amount: Number(data.amount || 0),
+    paidAmount: Number(
+      data.paid_amount || 0
+    ),
+    remainingAmount: Math.max(
+      Number(data.amount || 0) -
+        Number(data.paid_amount || 0),
+      0
+    ),
     status:
-      data.status || "Paid",
+      data.status || nextStatus,
     paidAt: data.paid_at,
   };
 }

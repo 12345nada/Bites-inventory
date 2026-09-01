@@ -37,7 +37,7 @@ import {
 import {
   useDialog,
 } from "../../context/DialogContext";
-
+import BitesLogo from "../../assets/images/bites-logo.png";
 const menuItems = [
   ["Dashboard", "Dashboard", FiGrid, "/dashboard", "dashboard"],
   ["Events", "Events", FiCalendar, "/events", "events"],
@@ -344,7 +344,11 @@ export default function Sidebar({
               }
             }}
           >
-            bites
+            <img
+  src={BitesLogo}
+  alt="Bites"
+  className="dashboard-logo-image"
+/>
           </button>
 
           <nav

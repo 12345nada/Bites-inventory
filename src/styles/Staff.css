@@ -950,3 +950,99 @@
 html[dir="rtl"] .staff-main {
   margin: 14px 0 14px 14px;
 }
+
+/* Staff payment totals by employee */
+.staff-payment-status.partial {
+  background: #fff2c9;
+  color: #8a6100;
+}
+
+.staff-payment-details-modal {
+  width: min(1120px, calc(100% - 40px));
+}
+
+.staff-payment-total-grid {
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.staff-payment-total-grid > div {
+  min-height: 72px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #f0ddcf;
+  border-radius: 10px;
+  background: #fffaf6;
+}
+
+.staff-payment-total-grid span {
+  color: #81766e;
+  font-size: 9px;
+}
+
+.staff-payment-total-grid strong {
+  color: #713006;
+  font-size: 15px;
+}
+
+.staff-payment-events-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #f0ddcf;
+  border-radius: 12px;
+}
+
+.staff-payment-events-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+.staff-payment-events-table th,
+.staff-payment-events-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #f0e8e2;
+  font-size: 9px;
+}
+
+.staff-payment-events-table thead {
+  background: linear-gradient(90deg, #fffaf6, #fceddf);
+}
+
+.staff-payment-entry {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.staff-payment-entry input {
+  width: 100px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #eadbd0;
+  border-radius: 7px;
+  outline: none;
+}
+
+.staff-payment-paid-label {
+  color: #58704d;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .staff-payment-total-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 500px) {
+  .staff-payment-total-grid {
+    grid-template-columns: 1fr;
+  }
+}

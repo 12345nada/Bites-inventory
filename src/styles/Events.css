@@ -1430,17 +1430,17 @@ body  {
 .event-details-info-grid {
   display: grid;
   grid-template-columns:
-    repeat(4, minmax(0, 1fr));
-  gap: 10px;
+    repeat(9, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .event-details-info-grid > div {
-  min-height: 72px;
-  padding: 12px;
+  min-height: 42px;
+  padding: 5px 7px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
+  gap: 2px;
   border: 1px solid #f0ddcf;
   border-radius: 10px;
   background: #fffaf6;

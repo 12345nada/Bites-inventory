@@ -652,7 +652,13 @@ function Events() {
           event.id
         );
 
-      setEventDetailsSheet(details);
+      setEventDetailsSheet({
+        ...details,
+        departureTime:
+          details.departureTime ||
+          event.departureTime ||
+          "",
+      });
     } catch (error) {
       console.error(
         "Error loading event details sheet:",
@@ -692,142 +698,236 @@ function Events() {
       format: "a4",
     });
 
-    document.setTextColor(
-      113,
-      48,
-      6
-    );
-    document.setFontSize(20);
-    document.text(
-      "bites",
-      14,
-      14
-    );
+    const pageWidth =
+      document.internal.pageSize.getWidth();
 
-    document.setTextColor(
-      33,
-      27,
-      23
-    );
+    const left = 14;
+    const right = 14;
+    const contentWidth =
+      pageWidth - left - right;
+
+    const brown = [113, 48, 6];
+    const dark = [33, 27, 23];
+    const muted = [108, 97, 89];
+    const border = [240, 221, 207];
+    const soft = [255, 250, 246];
+    const softHeader = [255, 245, 237];
+
+    document.setTextColor(...dark);
     document.setFontSize(17);
+    document.setFont(
+      "helvetica",
+      "bold"
+    );
     document.text(
       "Event Details Sheet",
-      14,
-      23
+      left,
+      16
     );
 
-    document.setFontSize(8);
-    document.setTextColor(
-      108,
-      97,
-      89
+    document.setFont(
+      "helvetica",
+      "normal"
     );
+    document.setFontSize(8);
+    document.setTextColor(...muted);
     document.text(
       "Complete event, staff and payment details",
-      14,
-      29
+      left,
+      22
     );
 
-    autoTable(document, {
-      startY: 34,
-      theme: "grid",
-      body: [
-        [
-          "Event Code",
-          details.eventCode || "-",
-          "Event Name",
-          details.eventName || "-",
-        ],
-        [
-          "Client",
-          details.client || "-",
-          "Date",
-          formatDate(details.date),
-        ],
-        [
-          "Branch",
-          details.branch || "-",
-          "Location",
-          `${details.location || "-"}${
-            details.area
-              ? ` - ${details.area}`
-              : ""
-          }`,
-        ],
-        [
-          "Start Time",
-          formatTime(
-            details.startTime
-          ),
-          "End Time",
-          formatTime(details.endTime),
-        ],
-        [
-          "Status",
-          details.status || "-",
-          "Drinks Included",
-          details.hasDrinks
-            ? "Yes"
-            : "No",
-        ],
+    const infoCards = [
+      [
+        "Event Code",
+        details.eventCode || "-",
       ],
-      styles: {
-        fontSize: 8,
-        cellPadding: 2.5,
-        lineColor: [
-          234,
-          219,
-          208,
-        ],
-        lineWidth: 0.2,
-      },
-      columnStyles: {
-        0: {
-          fontStyle: "bold",
-          fillColor: [
-            255,
-            248,
-            242,
-          ],
-        },
-        2: {
-          fontStyle: "bold",
-          fillColor: [
-            255,
-            248,
-            242,
-          ],
-        },
-      },
-      margin: {
-        left: 14,
-        right: 14,
-      },
+      [
+        "Event Name",
+        details.eventName || "-",
+      ],
+      [
+        "Client",
+        details.client || "-",
+      ],
+      [
+        "Date",
+        formatDate(details.date),
+      ],
+      [
+        "Branch",
+        details.branch || "-",
+      ],
+      [
+        "Location",
+        `${details.location || "-"}${
+          details.area
+            ? ` - ${details.area}`
+            : ""
+        }`,
+      ],
+      [
+        "Departure Time",
+        formatTime(
+          details.departureTime
+        ),
+      ],
+      [
+        "Start Time",
+        formatTime(
+          details.startTime
+        ),
+      ],
+      [
+        "End Time",
+        formatTime(details.endTime),
+      ],
+    ];
+
+    const infoGap = 2;
+    const infoCardWidth =
+      (
+        contentWidth -
+        infoGap *
+          (infoCards.length - 1)
+      ) /
+      infoCards.length;
+
+    const infoY = 28;
+    const infoHeight = 16;
+
+    infoCards.forEach(
+      ([label, value], index) => {
+        const x =
+          left +
+          index *
+            (infoCardWidth + infoGap);
+
+        document.setDrawColor(...border);
+        document.setFillColor(...soft);
+        document.roundedRect(
+          x,
+          infoY,
+          infoCardWidth,
+          infoHeight,
+          2,
+          2,
+          "FD"
+        );
+
+        document.setFont(
+          "helvetica",
+          "normal"
+        );
+        document.setTextColor(...muted);
+        document.setFontSize(5.5);
+        document.text(
+          label,
+          x + 2.5,
+          infoY + 5
+        );
+
+        document.setFont(
+          "helvetica",
+          "bold"
+        );
+        document.setTextColor(...dark);
+        document.setFontSize(7);
+
+        const valueLines =
+          document.splitTextToSize(
+            String(value || "-"),
+            infoCardWidth - 5
+          );
+
+        document.text(
+          valueLines.slice(0, 2),
+          x + 2.5,
+          infoY + 10.5
+        );
+      }
+    );
+
+    const drawSectionHeader = ({
+      y,
+      title,
+      subtitle,
+      total,
+    }) => {
+      document.setDrawColor(...border);
+      document.setFillColor(
+        255,
+        255,
+        255
+      );
+      document.roundedRect(
+        left,
+        y,
+        contentWidth,
+        14,
+        2.5,
+        2.5,
+        "FD"
+      );
+
+      document.setFont(
+        "helvetica",
+        "bold"
+      );
+      document.setTextColor(...dark);
+      document.setFontSize(10);
+      document.text(
+        title,
+        left + 4,
+        y + 5.5
+      );
+
+      document.setFont(
+        "helvetica",
+        "normal"
+      );
+      document.setTextColor(...muted);
+      document.setFontSize(6);
+      document.text(
+        subtitle,
+        left + 4,
+        y + 10
+      );
+
+      document.setFont(
+        "helvetica",
+        "bold"
+      );
+      document.setTextColor(...brown);
+      document.setFontSize(9);
+      document.text(
+        `${Number(
+          total || 0
+        ).toLocaleString(
+          "en-US"
+        )} EGP`,
+        pageWidth - right - 4,
+        y + 7.5,
+        {
+          align: "right",
+        }
+      );
+    };
+
+    const waitersSectionY =
+      infoY + infoHeight + 5;
+
+    drawSectionHeader({
+      y: waitersSectionY,
+      title: "Waiters",
+      subtitle:
+        "Assigned waiters and saved event rates.",
+      total: details.waiterTotal,
     });
-
-    const waitersTitleY =
-      (document.lastAutoTable
-        ?.finalY || 34) + 8;
-
-    document.setTextColor(
-      33,
-      27,
-      23
-    );
-    document.setFontSize(12);
-    document.text(
-      `Waiters — ${Number(
-        details.waiterTotal || 0
-      ).toLocaleString(
-        "en-US"
-      )} EGP`,
-      14,
-      waitersTitleY
-    );
 
     autoTable(document, {
       startY:
-        waitersTitleY + 3,
+        waitersSectionY + 14,
       head: [[
         "Name",
         "Role",
@@ -868,60 +968,53 @@ function Events() {
               "",
               "",
             ]],
+      theme: "grid",
       styles: {
-        fontSize: 7.5,
+        fontSize: 6.5,
         cellPadding: 2,
+        textColor: dark,
+        lineColor: border,
+        lineWidth: 0.15,
         overflow: "linebreak",
       },
       headStyles: {
-        fillColor: [
-          113,
-          48,
-          6,
-        ],
-        textColor: [
-          255,
-          255,
-          255,
-        ],
+        fillColor: softHeader,
+        textColor: dark,
+        fontStyle: "bold",
+        lineColor: border,
+        lineWidth: 0.15,
       },
       alternateRowStyles: {
         fillColor: [
           255,
-          248,
-          242,
+          255,
+          255,
         ],
       },
       margin: {
-        left: 14,
-        right: 14,
+        left,
+        right,
       },
+      tableLineColor: border,
+      tableLineWidth: 0.15,
     });
 
-    const driverTitleY =
+    const driverSectionY =
       (document.lastAutoTable
         ?.finalY ||
-        waitersTitleY) + 8;
+        waitersSectionY + 25) + 5;
 
-    document.setFontSize(12);
-    document.setTextColor(
-      33,
-      27,
-      23
-    );
-    document.text(
-      `Driver — ${Number(
-        details.driverTotal || 0
-      ).toLocaleString(
-        "en-US"
-      )} EGP`,
-      14,
-      driverTitleY
-    );
+    drawSectionHeader({
+      y: driverSectionY,
+      title: "Driver",
+      subtitle:
+        "Driver assignment and event payment.",
+      total: details.driverTotal,
+    });
 
     autoTable(document, {
       startY:
-        driverTitleY + 3,
+        driverSectionY + 14,
       head: [[
         "Name",
         "Role",
@@ -947,91 +1040,122 @@ function Events() {
             )} EGP`,
           ]]
         : [[
-            "No driver assigned",
+            "No driver assigned to this event.",
             "",
             "",
             "",
             "",
           ]],
+      theme: "grid",
       styles: {
-        fontSize: 7.5,
+        fontSize: 6.5,
         cellPadding: 2,
+        textColor: dark,
+        lineColor: border,
+        lineWidth: 0.15,
       },
       headStyles: {
-        fillColor: [
-          113,
-          48,
-          6,
-        ],
-        textColor: [
-          255,
-          255,
-          255,
-        ],
-      },
-      alternateRowStyles: {
-        fillColor: [
-          255,
-          248,
-          242,
-        ],
+        fillColor: softHeader,
+        textColor: dark,
+        fontStyle: "bold",
+        lineColor: border,
+        lineWidth: 0.15,
       },
       margin: {
-        left: 14,
-        right: 14,
+        left,
+        right,
       },
+      tableLineColor: border,
+      tableLineWidth: 0.15,
     });
 
     const totalsY =
       (document.lastAutoTable
         ?.finalY ||
-        driverTitleY) + 10;
+        driverSectionY + 25) + 5;
 
-    document.setFontSize(9);
-    document.setTextColor(
-      80,
-      72,
-      66
+    const totalGap = 3;
+    const totalCardWidth =
+      (
+        contentWidth -
+        totalGap * 2
+      ) / 3;
+
+    const totalCards = [
+      [
+        "Waiters Total",
+        details.waiterTotal || 0,
+        false,
+      ],
+      [
+        "Driver Total",
+        details.driverTotal || 0,
+        false,
+      ],
+      [
+        "Total Event Staff Cost",
+        details.totalStaffCost || 0,
+        true,
+      ],
+    ];
+
+    totalCards.forEach(
+      ([label, value, highlight], index) => {
+        const x =
+          left +
+          index *
+            (
+              totalCardWidth +
+              totalGap
+            );
+
+        document.setDrawColor(...border);
+        document.setFillColor(
+          ...(highlight
+            ? [255, 235, 218]
+            : soft)
+        );
+
+        document.roundedRect(
+          x,
+          totalsY,
+          totalCardWidth,
+          17,
+          2.5,
+          2.5,
+          "FD"
+        );
+
+        document.setFont(
+          "helvetica",
+          "normal"
+        );
+        document.setTextColor(...muted);
+        document.setFontSize(6);
+        document.text(
+          label,
+          x + 3,
+          totalsY + 6
+        );
+
+        document.setFont(
+          "helvetica",
+          "bold"
+        );
+        document.setTextColor(...brown);
+        document.setFontSize(10);
+        document.text(
+          `${Number(
+            value
+          ).toLocaleString(
+            "en-US"
+          )} EGP`,
+          x + 3,
+          totalsY + 12.5
+        );
+      }
     );
 
-    document.text(
-      `Waiters Total: ${Number(
-        details.waiterTotal || 0
-      ).toLocaleString(
-        "en-US"
-      )} EGP`,
-      14,
-      totalsY
-    );
-
-    document.text(
-      `Driver Total: ${Number(
-        details.driverTotal || 0
-      ).toLocaleString(
-        "en-US"
-      )} EGP`,
-      90,
-      totalsY
-    );
-
-    document.setFontSize(11);
-    document.setTextColor(
-      113,
-      48,
-      6
-    );
-    document.text(
-      `Total Event Staff Cost: ${Number(
-        details.totalStaffCost ||
-          0
-      ).toLocaleString(
-        "en-US"
-      )} EGP`,
-      166,
-      totalsY
-    );
-
-    
     document.save(
       `${details.eventCode}-event-details-sheet.pdf`
     );
@@ -1073,12 +1197,20 @@ function Events() {
         }`,
       ],
       [
+        "Departure Time",
+        formatTime(
+          details.departureTime
+        ),
         "Start Time",
         formatTime(
           details.startTime
         ),
+      ],
+      [
         "End Time",
         formatTime(details.endTime),
+        "",
+        "",
       ],
       [
         "Status",
@@ -2232,6 +2364,14 @@ function Events() {
                       {eventDetailsSheet.area
                         ? ` - ${eventDetailsSheet.area}`
                         : ""}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{ui("Departure Time", "وقت المغادرة")}</span>
+                    <strong>
+                      {formatTime(
+                        eventDetailsSheet.departureTime
+                      )}
                     </strong>
                   </div>
                   <div>
