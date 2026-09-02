@@ -204,20 +204,28 @@ export default function DashboardCharts({
       })
     );
 
-  const branchCounts = events.reduce(
-    (result, event) => {
-      if (!event.branch) {
+  const branchCounts = events
+    .filter(
+      (event) =>
+        String(event.status)
+          .trim()
+          .toLowerCase() !==
+        "cancelled"
+    )
+    .reduce(
+      (result, event) => {
+        if (!event.branch) {
+          return result;
+        }
+
+        result[event.branch] =
+          (result[event.branch] || 0) +
+          1;
+
         return result;
-      }
-
-      result[event.branch] =
-        (result[event.branch] || 0) +
-        1;
-
-      return result;
-    },
-    {}
-  );
+      },
+      {}
+    );
 
   const branchData =
     Object.entries(branchCounts).map(
