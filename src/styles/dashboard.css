@@ -433,6 +433,44 @@ body {
   gap: 26px;
 }
 
+.dashboard-language-button {
+  height: 36px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #ead4c4;
+  border-radius: 10px;
+  background: #fff9f4;
+  color: #713006;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dashboard-language-button svg {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.dashboard-language-button:hover {
+  border-color: #c87831;
+  background: #fbe8d8;
+  transform: translateY(-1px);
+}
+
+.dashboard-language-button:focus-visible {
+  outline: 2px solid rgba(200, 120, 49, 0.3);
+  outline-offset: 2px;
+}
+
 .notification-wrapper {
   position: relative;
   display: flex;
@@ -1468,6 +1506,16 @@ body {
 
   .dashboard-topbar-actions {
     gap: 12px;
+  }
+
+  .dashboard-language-button {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+  }
+
+  .dashboard-language-button span {
+    display: none;
   }
 
   .dashboard-welcome {

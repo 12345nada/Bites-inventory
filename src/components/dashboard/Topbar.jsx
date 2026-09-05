@@ -8,6 +8,7 @@ import {
   FiBell,
   FiCamera,
   FiCheck,
+  FiGlobe,
   FiSearch,
 } from "react-icons/fi";
 
@@ -275,6 +276,17 @@ export default function Topbar({
       (notification) =>
         !notification.isRead
     ).length;
+
+  const isArabic =
+    (i18n.resolvedLanguage || i18n.language)
+      ?.toLowerCase()
+      .startsWith("ar");
+
+  const handleLanguageChange = () => {
+    i18n.changeLanguage(
+      isArabic ? "en" : "ar"
+    );
+  };
 
   useEffect(() => {
     let channel = null;
@@ -618,6 +630,30 @@ export default function Topbar({
       </div>
 
       <div className="dashboard-topbar-actions">
+        <button
+          type="button"
+          className="dashboard-language-button"
+          onClick={handleLanguageChange}
+          aria-label={
+            isArabic
+              ? "Switch to English"
+              : "التبديل إلى العربية"
+          }
+          title={
+            isArabic
+              ? "Switch to English"
+              : "التبديل إلى العربية"
+          }
+        >
+          <FiGlobe />
+
+          <span>
+            {isArabic
+              ? "English"
+              : "العربية"}
+          </span>
+        </button>
+
         <div
           className="notification-wrapper"
           ref={notificationRef}

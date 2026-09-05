@@ -518,16 +518,17 @@ export default function Staff() {
 
     if (!enteredAmount || enteredAmount <= 0) {
       await showAlert({
-        message: "Enter a payment amount greater than 0.",
+        message: t("staffPage.errors.paymentAmountGreaterThanZero"),
       });
       return;
     }
 
     if (enteredAmount > remainingAmount) {
       await showAlert({
-        message: `Payment cannot exceed the remaining ${remainingAmount.toLocaleString(
-          "en-US"
-        )} EGP.`,
+        message: t("staffPage.errors.paymentExceedsRemaining", {
+          amount: remainingAmount.toLocaleString("en-US"),
+          currency: t("staffPage.egp"),
+        }),
       });
       return;
     }
@@ -611,7 +612,7 @@ export default function Staff() {
       showAlert({
         message:
           error.message ||
-          "Could not record payment.",
+          t("staffPage.errors.couldNotRecordPayment"),
       });
     } finally {
       setPaymentSavingKey(null);
@@ -1206,7 +1207,7 @@ export default function Staff() {
                       {t("staffPage.status.pending")}
                     </option>
                     <option value="Partial">
-                      Partial
+                      {t("staffPage.status.partial")}
                     </option>
                     <option value="Paid">
                       {t("staffPage.status.paid")}
@@ -1297,7 +1298,15 @@ export default function Staff() {
                           {driver.carNumber}
                         </td>
                         <td>
-                          {driver.carType}
+                          {driver.carType === "Van"
+                            ? t("staffPage.values.van")
+                            : driver.carType === "Truck"
+                              ? t("staffPage.values.truck")
+                              : driver.carType === "Pickup"
+                                ? t("staffPage.values.pickup")
+                                : driver.carType === "Refrigerated Truck"
+                                  ? t("staffPage.values.refrigeratedTruck")
+                                  : t("staffPage.values.other")}
                         </td>
                         <td>
                           {driver.staffRole === "Head Driver" ? t("staffPage.values.headDriver") : t("staffPage.values.driver")}
@@ -1580,11 +1589,11 @@ export default function Staff() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Staff</th>
+                      <th>{t("staffPage.table.staff")}</th>
                       <th>{t("staffPage.table.type")}</th>
-                      <th>Total Amount</th>
-                      <th>Paid</th>
-                      <th>Remaining</th>
+                      <th>{t("staffPage.table.totalAmount")}</th>
+                      <th>{t("staffPage.table.paid")}</th>
+                      <th>{t("staffPage.table.remaining")}</th>
                       <th>{t("staffPage.table.status")}</th>
                       <th>{t("staffPage.table.action")}</th>
                     </tr>
@@ -1620,7 +1629,13 @@ export default function Staff() {
                                     {summary.staffName}
                                   </strong>
                                   <span>
-                                    {summary.staffRole}
+                                    {summary.staffRole === "Head Driver"
+                                      ? t("staffPage.values.headDriver")
+                                      : summary.staffRole === "Driver"
+                                        ? t("staffPage.values.driver")
+                                        : summary.staffRole === "Head Waiter"
+                                          ? t("staffPage.values.headWaiter")
+                                          : t("staffPage.values.waiter")}
                                   </span>
                                 </div>
                               </div>
@@ -1655,7 +1670,11 @@ export default function Staff() {
                                   summary.status
                                 ).toLowerCase()}`}
                               >
-                                {summary.status}
+                                {summary.status === "Paid"
+                                  ? t("staffPage.status.paid")
+                                  : summary.status === "Partial"
+                                    ? t("staffPage.status.partial")
+                                    : t("staffPage.status.pending")}
                               </span>
                             </td>
                             <td>
@@ -1896,15 +1915,15 @@ export default function Staff() {
               </label>
 
               <label>
-  Branch
+  {t("staffPage.fields.branch")}
   <select
     name="branch"
     value={driverForm.branch || ""}
     onChange={handleDriverChange}
   >
-    <option value="">Select branch</option>
-    <option value="Cairo">Cairo</option>
-    <option value="Alex">Alex</option>
+    <option value="">{t("staffPage.fields.selectBranch")}</option>
+    <option value="Cairo">{t("branches.cairo")}</option>
+    <option value="Alex">{t("branches.alex")}</option>
   </select>
 </label>
 
@@ -1968,7 +1987,7 @@ export default function Staff() {
                     }
                   >
                     <option value="">
-                      No Head Driver
+                      {t("staffPage.values.noHeadDriver")}
                     </option>
                     {headDrivers.map(
                       (driver) => (
@@ -1991,13 +2010,13 @@ export default function Staff() {
                 <label className="staff-upload-box">
                   <FiImage />
                   <span>
-                    National ID Image
+                    {t("staffPage.documents.nationalIdImage")}
                   </span>
                   <small>
                     {driverForm.documents
                       .nationalIdImage
                       ?.name ||
-                      "Upload image"}
+                      t("staffPage.documents.uploadImage")}
                   </small>
                   <input
                     type="file"
@@ -2014,12 +2033,12 @@ export default function Staff() {
                 <label className="staff-upload-box">
                   <FiUpload />
                   <span>
-                    License Image
+                    {t("staffPage.documents.licenseImage")}
                   </span>
                   <small>
                     {driverForm.documents
                       .licenseImage?.name ||
-                      "Upload image"}
+                      t("staffPage.documents.uploadImage")}
                   </small>
                   <input
                     type="file"
@@ -2139,15 +2158,15 @@ export default function Staff() {
               </label>
 
               <label>
-  Branch
+  {t("staffPage.fields.branch")}
   <select
     name="branch"
     value={waiterForm.branch || ""}
     onChange={handleWaiterChange}
   >
-    <option value="">Select branch</option>
-    <option value="Cairo">Cairo</option>
-    <option value="Alex">Alex</option>
+    <option value="">{t("staffPage.fields.selectBranch")}</option>
+    <option value="Cairo">{t("branches.cairo")}</option>
+    <option value="Alex">{t("branches.alex")}</option>
   </select>
 </label>
 
@@ -2211,7 +2230,7 @@ export default function Staff() {
                     }
                   >
                     <option value="">
-                      No Head Waiter
+                      {t("staffPage.values.noHeadWaiter")}
                     </option>
                     {headWaiters.map(
                       (waiter) => (
@@ -2286,7 +2305,7 @@ export default function Staff() {
                         <span>{label}</span>
                         <small>
                           {fileName ||
-                            "Upload file"}
+                            t("staffPage.documents.uploadFile")}
                         </small>
                         <input
                           type="file"
@@ -2407,7 +2426,7 @@ export default function Staff() {
             <div className="staff-modal-header">
               <div>
                 <h2>{selectedStaffPayment.staffName}</h2>
-                <p>Payment summary for all completed events</p>
+                <p>{t("staffPage.payments.summaryAllCompleted")}</p>
               </div>
 
               <button
@@ -2422,33 +2441,37 @@ export default function Staff() {
 
             <div className="staff-payment-total-grid">
               <div>
-                <span>Total Amount</span>
+                <span>{t("staffPage.table.totalAmount")}</span>
                 <strong>
                   {Number(
                     selectedStaffPayment.totalAmount || 0
-                  ).toLocaleString("en-US")} EGP
+                  ).toLocaleString("en-US")} {t("staffPage.egp")}
                 </strong>
               </div>
               <div>
-                <span>Paid</span>
+                <span>{t("staffPage.table.paid")}</span>
                 <strong>
                   {Number(
                     selectedStaffPayment.paidAmount || 0
-                  ).toLocaleString("en-US")} EGP
+                  ).toLocaleString("en-US")} {t("staffPage.egp")}
                 </strong>
               </div>
               <div>
-                <span>Remaining</span>
+                <span>{t("staffPage.table.remaining")}</span>
                 <strong>
                   {Number(
                     selectedStaffPayment.remainingAmount || 0
-                  ).toLocaleString("en-US")} EGP
+                  ).toLocaleString("en-US")} {t("staffPage.egp")}
                 </strong>
               </div>
               <div>
-                <span>Status</span>
+                <span>{t("staffPage.table.status")}</span>
                 <strong>
-                  {selectedStaffPayment.status}
+                  {selectedStaffPayment.status === "Paid"
+                    ? t("staffPage.status.paid")
+                    : selectedStaffPayment.status === "Partial"
+                      ? t("staffPage.status.partial")
+                      : t("staffPage.status.pending")}
                 </strong>
               </div>
             </div>
@@ -2457,13 +2480,13 @@ export default function Staff() {
               <table className="staff-payment-events-table">
                 <thead>
                   <tr>
-                    <th>Event</th>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Paid</th>
-                    <th>Remaining</th>
-                    <th>Status</th>
-                    <th>Payment</th>
+                    <th>{t("staffPage.table.event")}</th>
+                    <th>{t("staffPage.table.date")}</th>
+                    <th>{t("staffPage.table.amount")}</th>
+                    <th>{t("staffPage.table.paid")}</th>
+                    <th>{t("staffPage.table.remaining")}</th>
+                    <th>{t("staffPage.table.status")}</th>
+                    <th>{t("staffPage.table.payment")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2498,14 +2521,14 @@ export default function Staff() {
                           </td>
                           <td>{formatDate(payment.eventDate)}</td>
                           <td>
-                            {Number(payment.amount || 0).toLocaleString("en-US")} EGP
+                            {Number(payment.amount || 0).toLocaleString("en-US")} {t("staffPage.egp")}
                           </td>
                           <td>
-                            {Number(payment.paidAmount || 0).toLocaleString("en-US")} EGP
+                            {Number(payment.paidAmount || 0).toLocaleString("en-US")} {t("staffPage.egp")}
                           </td>
                           <td>
                             <strong>
-                              {remaining.toLocaleString("en-US")} EGP
+                              {remaining.toLocaleString("en-US")} {t("staffPage.egp")}
                             </strong>
                           </td>
                           <td>
@@ -2514,7 +2537,11 @@ export default function Staff() {
                                 payment.status
                               ).toLowerCase()}`}
                             >
-                              {payment.status}
+                              {payment.status === "Paid"
+                                ? t("staffPage.status.paid")
+                                : payment.status === "Partial"
+                                  ? t("staffPage.status.partial")
+                                  : t("staffPage.status.pending")}
                             </span>
                           </td>
                           <td>
@@ -2525,7 +2552,7 @@ export default function Staff() {
                                   min="0.01"
                                   max={remaining}
                                   step="0.01"
-                                  placeholder="Amount"
+                                  placeholder={t("staffPage.payments.amountPlaceholder")}
                                   value={paymentDrafts[key] || ""}
                                   onChange={(event) =>
                                     setPaymentDrafts((current) => ({
@@ -2548,13 +2575,13 @@ export default function Staff() {
                                   }
                                 >
                                   {paymentSavingKey === key
-                                    ? "Saving..."
-                                    : "Pay"}
+                                    ? t("staffPage.actions.saving")
+                                    : t("staffPage.payments.pay")}
                                 </button>
                               </div>
                             ) : (
                               <span className="staff-payment-paid-label">
-                                Paid
+                                {t("staffPage.status.paid")}
                               </span>
                             )}
                           </td>
@@ -2585,10 +2612,10 @@ export default function Staff() {
             <div className="staff-modal-header">
               <div>
                 <h2>
-                  Event Payment Details
+                  {t("staffPage.eventDetails.title")}
                 </h2>
                 <p>
-                  Full staff breakdown for{" "}
+                  {t("staffPage.eventDetails.subtitle")} {" "}
                   {
                     selectedEventDetails.eventCode
                   }
@@ -2708,7 +2735,7 @@ export default function Staff() {
                       maximumFractionDigits: 2,
                     }
                   )}{" "}
-                  EGP
+                  {t("staffPage.egp")}
                 </strong>
               </div>
 
@@ -2736,7 +2763,9 @@ export default function Staff() {
                               {waiter.name}
                             </td>
                             <td>
-                              {waiter.role}
+                              {waiter.role === "Head Waiter"
+                                ? t("staffPage.values.headWaiter")
+                                : t("staffPage.values.waiter")}
                             </td>
                             <td>
                               {waiter.reportsTo ||
@@ -2744,7 +2773,7 @@ export default function Staff() {
                             </td>
                             <td>
                               {waiter.attendance ||
-                                "Assigned"}
+                                t("staffPage.values.assigned")}
                             </td>
                             <td>
                               {Number(
@@ -2794,7 +2823,7 @@ export default function Staff() {
                       maximumFractionDigits: 2,
                     }
                   )}{" "}
-                  EGP
+                  {t("staffPage.egp")}
                 </strong>
               </div>
 
@@ -2820,10 +2849,9 @@ export default function Staff() {
                           }
                         </td>
                         <td>
-                          {
-                            selectedEventDetails
-                              .driver.role
-                          }
+                          {selectedEventDetails.driver.role === "Head Driver"
+                            ? t("staffPage.values.headDriver")
+                            : t("staffPage.values.driver")}
                         </td>
                         <td>
                           {selectedEventDetails
@@ -2877,7 +2905,7 @@ export default function Staff() {
                       maximumFractionDigits: 2,
                     }
                   )}{" "}
-                  EGP
+                  {t("staffPage.egp")}
                 </strong>
               </div>
 
@@ -2893,13 +2921,13 @@ export default function Staff() {
                       maximumFractionDigits: 2,
                     }
                   )}{" "}
-                  EGP
+                  {t("staffPage.egp")}
                 </strong>
               </div>
 
               <div className="grand-total">
                 <span>
-                  Total Event Staff Cost
+                  {t("staffPage.eventDetails.totalStaffCost")}
                 </span>
                 <strong>
                   {Number(
@@ -2911,7 +2939,7 @@ export default function Staff() {
                       maximumFractionDigits: 2,
                     }
                   )}{" "}
-                  EGP
+                  {t("staffPage.egp")}
                 </strong>
               </div>
             </div>

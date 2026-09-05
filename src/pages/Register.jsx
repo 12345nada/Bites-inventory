@@ -20,8 +20,8 @@ import {
   supabase,
 } from "../lib/supabase";
 
-import Background from "../assets/images/Background2.png";
-import MobileBackground from "../assets/images/registerMobile.png";
+import Background from "../assets/images/Background2.svg";
+import MobileBackground from "../assets/images/registerMobile.svg";
 
 import "../styles/register.css";
 

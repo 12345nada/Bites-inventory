@@ -23,8 +23,10 @@ import {
   supabase,
 } from "../lib/supabase";
 
-import Background from "../assets/images/Background2.png";
-import MobileBackground from "../assets/images/registerMobile.png";
+import Background from "../assets/images/Background2.svg";
+import ArabicBackground from "../assets/images/Background2-ar.svg";
+import MobileBackground from "../assets/images/registerMobile.svg";
+import ArabicMobileBackground from "../assets/images/registerMobile-ar.png";
 
 import "../styles/register.css";
 
@@ -123,6 +125,11 @@ const Login = () => {
     t,
     i18n,
   } = useTranslation();
+
+  const isArabic =
+    (i18n.resolvedLanguage || i18n.language)
+      ?.toLowerCase()
+      .startsWith("ar");
 
   const [
     showPassword,
@@ -461,11 +468,19 @@ const Login = () => {
       <picture className="register-picture">
         <source
           media="(max-width: 600px)"
-          srcSet={MobileBackground}
+          srcSet={
+            isArabic
+              ? ArabicMobileBackground
+              : MobileBackground
+          }
         />
 
         <img
-          src={Background}
+          src={
+            isArabic
+              ? ArabicBackground
+              : Background
+          }
           alt="Bites login background"
           className="register-background"
         />

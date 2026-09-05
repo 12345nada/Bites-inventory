@@ -74,15 +74,20 @@ const reportTitles = {
   warehouses: "Warehouse Performance Report",
 };
 
-const money = (value) =>
-  `${Number(value || 0).toLocaleString("en-US")} EGP`;
-
 export default function Reports() {
   const { t } = useTranslation();
   const { showAlert } = useDialog();
   const { hasPermission } = useAuth();
 
   const canAdd = hasPermission("Reports", "add");
+
+  const translateReportText = (value) =>
+    t(`reportsPage.labels.${value}`, {
+      defaultValue: value,
+    });
+
+  const money = (value) =>
+    `${Number(value || 0).toLocaleString("en-US")} ${t("reportsPage.currency")}`;
 
   const [data, setData] = useState({
     inventory: [],
@@ -1127,7 +1132,7 @@ export default function Reports() {
 
     return column.toLowerCase().includes("date")
       ? formatDate(cell)
-      : cell;
+      : translateReportText(cell);
   };
 
   return (
@@ -1144,8 +1149,7 @@ export default function Reports() {
           <div>
             <h1>{t("reportsPage.title")}</h1>
             <p>
-              Business intelligence across inventory,
-              purchases, events, operations and staff.
+              {t("reportsPage.subtitle")}
             </p>
           </div>
 
@@ -1192,51 +1196,50 @@ export default function Reports() {
           <div className="reports-filter-title">
             <FiFilter />
             <div>
-              <h3>Report Center</h3>
+              <h3>{t("reportsPage.reportCenter")}</h3>
               <p>
-                Choose the business view you need and
-                narrow the results.
+                {t("reportsPage.reportCenterSubtitle")}
               </p>
             </div>
           </div>
 
           <div className="reports-filter-grid">
             <label>
-              Report Type
+              {t("reportsPage.filters.reportType")}
               <select
                 value={reportType}
                 onChange={handleReportTypeChange}
                 disabled={loading}
               >
                 <option value="overview">
-                  Business Overview
+                  {t("reportsPage.labels.Business Overview")}
                 </option>
                 <option value="inventory">
-                  Inventory
+                  {t("reportsPage.labels.Inventory")}
                 </option>
                 <option value="purchases">
-                  Purchases
+                  {t("reportsPage.labels.Purchases")}
                 </option>
                 <option value="events">
-                  Events
+                  {t("reportsPage.labels.Events")}
                 </option>
                 <option value="dispatches">
-                  Dispatches
+                  {t("reportsPage.labels.Dispatches")}
                 </option>
                 <option value="returns">
-                  Returns & Recovery
+                  {t("reportsPage.labels.Returns & Recovery")}
                 </option>
                 <option value="staff">
-                  Staff Payments
+                  {t("reportsPage.labels.Staff Payments")}
                 </option>
                 <option value="warehouses">
-                  Warehouse Performance
+                  {t("reportsPage.labels.Warehouse Performance")}
                 </option>
               </select>
             </label>
 
             <label>
-              From Date
+              {t("reportsPage.filters.fromDate")}
               <input
                 type="date"
                 value={fromDate}
@@ -1251,7 +1254,7 @@ export default function Reports() {
             </label>
 
             <label>
-              To Date
+              {t("reportsPage.filters.toDate")}
               <input
                 type="date"
                 value={toDate}
@@ -1266,7 +1269,7 @@ export default function Reports() {
             </label>
 
             <label>
-              Warehouse
+              {t("reportsPage.filters.warehouse")}
               <select
                 value={selectedWarehouse}
                 onChange={(event) =>
@@ -1280,7 +1283,7 @@ export default function Reports() {
                 }
               >
                 <option value="All Warehouses">
-                  All Warehouses
+                  {t("reportsPage.filters.allWarehouses")}
                 </option>
                 {data.warehouses.map(
                   (warehouse) => (
@@ -1296,7 +1299,7 @@ export default function Reports() {
             </label>
 
             <label>
-              Status
+              {t("reportsPage.filters.status")}
               <select
                 value={status}
                 onChange={(event) =>
@@ -1313,7 +1316,7 @@ export default function Reports() {
                       key={option}
                       value={option}
                     >
-                      {option}
+                      {translateReportText(option)}
                     </option>
                   )
                 )}
@@ -1326,7 +1329,7 @@ export default function Reports() {
               onClick={resetFilters}
               disabled={loading}
             >
-              Reset Filters
+              {t("reportsPage.filters.reset")}
             </button>
           </div>
         </section>
@@ -1345,7 +1348,7 @@ export default function Reports() {
                     <Icon />
                   </div>
                   <div>
-                    <span>{card.label}</span>
+                    <span>{translateReportText(card.label)}</span>
                     <strong>{card.value}</strong>
                   </div>
                 </article>
@@ -1357,32 +1360,32 @@ export default function Reports() {
         {reportType === "overview" && (
           <section className="reports-insight-grid">
             <article className="reports-insight-card">
-              <h3>Event Activity</h3>
+              <h3>{t("reportsPage.insights.eventActivity")}</h3>
               <p>
                 <strong>{overviewStats.upcomingEvents}</strong>{" "}
-                upcoming event(s),{" "}
+                {t("reportsPage.insights.upcomingEvents")}{" "}
                 <strong>{overviewStats.inProgressEvents}</strong>{" "}
-                currently in progress.
+                {t("reportsPage.insights.currentlyInProgress")}
               </p>
               <p>
                 <strong>{overviewStats.completedEvents}</strong>{" "}
-                event(s) completed and{" "}
+                {t("reportsPage.insights.eventsCompletedAnd")}{" "}
                 <strong>{overviewStats.cancelledEvents}</strong>{" "}
-                cancelled.
+                {t("reportsPage.insights.cancelled")}
               </p>
             </article>
 
             <article className="reports-insight-card">
-              <h3>Financial & Stock Attention</h3>
+              <h3>{t("reportsPage.insights.financialStockAttention")}</h3>
               <p>
-                Pending staff payments:{" "}
+                {t("reportsPage.insights.pendingStaffPayments")}{" "}
                 <strong>
                   {money(overviewStats.pendingStaff)}
                 </strong>
               </p>
               <p>
                 <strong>{overviewStats.lowStockCount}</strong>{" "}
-                inventory item(s) need stock attention.
+                {t("reportsPage.insights.itemsNeedAttention")}
               </p>
             </article>
           </section>
@@ -1393,13 +1396,15 @@ export default function Reports() {
             <div>
               <div className="report-result-heading">
                 <FiFileText />
-                <h2>{reportConfig.title}</h2>
+                <h2>{translateReportText(reportConfig.title)}</h2>
               </div>
 
               <p>
-                Showing {firstVisibleRecord} -{" "}
-                {lastVisibleRecord} of{" "}
-                {filteredRows.length} records
+                {t("reportsPage.showingRange", {
+                  from: firstVisibleRecord,
+                  to: lastVisibleRecord,
+                  total: filteredRows.length,
+                })}
               </p>
             </div>
 
@@ -1407,7 +1412,7 @@ export default function Reports() {
               <FiSearch />
               <input
                 type="text"
-                placeholder="Search report..."
+                placeholder={t("reportsPage.search")}
                 value={searchValue}
                 onChange={(event) =>
                   setSearchValue(
@@ -1426,7 +1431,7 @@ export default function Reports() {
                   {reportConfig.columns.map(
                     (column) => (
                       <th key={column}>
-                        {column}
+                        {translateReportText(column)}
                       </th>
                     )
                   )}
@@ -1472,8 +1477,7 @@ export default function Reports() {
                       }
                       className="report-empty-state"
                     >
-                      No records match the selected
-                      filters.
+                      {t("reportsPage.noRecords")}
                     </td>
                   </tr>
                 )}
@@ -1483,9 +1487,11 @@ export default function Reports() {
 
           <div className="report-result-footer">
             <p>
-              Showing {firstVisibleRecord} -{" "}
-              {lastVisibleRecord} of{" "}
-              {filteredRows.length} records
+              {t("reportsPage.showingRange", {
+                from: firstVisibleRecord,
+                to: lastVisibleRecord,
+                total: filteredRows.length,
+              })}
             </p>
 
             <div>

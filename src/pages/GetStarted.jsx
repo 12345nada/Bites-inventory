@@ -2,8 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { FiArrowRight } from "react-icons/fi";
 
-import DesktopBackground from "../assets/images/Get_start.png";
-import MobileBackground from "../assets/images/Get_startedMobile.png";
+import DesktopBackground from "../assets/images/Get_start.svg";
+import MobileBackground from "../assets/images/Get_startedMobile.svg";
 
 import "../styles/getStarted.css";
 
