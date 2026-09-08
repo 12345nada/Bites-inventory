@@ -100,6 +100,12 @@ const waiterEmptyForm = {
   },
 };
 
+const isValidEgyptianPhone = (value) =>
+  /^01\d{9}$/.test(String(value).trim());
+
+const isValidNationalId = (value) =>
+  /^\d{14}$/.test(String(value).trim());
+
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -759,10 +765,16 @@ export default function Settings() {
       value,
     } = event.target;
 
+    const cleanedValue =
+      name === "phone" ||
+      name === "nationalId"
+        ? value.replace(/\D/g, "")
+        : value;
+
     setDriverForm(
       (currentForm) => ({
         ...currentForm,
-        [name]: value,
+        [name]: cleanedValue,
       })
     );
   };
@@ -775,10 +787,16 @@ export default function Settings() {
       value,
     } = event.target;
 
+    const cleanedValue =
+      name === "phone" ||
+      name === "nationalId"
+        ? value.replace(/\D/g, "")
+        : value;
+
     setWaiterForm(
       (currentForm) => ({
         ...currentForm,
-        [name]: value,
+        [name]: cleanedValue,
       })
     );
   };
@@ -1012,6 +1030,39 @@ export default function Settings() {
       showAlert({
         message:
           t("settingsPage.errors.completeWaiter"),
+      });
+
+      return;
+    }
+
+    const selectedStaffForm =
+      isDriverRole
+        ? driverForm
+        : waiterForm;
+
+    if (
+      (isDriverRole || isWaiterRole) &&
+      !isValidEgyptianPhone(
+        selectedStaffForm.phone
+      )
+    ) {
+      showAlert({
+        message:
+          "Phone number must be exactly 11 digits and start with 01.",
+      });
+
+      return;
+    }
+
+    if (
+      (isDriverRole || isWaiterRole) &&
+      !isValidNationalId(
+        selectedStaffForm.nationalId
+      )
+    ) {
+      showAlert({
+        message:
+          "National ID must contain exactly 14 digits.",
       });
 
       return;
@@ -2381,6 +2432,7 @@ export default function Settings() {
                     {t("settingsPage.general.phone")} Number
 
                     <input
+                      type="tel"
                       name="phone"
                       value={
                         driverForm.phone
@@ -2388,6 +2440,11 @@ export default function Settings() {
                       onChange={
                         handleDriverChange
                       }
+                      inputMode="numeric"
+                      maxLength={11}
+                      pattern="01[0-9]{9}"
+                      title="Phone number must be 11 digits and start with 01"
+                      required
                       disabled={saving}
                     />
                   </label>
@@ -2396,6 +2453,7 @@ export default function Settings() {
                     National ID
 
                     <input
+                      type="text"
                       name="nationalId"
                       value={
                         driverForm.nationalId
@@ -2403,6 +2461,11 @@ export default function Settings() {
                       onChange={
                         handleDriverChange
                       }
+                      inputMode="numeric"
+                      maxLength={14}
+                      pattern="[0-9]{14}"
+                      title="National ID must contain exactly 14 digits"
+                      required
                       disabled={saving}
                     />
                   </label>
@@ -2689,6 +2752,7 @@ export default function Settings() {
                     {t("settingsPage.general.phone")} Number
 
                     <input
+                      type="tel"
                       name="phone"
                       value={
                         waiterForm.phone
@@ -2696,6 +2760,11 @@ export default function Settings() {
                       onChange={
                         handleWaiterChange
                       }
+                      inputMode="numeric"
+                      maxLength={11}
+                      pattern="01[0-9]{9}"
+                      title="Phone number must be 11 digits and start with 01"
+                      required
                       disabled={saving}
                     />
                   </label>
@@ -2704,6 +2773,7 @@ export default function Settings() {
                     National ID
 
                     <input
+                      type="text"
                       name="nationalId"
                       value={
                         waiterForm.nationalId
@@ -2711,6 +2781,11 @@ export default function Settings() {
                       onChange={
                         handleWaiterChange
                       }
+                      inputMode="numeric"
+                      maxLength={14}
+                      pattern="[0-9]{14}"
+                      title="National ID must contain exactly 14 digits"
+                      required
                       disabled={saving}
                     />
                   </label>

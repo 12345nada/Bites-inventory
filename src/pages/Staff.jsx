@@ -97,6 +97,18 @@ const formatDate = (value) => {
   });
 };
 
+const maskNationalId = (value) => {
+  const nationalId = String(value || "");
+
+  if (!nationalId) {
+    return "-";
+  }
+
+  return `${"*".repeat(
+    Math.max(nationalId.length - 4, 0)
+  )}${nationalId.slice(-4)}`;
+};
+
 export default function Staff() {
   const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
@@ -1282,7 +1294,9 @@ export default function Staff() {
                         </td>
                         <td>{driver.phone}</td>
                         <td>
-                          {driver.nationalId}
+                          {maskNationalId(
+                            driver.nationalId
+                          )}
                         </td>
                         <td>
                           {
@@ -1458,7 +1472,9 @@ export default function Staff() {
                           </td>
                           <td>{waiter.phone}</td>
                           <td>
-                            {waiter.nationalId}
+                            {maskNationalId(
+                              waiter.nationalId
+                            )}
                           </td>
                           <td>
                             {formatDate(

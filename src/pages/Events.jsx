@@ -532,12 +532,7 @@ function Events() {
       event.date <= nextSevenDays
   ).length;
 
-  const totalActiveEvents = events.filter(
-    (event) =>
-      String(event.status)
-        .trim()
-        .toLowerCase() !== "cancelled"
-  ).length;
+  const totalEvents = events.length;
 
   const getStatusClass = (status) =>
     String(status || "")
@@ -1650,6 +1645,54 @@ function Events() {
       return false;
     }
 
+    if (!editingEventId) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const eventDate = new Date(
+        `${formData.date}T00:00:00`
+      );
+
+      if (eventDate < today) {
+        showAlert({
+          message: ui(
+            "Event date cannot be in the past.",
+            "لا يمكن أن يكون تاريخ الفعالية في الماضي."
+          ),
+        });
+
+        return false;
+      }
+    }
+
+    if (
+      formData.departureTime >
+      formData.startTime
+    ) {
+      showAlert({
+        message: ui(
+          "Departure time must be before or equal to the event start time.",
+          "يجب أن يكون وقت التحرك قبل أو مساويًا لوقت بداية الفعالية."
+        ),
+      });
+
+      return false;
+    }
+
+    if (
+      formData.startTime >=
+      formData.endTime
+    ) {
+      showAlert({
+        message: ui(
+          "Event end time must be after the start time.",
+          "يجب أن يكون وقت نهاية الفعالية بعد وقت البداية."
+        ),
+      });
+
+      return false;
+    }
+
     return true;
   };
 
@@ -1764,7 +1807,7 @@ function Events() {
           <StatCard
             icon={<FiCalendar />}
             title={ui("Total Events", "إجمالي الفعاليات")}
-            number={totalActiveEvents}
+            number={totalEvents}
             description={ui("All events", "جميع الفعاليات")}
           />
 

@@ -105,17 +105,10 @@ export default function Dashboard() {
     [events] 
   ); 
  
-  const totalActiveEvents = useMemo( 
-    () => 
-      events.filter( 
-        (event) => 
-          String(event.status) 
-            .trim() 
-            .toLowerCase() !== 
-          "cancelled" 
-      ).length, 
-    [events] 
-  ); 
+  const totalEvents = useMemo(
+  () => events.length,
+  [events]
+);
  
   const eventsWithDrinks = useMemo( 
     () => 
@@ -144,7 +137,7 @@ export default function Dashboard() {
       ), 
       value: loading 
         ? "..." 
-        : String(totalActiveEvents), 
+        : String(totalEvents),
       subtitle: t( 
         "dashboard.allEvents" 
       ), 

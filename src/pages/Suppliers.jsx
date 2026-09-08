@@ -51,6 +51,9 @@ const emptyForm = {
   status: "Active",
 };
 
+const isValidEgyptianPhone = (value) =>
+  /^01\d{9}$/.test(String(value).trim());
+
 export default function Suppliers() {
   const { t } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
@@ -364,9 +367,14 @@ export default function Suppliers() {
       value,
     } = event.target;
 
+    const cleanedValue =
+      name === "phone"
+        ? value.replace(/\D/g, "")
+        : value;
+
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      [name]: cleanedValue,
     }));
   };
 
@@ -413,6 +421,15 @@ export default function Suppliers() {
         message:
           t("suppliers.errors.completeAllFields"),
       });
+      return;
+    }
+
+    if (!isValidEgyptianPhone(formData.phone)) {
+      showAlert({
+        message:
+          "Phone number must be exactly 11 digits and start with 01.",
+      });
+
       return;
     }
 
@@ -932,11 +949,16 @@ export default function Suppliers() {
               <label>
                 {t("suppliers.modal.phoneNumber")}
                 <input
-                  type="text"
+                  type="tel"
                   name="phone"
                   placeholder="01012345678"
                   value={formData.phone}
                   onChange={handleFormChange}
+                  inputMode="numeric"
+                  maxLength={11}
+                  pattern="01[0-9]{9}"
+                  title="Phone number must be 11 digits and start with 01"
+                  required
                 />
               </label>
 

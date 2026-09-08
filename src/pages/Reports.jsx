@@ -272,15 +272,16 @@ export default function Reports() {
           item.stockLevel === "Out of Stock"
       ).length;
 
-    const activeEvents =
-      eventCounts.completed +
-      eventCounts.upcoming +
-      eventCounts.inProgress;
+    const totalEvents =
+  eventCounts.completed +
+  eventCounts.upcoming +
+  eventCounts.inProgress +
+  eventCounts.cancelled;
 
     return {
       inventoryValue,
       purchaseSpend,
-      activeEvents,
+      activeEvents: totalEvents,
       completedEvents: eventCounts.completed,
       upcomingEvents: eventCounts.upcoming,
       inProgressEvents: eventCounts.inProgress,
