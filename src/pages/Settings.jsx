@@ -108,7 +108,7 @@ const isValidNationalId = (value) =>
 
 
 export default function Settings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -1154,9 +1154,24 @@ export default function Settings() {
         error
       );
 
+      const errorMessage =
+        error.message?.includes(
+          "staff_phone_format_check"
+        )
+          ? i18n.language?.startsWith("ar")
+            ? "يجب أن يتكون رقم الهاتف من 11 رقمًا بالضبط ويبدأ بـ 01."
+            : "Phone number must be exactly 11 digits and start with 01."
+          : error.message?.includes(
+                "staff_national_id_format_check"
+              )
+            ? i18n.language?.startsWith("ar")
+              ? "يجب أن يتكون الرقم القومي من 14 رقمًا بالضبط."
+              : "National ID must contain exactly 14 digits."
+            : error.message ||
+              t("settingsPage.errors.couldNotCreateUser");
+
       showAlert({
-        message: error.message ||
-          t("settingsPage.errors.couldNotCreateUser"),
+        message: errorMessage,
       });
     } finally {
       setSaving(false);

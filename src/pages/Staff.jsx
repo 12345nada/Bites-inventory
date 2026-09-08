@@ -111,7 +111,7 @@ const maskNationalId = (value) => {
 };
 
 export default function Staff() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showAlert, showConfirm } = useDialog();
 
 
@@ -908,8 +908,20 @@ export default function Staff() {
       showAlert({
         message: error.code === "23505"
           ? t("staffPage.errors.driverDuplicate")
-          : error.message ||
-              t("staffPage.errors.couldNotSaveDriver"),
+          : error.message?.includes(
+                "staff_phone_format_check"
+              )
+            ? i18n.language?.startsWith("ar")
+              ? "يجب أن يتكون رقم الهاتف من 11 رقمًا بالضبط ويبدأ بـ 01."
+              : "Phone number must be exactly 11 digits and start with 01."
+            : error.message?.includes(
+                  "staff_national_id_format_check"
+                )
+              ? i18n.language?.startsWith("ar")
+                ? "يجب أن يتكون الرقم القومي من 14 رقمًا بالضبط."
+                : "National ID must contain exactly 14 digits."
+              : error.message ||
+                t("staffPage.errors.couldNotSaveDriver"),
       });
     } finally {
       setSaving(false);
@@ -966,8 +978,20 @@ export default function Staff() {
       showAlert({
         message: error.code === "23505"
           ? t("staffPage.errors.waiterDuplicate")
-          : error.message ||
-              t("staffPage.errors.couldNotSaveWaiter"),
+          : error.message?.includes(
+                "staff_phone_format_check"
+              )
+            ? i18n.language?.startsWith("ar")
+              ? "يجب أن يتكون رقم الهاتف من 11 رقمًا بالضبط ويبدأ بـ 01."
+              : "Phone number must be exactly 11 digits and start with 01."
+            : error.message?.includes(
+                  "staff_national_id_format_check"
+                )
+              ? i18n.language?.startsWith("ar")
+                ? "يجب أن يتكون الرقم القومي من 14 رقمًا بالضبط."
+                : "National ID must contain exactly 14 digits."
+              : error.message ||
+                t("staffPage.errors.couldNotSaveWaiter"),
       });
     } finally {
       setSaving(false);

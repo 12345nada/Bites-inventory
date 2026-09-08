@@ -13,6 +13,7 @@ import {
   FiEye,
   FiEyeOff,
   FiArrowRight,
+  FiGlobe,
 } from "react-icons/fi";
 
 import {
@@ -492,30 +493,24 @@ const Login = () => {
           <div className="language-switcher">
             <button
               type="button"
-              className={
-                i18n.language === "en"
-                  ? "active"
-                  : ""
-              }
+              className="language-toggle"
               onClick={() =>
-                changeLanguage("en")
+                changeLanguage(
+                  isArabic ? "en" : "ar"
+                )
+              }
+              aria-label={
+                isArabic
+                  ? "Switch to English"
+                  : "التبديل إلى العربية"
               }
             >
-              English
-            </button>
-
-            <button
-              type="button"
-              className={
-                i18n.language === "ar"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                changeLanguage("ar")
-              }
-            >
-              العربية
+              <FiGlobe aria-hidden="true" />
+              <span>
+                {isArabic
+                  ? "English"
+                  : "العربية"}
+              </span>
             </button>
           </div>
 
