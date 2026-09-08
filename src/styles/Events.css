@@ -340,6 +340,15 @@ body  {
   accent-color: #7a2706;
   cursor: pointer;
 }
+
+.events-table-wrapper tbody .event-clickable-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.events-table-wrapper tbody .event-clickable-row:hover {
+  background-color: #fff8f1;
+}
 .event-name-cell  {
   display: flex;
   align-items: center;
@@ -673,6 +682,13 @@ body  {
 .event-modal-grid select:focus  {
   border-color: #b87549;
   box-shadow: 0 0 0 3px rgba(184, 117, 73, 0.12);
+}
+
+.event-modal-grid input:user-invalid,
+.event-modal-grid select:user-invalid {
+  border-color: #c62828;
+  background: #fff6f6;
+  box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.1);
 }
 .event-modal-full-field  {
   grid-column: 1 / -1;

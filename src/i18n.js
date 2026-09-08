@@ -50,6 +50,7 @@ sidebar: {
   logout: "Logout",
   loggingOut: "Logging out...", 
   logoutConfirm: "Are you sure you want to log out?",
+  closeSidebar: "Close menu",
 cancel: "Cancel",
   
 },
@@ -109,7 +110,7 @@ dashboardCharts: {
 },
 
 topbar: {
-  searchAnything: "search anything...",
+  searchAnything: "Search this page...",
   openNotifications: "Open notifications",
   notifications: "Notifications",
   newNotifications: "{{count}} new",
@@ -776,6 +777,7 @@ sidebar: {
   logout: "تسجيل الخروج",
 loggingOut: "جاري تسجيل الخروج...",
 logoutConfirm: "هل أنتِ متأكدة من تسجيل الخروج؟",
+closeSidebar: "إغلاق القائمة",
 cancel: "إلغاء",
 },
 dashboard: {
@@ -834,7 +836,7 @@ dashboardCharts: {
 },
 
 topbar: {
-  searchAnything: "ابحث عن أي شيء...",
+  searchAnything: "ابحث في هذه الصفحة...",
   openNotifications: "فتح الإشعارات",
   notifications: "الإشعارات",
   newNotifications: "{{count}} جديد",

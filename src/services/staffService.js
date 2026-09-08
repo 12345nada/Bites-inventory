@@ -9,7 +9,7 @@ const STAFF_FIELDS = `
   staff_type,
   full_name,
   phone,
-  national_id,
+  national_id_masked,
   branch,
   status,
   event_rate,
@@ -85,7 +85,8 @@ export const mapStaffFromDatabase = (staff) => {
         `DRV-${String(staff.id).padStart(3, "0")}`,
       fullName: staff.full_name || "",
       phone: staff.phone || "",
-      nationalId: staff.national_id || "",
+      nationalId:
+        staff.national_id_masked || "",
       branch: staff.branch || "",
       licenseNumber:
         staff.license_number || "",
@@ -124,7 +125,8 @@ export const mapStaffFromDatabase = (staff) => {
       `WTR-${String(staff.id).padStart(3, "0")}`,
     fullName: staff.full_name || "",
     phone: staff.phone || "",
-    nationalId: staff.national_id || "",
+    nationalId:
+      staff.national_id_masked || "",
     branch: staff.branch || "",
     status: staff.status || "Active",
     eventRate: Number(staff.event_rate || 0),
@@ -223,6 +225,24 @@ export async function getStaff() {
         )
     ),
   };
+}
+
+export async function getStaffNationalId(
+  staffId
+) {
+  const { data, error } =
+    await supabase.rpc(
+      "get_staff_national_id",
+      {
+        p_staff_id: staffId,
+      }
+    );
+
+  if (error) {
+    throw error;
+  }
+
+  return data || "";
 }
 
 async function uploadDocument(
@@ -439,14 +459,19 @@ export async function updateDriver(
   driverId,
   driverData
 ) {
+  const nationalId = String(
+    driverData.nationalId || ""
+  ).trim();
+
   const { error } = await supabase
     .from("staff")
     .update({
       full_name:
         driverData.fullName.trim(),
       phone: driverData.phone.trim(),
-      national_id:
-        driverData.nationalId.trim(),
+      ...(!nationalId.startsWith("*")
+        ? { national_id: nationalId }
+        : {}),
       branch: driverData.branch,
       status: driverData.status,
       event_rate:
@@ -544,14 +569,19 @@ export async function updateWaiter(
   waiterId,
   waiterData
 ) {
+  const nationalId = String(
+    waiterData.nationalId || ""
+  ).trim();
+
   const { error } = await supabase
     .from("staff")
     .update({
       full_name:
         waiterData.fullName.trim(),
       phone: waiterData.phone.trim(),
-      national_id:
-        waiterData.nationalId.trim(),
+      ...(!nationalId.startsWith("*")
+        ? { national_id: nationalId }
+        : {}),
       branch: waiterData.branch,
       status: waiterData.status,
       event_rate:

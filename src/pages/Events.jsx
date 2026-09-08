@@ -1612,7 +1612,6 @@ function Events() {
       "location",
       "area",
       "branch",
-      "driverId",
     ];
 
     const hasEmptyField =
@@ -1626,20 +1625,6 @@ function Events() {
     if (hasEmptyField) {
       showAlert({
         message: "Please complete all event fields.",
-      });
-
-      return false;
-    }
-
-    if (
-      !Array.isArray(
-        formData.waiterIds
-      ) ||
-      formData.waiterIds.length === 0
-    ) {
-      showAlert({
-        message:
-          "Please select at least one waiter.",
       });
 
       return false;
@@ -1956,8 +1941,20 @@ function Events() {
                   0 ? (
                   paginatedEvents.map(
                     (event) => (
-                      <tr key={event.id}>
-                        <td>
+                      <tr
+                        key={event.id}
+                        className="event-clickable-row"
+                        onClick={() =>
+                          openEventDetailsSheet(
+                            event
+                          )
+                        }
+                      >
+                        <td
+                          onClick={(clickEvent) =>
+                            clickEvent.stopPropagation()
+                          }
+                        >
                           <input
                             type="checkbox"
                             aria-label={`Select ${event.name}`}
@@ -2053,7 +2050,12 @@ function Events() {
                           </span>
                         </td>
 
-                        <td className="event-action-cell">
+                        <td
+                          className="event-action-cell"
+                          onClick={(clickEvent) =>
+                            clickEvent.stopPropagation()
+                          }
+                        >
                           <div className="event-actions">
                             <button
                               type="button"
@@ -2706,6 +2708,7 @@ function Events() {
                   value={formData.name}
                   onChange={handleFormChange}
                   placeholder={ui("Family Wedding", "حفل زفاف")}
+                  required
                   disabled={saving}
                 />
               </label>
@@ -2719,6 +2722,7 @@ function Events() {
                   value={formData.client}
                   onChange={handleFormChange}
                   placeholder={ui("Client name", "اسم العميل")}
+                  required
                   disabled={saving}
                 />
               </label>
@@ -2731,6 +2735,7 @@ function Events() {
                   name="date"
                   value={formData.date}
                   onChange={handleFormChange}
+                  required
                   disabled={saving}
                 />
               </label>
@@ -2746,6 +2751,7 @@ function Events() {
                       formData.departureTime
                     }
                     onChange={handleFormChange}
+                    required
                     disabled={saving}
                   />
                 </label>
@@ -2758,6 +2764,7 @@ function Events() {
                     name="startTime"
                     value={formData.startTime}
                     onChange={handleFormChange}
+                    required
                     disabled={saving}
                   />
                 </label>
@@ -2770,6 +2777,7 @@ function Events() {
                     name="endTime"
                     value={formData.endTime}
                     onChange={handleFormChange}
+                    required
                     disabled={saving}
                   />
                 </label>
@@ -2784,6 +2792,7 @@ function Events() {
                   value={formData.location}
                   onChange={handleFormChange}
                   placeholder={ui("Villa 45", "فيلا 45")}
+                  required
                   disabled={saving}
                 />
               </label>
@@ -2797,6 +2806,7 @@ function Events() {
                   value={formData.area}
                   onChange={handleFormChange}
                   placeholder={ui("New Cairo", "القاهرة الجديدة")}
+                  required
                   disabled={saving}
                 />
               </label>
@@ -2808,6 +2818,7 @@ function Events() {
                   name="branch"
                   value={formData.branch}
                   onChange={handleFormChange}
+                  required
                   disabled={saving}
                 >
                   <option value="Cairo">

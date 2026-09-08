@@ -987,7 +987,24 @@ export default function Returns() {
                       colSpan="10"
                       className="returns-empty-state"
                     >
-                      {t("returnsPage.noResults")}
+                      <div className="returns-empty-content">
+                        <div className="returns-empty-icon">
+                          <FiCornerUpLeft />
+                        </div>
+
+                        <p>
+                          {t("returnsPage.noResults")}
+                        </p>
+
+                        <button
+                          type="button"
+                          className="returns-empty-action"
+                          onClick={openAddModal}
+                        >
+                          <FiPlus />
+                          {t("returnsPage.receiveReturn")}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )}

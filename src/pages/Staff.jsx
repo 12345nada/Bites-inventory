@@ -15,6 +15,7 @@ import Topbar from "../components/dashboard/Topbar";
 import {
   deleteStaff,
   getStaff,
+  getStaffNationalId,
   updateDriver,
   updateWaiter,
 } from "../services/staffService";
@@ -114,7 +115,7 @@ export default function Staff() {
   const { showAlert, showConfirm } = useDialog();
 
 
-  const { hasPermission } = useAuth();
+  const { hasPermission, isAdmin } = useAuth();
 
   const canEdit = hasPermission("Staff", "edit");
   const canDelete = hasPermission("Staff", "delete");
@@ -737,7 +738,7 @@ export default function Staff() {
     setOpenActionId(staffId);
   };
 
-  const openEditDriver = (driver) => {
+  const openEditDriver = async (driver) => {
     if (!canEdit) {
       showAlert({
         title: t("staffPage.errors.permissionDenied"),
@@ -749,18 +750,38 @@ export default function Staff() {
       return;
     }
 
-    setEditingDriverId(driver.id);
-    setOpenActionId(null);
-    setDriverForm({
-      ...driver,
-      documents: {
-        ...driver.documents,
-      },
-    });
-    setShowDriverModal(true);
+    try {
+      const nationalId = isAdmin
+        ? await getStaffNationalId(
+            driver.id
+          )
+        : driver.nationalId;
+
+      setEditingDriverId(driver.id);
+      setOpenActionId(null);
+      setDriverForm({
+        ...driver,
+        nationalId,
+        documents: {
+          ...driver.documents,
+        },
+      });
+      setShowDriverModal(true);
+    } catch (error) {
+      console.error(
+        "Could not load driver National ID:",
+        error
+      );
+
+      showAlert({
+        message:
+          error.message ||
+          t("staffPage.errors.couldNotLoadStaff"),
+      });
+    }
   };
 
-  const openEditWaiter = (waiter) => {
+  const openEditWaiter = async (waiter) => {
     if (!canEdit) {
       showAlert({
         title: t("staffPage.errors.permissionDenied"),
@@ -772,22 +793,42 @@ export default function Staff() {
       return;
     }
 
-    setEditingWaiterId(waiter.id);
-    setOpenActionId(null);
-    setWaiterForm({
-      ...waiter,
-      documents: {
-        ...waiter.documents,
-        healthCertificate: {
-          ...waiter.documents
-            .healthCertificate,
+    try {
+      const nationalId = isAdmin
+        ? await getStaffNationalId(
+            waiter.id
+          )
+        : waiter.nationalId;
+
+      setEditingWaiterId(waiter.id);
+      setOpenActionId(null);
+      setWaiterForm({
+        ...waiter,
+        nationalId,
+        documents: {
+          ...waiter.documents,
+          healthCertificate: {
+            ...waiter.documents
+              .healthCertificate,
+          },
+          contract: {
+            ...waiter.documents.contract,
+          },
         },
-        contract: {
-          ...waiter.documents.contract,
-        },
-      },
-    });
-    setShowWaiterModal(true);
+      });
+      setShowWaiterModal(true);
+    } catch (error) {
+      console.error(
+        "Could not load waiter National ID:",
+        error
+      );
+
+      showAlert({
+        message:
+          error.message ||
+          t("staffPage.errors.couldNotLoadStaff"),
+      });
+    }
   };
 
   const handleDriverChange = (
@@ -1859,6 +1900,10 @@ export default function Staff() {
                     value={
                       driverForm[name]
                     }
+                    disabled={
+                      name === "nationalId" &&
+                      !isAdmin
+                    }
                     onChange={
                       handleDriverChange
                     }
@@ -2144,6 +2189,10 @@ export default function Staff() {
                     name={name}
                     value={
                       waiterForm[name]
+                    }
+                    disabled={
+                      name === "nationalId" &&
+                      !isAdmin
                     }
                     onChange={
                       handleWaiterChange
