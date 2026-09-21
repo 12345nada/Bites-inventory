@@ -255,7 +255,7 @@
   text-align: left;
   border-top: 1px solid #f0e8e2;
   color: #332e2a;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.25;
 }
 
@@ -1335,3 +1335,17 @@ html[dir="rtl"] .items-main {
   margin: 14px 0 14px 14px;
 }
 
+
+
+/* Table typography balance only */
+.items-table-wrapper th {
+  font-size: 11px;
+  font-weight: 600;
+  color: #332e2a;
+}
+
+.items-table-wrapper td {
+  font-size: 11px;
+  font-weight: 400;
+  color: #332e2a;
+}
