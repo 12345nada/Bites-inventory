@@ -21,7 +21,7 @@
 
 .settings-title-section p {
   margin: 3px 0 0;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .settings-card {
@@ -59,7 +59,7 @@
   background: transparent;
 
   color: #71675f;
-  font-size: 10px;
+  font-size: 14px;
 
   cursor: pointer;
 }
@@ -93,7 +93,7 @@
   flex-direction: column;
   gap: 7px;
 
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 600;
 }
 .general-settings-grid input,
@@ -145,13 +145,13 @@
 
 .permission-column-header h3 {
   margin: 0;
-  font-size: 12px;
+  font-size: 20px;
 }
 .permission-column-header p {
   margin: 3px 0 0;
 
   color: #8b8179;
-  font-size: 8px;
+  font-size: 13px;
 }
 
 .permission-column-header > svg {
@@ -174,7 +174,7 @@
   background: #713006;
   color: #ffffff;
 
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 600;
 
   cursor: pointer;
@@ -228,7 +228,7 @@
 
   background: transparent;
 
-  font-size: 9px;
+  font-size: 14px;
 }
 .permission-list {
   max-height: 430px;
@@ -267,14 +267,14 @@
 
 .permission-list strong {
   color: #2e2824;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 .permission-list span {
   margin-top: 2px;
 
   color: #8b8179;
-  font-size: 7px;
+  font-size: 13px;
 }
 
 .role-list-row {
@@ -319,13 +319,13 @@
 
 .employee-list-row strong {
   color: #2e2824;
-  font-size: 9px;
+  font-size: 15px;
 }
 
 .employee-list-row span {
   margin-top: 2px;
   color: #8b8179;
-  font-size: 7px;
+  font-size: 13px;
 }
 
 .delete-user-button {
@@ -402,7 +402,7 @@
   background: #fffaf6;
   color: #8b330a;
 
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 600;
 
   cursor: pointer;
@@ -429,14 +429,14 @@
 
 .permissions-panel-header h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: 20px;
 }
 
 .permissions-panel-header p {
   margin: 3px 0 0;
 
   color: #81766e;
-  font-size: 8px;
+  font-size: 13px;
 }
 
 .permissions-panel-header select {
@@ -448,7 +448,7 @@
 
   background: #ffffff;
 
-  font-size: 9px;
+  font-size: 14px;
 }
 
 .permissions-master-toggle {
@@ -476,14 +476,14 @@
 
 .permissions-master-toggle strong {
   color: #332e2a;
-  font-size: 10px;
+  font-size: 15px;
 }
 
 .permissions-master-toggle
   > div
   > span {
   color: #81766e;
-  font-size: 8px;
+  font-size: 13px;
 }
 
 .permissions-master-toggle
@@ -527,7 +527,7 @@
   background: #fff3e8;
 
   color: #332e2a;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -536,7 +536,7 @@
 }
 
 .permission-table-row strong {
-  font-size: 8px;
+  font-size: 15px;
 }
 
 .permission-switch {
@@ -605,7 +605,7 @@
 
 .permissions-footer span {
   color: #6f675f;
-  font-size: 9px;
+  font-size: 13px;
 }
 
 .settings-save-button {
@@ -623,7 +623,7 @@
   background: #713006;
   color: #ffffff;
 
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 600;
 
   cursor: pointer;
@@ -742,7 +742,7 @@
   background: #713006;
   color: #ffffff;
 
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -756,7 +756,7 @@
   margin: 4px 0 0;
 
   color: #81766e;
-  font-size: 9px;
+  font-size: 13px;
 }
 
 .settings-user-grid {
@@ -775,7 +775,7 @@
 
   color: #332e2a;
 
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -792,7 +792,7 @@
   background: #ffffff;
 
   color: #332e2a;
-  font-size: 11px;
+  font-size: 14px;
 
   outline: none;
 
@@ -834,7 +834,7 @@
 
   color: #746960;
 
-  font-size: 9px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .settings-role-modal-header {
@@ -861,7 +861,7 @@
   margin: 3px 0 0;
 
   color: #81766e;
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .settings-role-modal-header button {
@@ -911,7 +911,7 @@
   flex-direction: column;
   gap: 6px;
 
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -968,7 +968,7 @@
   background: #ffffff;
   color: #332e2a;
 
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
 
   cursor: pointer;
@@ -1011,7 +1011,7 @@
   justify-content: center;
 
   color: #81766e;
-  font-size: 12px;
+  font-size: 14px;
 }
 .settings-main::-webkit-scrollbar,
 .settings-role-modal::-webkit-scrollbar,
@@ -1181,7 +1181,7 @@
   }
 
   .settings-title-section p {
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .settings-role-modal-header h2,
@@ -1207,11 +1207,11 @@
     width: 30px;
     height: 30px;
 
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .settings-user-section-header h3 {
-    font-size: 13px;
+    font-size: 20px;
   }
 
   .settings-user-grid {
@@ -1262,7 +1262,7 @@
   background: #ffffff;
   color: #c93f36;
 
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 600;
 
   cursor: pointer;
@@ -1324,7 +1324,7 @@
   border-radius: 8px;
   background: #ffffff;
   color: #713006;
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -1355,13 +1355,13 @@
 
 .reset-password-user strong {
   color: #2e2824;
-  font-size: 11px;
+  font-size: 15px;
 }
 
 .reset-password-user span {
   margin-top: 3px;
   color: #81766e;
-  font-size: 9px;
+  font-size: 13px;
 }
 
 @media (max-width: 768px) {

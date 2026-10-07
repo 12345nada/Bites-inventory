@@ -237,6 +237,11 @@ export default function Dashboard() {
           ))} 
         </section> 
  
+        <DashboardCharts
+          events={events}
+          returnTotals={returnTotals}
+        />
+
         <EventTable 
           events={events} 
           loading={loading} 
@@ -246,10 +251,6 @@ export default function Dashboard() {
           } 
         /> 
  
-        <DashboardCharts 
-          events={events} 
-          returnTotals={returnTotals} 
-        /> 
       </main> 
     </div> 
   ); 

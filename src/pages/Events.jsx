@@ -1767,25 +1767,27 @@ function Events() {
       <Sidebar activePage="events" />
 
       <main className="events-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="events-title-section">
           <div>
             <h1>{ui("Events", "الفعاليات")}</h1>
             <p>{ui("Manage all your events", "إدارة جميع الفعاليات")}</p>
           </div>
 
-          <button
-            type="button"
-            className="add-event-button"
-            onClick={openAddModal}
-          >
-            <FiPlus />
-            <span>{ui("Add New Event", "إضافة فعالية جديدة")}</span>
-          </button>
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
+
+            <button
+              type="button"
+              className="add-event-button"
+              onClick={openAddModal}
+            >
+              <FiPlus />
+              <span>{ui("Add New Event", "إضافة فعالية جديدة")}</span>
+            </button>
+          </div>
         </section>
 
         <section className="events-stats">

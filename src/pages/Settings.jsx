@@ -1556,18 +1556,20 @@ export default function Settings() {
       <Sidebar activePage="settings" />
 
       <main className="settings-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={
-            setSearchValue
-          }
-        />
-
         <section className="settings-title-section">
           <div>
             <h1>{t("settingsPage.title")}</h1>
 
             <p>{t("settingsPage.subtitle")}</p>
+          </div>
+
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={
+                setSearchValue
+              }
+            />
           </div>
         </section>
 

@@ -1228,11 +1228,6 @@ console.log(
       <Sidebar activePage="items" />
 
       <main className="items-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="items-title-section">
           <div className="items-title">
             <div className="items-title-icon">
@@ -1245,15 +1240,22 @@ console.log(
             </div>
           </div>
 
-          <button
-            type="button"
-            className="add-item-button"
-            onClick={openAddModal}
-            disabled={loading}
-          >
-            <FiPlus />
-            {t("items.addNewItem")}
-          </button>
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
+
+            <button
+              type="button"
+              className="add-item-button"
+              onClick={openAddModal}
+              disabled={loading}
+            >
+              <FiPlus />
+              {t("items.addNewItem")}
+            </button>
+          </div>
         </section>
 
         <section className="items-stats">

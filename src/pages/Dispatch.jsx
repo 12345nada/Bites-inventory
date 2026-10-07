@@ -897,11 +897,6 @@ export default function Dispatch() {
       <Sidebar activePage="dispatch" />
 
       <main className="dispatch-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="dispatch-title-section">
           <div>
             <h1>{t("dispatchPage.title")}</h1>
@@ -911,14 +906,21 @@ export default function Dispatch() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="add-dispatch-button"
-            onClick={openAddModal}
-          >
-            <FiPlus />
-            {t("dispatchPage.addNewDispatch")}
-          </button>
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
+
+            <button
+              type="button"
+              className="add-dispatch-button"
+              onClick={openAddModal}
+            >
+              <FiPlus />
+              {t("dispatchPage.addNewDispatch")}
+            </button>
+          </div>
         </section>
 
         <section className="dispatch-table-card">

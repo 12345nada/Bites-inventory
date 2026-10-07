@@ -582,11 +582,6 @@ export default function Suppliers() {
       <Sidebar activePage="suppliers" />
 
       <main className="suppliers-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="suppliers-title-section">
           <div>
             <h1>{t("suppliers.title")}</h1>
@@ -596,14 +591,21 @@ export default function Suppliers() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="add-supplier-button"
-            onClick={openAddModal}
-          >
-            <FiPlus />
-            {t("suppliers.addNewSupplier")}
-          </button>
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
+
+            <button
+              type="button"
+              className="add-supplier-button"
+              onClick={openAddModal}
+            >
+              <FiPlus />
+              {t("suppliers.addNewSupplier")}
+            </button>
+          </div>
         </section>
 
         <section className="suppliers-table-card">

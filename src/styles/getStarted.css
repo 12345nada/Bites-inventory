@@ -276,3 +276,14 @@ body {
     font-size: 14px;
   }
 }
+/* Remove only ancestor spacing; retain the auth design's internal padding. */
+html:has(.get-started-page),
+body:has(.get-started-page),
+#root:has(> .get-started-page) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+}

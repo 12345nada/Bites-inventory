@@ -949,11 +949,6 @@ export default function Purchase() {
       <Sidebar activePage="purchase" />
 
       <main className="purchase-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="purchase-title-section">
           <div>
             <h1>{t("purchase.title")}</h1>
@@ -961,16 +956,23 @@ export default function Purchase() {
             <p>{t("purchase.subtitle")}</p>
           </div>
 
-          <button
-            type="button"
-            className="new-purchase-button"
-            onClick={openNewPurchaseModal}
-          >
-            <FiPlus />
-            <span>
-              {t("purchase.newRequest")}
-            </span>
-          </button>
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
+
+            <button
+              type="button"
+              className="new-purchase-button"
+              onClick={openNewPurchaseModal}
+            >
+              <FiPlus />
+              <span>
+                {t("purchase.newRequest")}
+              </span>
+            </button>
+          </div>
         </section>
 
         <section className="purchase-stats">

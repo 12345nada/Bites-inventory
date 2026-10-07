@@ -578,11 +578,6 @@ export default function Warehouse() {
       <Sidebar activePage="warehouse" />
 
       <main className="warehouse-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="warehouse-title-section">
           <div>
             <h1>{t("warehousePage.title")}</h1>
@@ -592,14 +587,21 @@ export default function Warehouse() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="add-warehouse-button"
-            onClick={openAddModal}
-          >
-            <FiPlus />
-            <span>{t("warehousePage.addNewWarehouse")}</span>
-          </button>
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
+
+            <button
+              type="button"
+              className="add-warehouse-button"
+              onClick={openAddModal}
+            >
+              <FiPlus />
+              <span>{t("warehousePage.addNewWarehouse")}</span>
+            </button>
+          </div>
         </section>
 
         <section className="warehouse-table-card">

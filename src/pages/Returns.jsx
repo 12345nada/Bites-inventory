@@ -755,11 +755,6 @@ export default function Returns() {
       <Sidebar activePage="returns" />
 
       <main className="returns-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="returns-title-section">
           <div>
             <h1>{t("returnsPage.title")}</h1>
@@ -769,14 +764,21 @@ export default function Returns() {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="add-return-button"
-            onClick={openAddModal}
-          >
-            <FiPlus />
-            {t("returnsPage.receiveReturn")}
-          </button>
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
+
+            <button
+              type="button"
+              className="add-return-button"
+              onClick={openAddModal}
+            >
+              <FiPlus />
+              {t("returnsPage.receiveReturn")}
+            </button>
+          </div>
         </section>
 
         <section className="returns-table-card">

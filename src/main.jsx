@@ -44,6 +44,8 @@ import {
   DialogProvider,
 } from "./context/DialogContext.jsx";
 
+import "./styles/bites-theme.css";
+
 createRoot(
   document.getElementById("root")
 ).render(

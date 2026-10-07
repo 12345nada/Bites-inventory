@@ -963,3 +963,15 @@ html[dir="rtl"] .create-btn {
 html[dir="rtl"] .language-switcher {
   direction: ltr;
 }
+
+/* Remove only ancestor spacing; retain the auth design's internal padding. */
+html:has(.register-page:has(> .login-content)),
+body:has(.register-page:has(> .login-content)),
+#root:has(> .register-page:has(> .login-content)) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+}

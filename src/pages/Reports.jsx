@@ -1141,11 +1141,6 @@ export default function Reports() {
       <Sidebar activePage="reports" />
 
       <main className="reports-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="reports-title-section">
           <div>
             <h1>{t("reportsPage.title")}</h1>
@@ -1154,42 +1149,49 @@ export default function Reports() {
             </p>
           </div>
 
-          <div
-            className="reports-export-wrapper"
-            ref={exportMenuRef}
-          >
-            <button
-              type="button"
-              className="export-pdf-button reports-export-button"
-              onClick={() =>
-                setIsExportMenuOpen(
-                  (current) => !current
-                )
-              }
-              disabled={loading}
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
+
+            <div
+              className="reports-export-wrapper"
+              ref={exportMenuRef}
             >
-              <FiDownload />
-              {t("reportsPage.export")}
-              <FiChevronDown />
-            </button>
+              <button
+                type="button"
+                className="export-pdf-button reports-export-button"
+                onClick={() =>
+                  setIsExportMenuOpen(
+                    (current) => !current
+                  )
+                }
+                disabled={loading}
+              >
+                <FiDownload />
+                {t("reportsPage.export")}
+                <FiChevronDown />
+              </button>
 
-            {isExportMenuOpen && (
-              <div className="reports-export-menu">
-                <button
-                  type="button"
-                  onClick={() => handleExport("pdf")}
-                >
-                  {t("reportsPage.exportPdf")}
-                </button>
+              {isExportMenuOpen && (
+                <div className="reports-export-menu">
+                  <button
+                    type="button"
+                    onClick={() => handleExport("pdf")}
+                  >
+                    {t("reportsPage.exportPdf")}
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleExport("excel")}
-                >
-                  {t("reportsPage.exportExcel")}
-                </button>
-              </div>
-            )}
+                  <button
+                    type="button"
+                    onClick={() => handleExport("excel")}
+                  >
+                    {t("reportsPage.exportExcel")}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 

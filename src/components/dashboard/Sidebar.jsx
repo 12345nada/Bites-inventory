@@ -37,6 +37,7 @@ import {
 import {
   useDialog,
 } from "../../context/DialogContext";
+import Topbar from "./Topbar";
 import BitesLogo from "../../assets/images/bites-logo.png";
 const menuItems = [
   ["Dashboard", "Dashboard", FiGrid, "/dashboard", "dashboard"],
@@ -102,6 +103,9 @@ export default function Sidebar({
     showConfirm,
   } = useDialog();
 
+  const moreMenuRef = useRef(null);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
   const userMenuRef =
     useRef(null);
 
@@ -139,7 +143,13 @@ export default function Sidebar({
       );
     });
 
+  const primaryPages = ["dashboard", "events", "items", "purchase", "suppliers"];
+  const primaryItems = visibleMenuItems.filter((item) => primaryPages.includes(item.pageName));
+  const moreItems = visibleMenuItems.filter((item) => !primaryPages.includes(item.pageName));
+  const activeMoreItem = moreItems.find((item) => item.path === location.pathname);
+
   const closeSidebar = () => {
+    setIsMoreOpen(false);
     setIsSidebarOpen(false);
   };
 
@@ -243,6 +253,9 @@ export default function Sidebar({
     const handleOutsideClick = (
       event
     ) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setIsMoreOpen(false);
+      }
       if (
         userMenuRef.current &&
         !userMenuRef.current.contains(
@@ -360,7 +373,7 @@ export default function Sidebar({
             }
           >
             <ul className="dashboard-menu">
-              {visibleMenuItems.map(
+              {primaryItems.map(
                 (item) => {
                   const Icon =
                     item.icon;
@@ -408,10 +421,36 @@ export default function Sidebar({
                   );
                 }
               )}
+              {moreItems.length > 0 && (
+                <li ref={moreMenuRef} className={`dashboard-more ${activeMoreItem ? "active" : ""}`}>
+                  <button type="button" className="dashboard-menu-button"
+                    aria-expanded={isMoreOpen} aria-controls="inventory-more-menu"
+                    onClick={() => setIsMoreOpen((current) => !current)}>
+                    <span className="dashboard-menu-text">{activeMoreItem
+                      ? t(`sidebar.${activeMoreItem.pageName}`)
+                      : t("sidebar.more", { defaultValue: "More" })}</span>
+                    <FiChevronDown />
+                  </button>
+                  {isMoreOpen && (
+                    <div id="inventory-more-menu" className="dashboard-more-dropdown">
+                      {moreItems.map((item) => {
+                        const Icon = item.icon;
+                        return <button key={item.pageName} type="button"
+                          className={item.pageName === activePage ? "active" : ""}
+                          aria-current={item.pageName === activePage ? "page" : undefined}
+                          onClick={() => handleNavigation(item.path)}>
+                          <Icon /><span>{t(`sidebar.${item.pageName}`)}</span>
+                        </button>;
+                      })}
+                    </div>
+                  )}
+                </li>
+              )}
             </ul>
           </nav>
         </div>
 
+        <Topbar actionsOnly />
         <div
           className="dashboard-user-wrapper"
           ref={userMenuRef}

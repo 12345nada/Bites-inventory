@@ -1184,17 +1184,19 @@ export default function Staff() {
       <Sidebar activePage="staff" />
 
       <main className="staff-main">
-        <Topbar
-          searchValue={searchValue}
-          onSearchChange={setSearchValue}
-        />
-
         <section className="staff-title-section">
           <div>
             <h1>{t("staffPage.title")}</h1>
             <p>
               {t("staffPage.subtitle")}
             </p>
+          </div>
+
+          <div className="inventory-header-actions">
+            <Topbar
+              searchValue={searchValue}
+              onSearchChange={setSearchValue}
+            />
           </div>
         </section>
 

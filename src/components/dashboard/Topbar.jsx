@@ -222,10 +222,7 @@ const getAvatarExtension = (
   return "jpg";
 };
 
-export default function Topbar({
-  searchValue = "",
-  onSearchChange,
-}) {
+function TopbarActions() {
   const navigate =
     useNavigate();
 
@@ -613,22 +610,6 @@ export default function Topbar({
     };
 
   return (
-    <header className="dashboard-topbar">
-      <div className="dashboard-search">
-        <FiSearch />
-
-        <input
-          type="text"
-          placeholder={t("topbar.searchAnything")}
-          value={searchValue}
-          onChange={(event) =>
-            onSearchChange?.(
-              event.target.value
-            )
-          }
-        />
-      </div>
-
       <div className="dashboard-topbar-actions">
         <button
           type="button"
@@ -843,6 +824,21 @@ export default function Topbar({
             <span className="dashboard-profile-loading" />
           )}
         </button>
+      </div>
+  );
+}
+
+
+export default function Topbar({ searchValue = "", onSearchChange, actionsOnly = false }) {
+  const { t } = useTranslation();
+  if (actionsOnly) return <TopbarActions />;
+  return (
+    <header className="dashboard-topbar">
+      <div className="dashboard-search">
+        <FiSearch />
+        <input type="text" aria-label={t("topbar.searchAnything")}
+          placeholder={t("topbar.searchAnything")} value={searchValue}
+          onChange={(event) => onSearchChange?.(event.target.value)} />
       </div>
     </header>
   );
